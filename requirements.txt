@@ -1,0 +1,10 @@
+# local package
+-e .
+
+# external requirements
+click
+numpy
+matplotlib
+pandas
+Cython
+pyroomacoustics
