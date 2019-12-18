@@ -24,9 +24,9 @@ def awgn(x, snr_db):
     return x + np.random.normal(0, n, L)
 
 
-def vincent_deconvolution(y, x):
+def classic_deconvolution(y, x):
     '''
-    Deconvolution with Vincent's method: X = Y/H
+    Deconvolution with Classic method: X = Y/H
     '''
     if not y.shape == x.shape:
         raise ValueError('y and h should be of the same size')
@@ -34,7 +34,7 @@ def vincent_deconvolution(y, x):
     return h
 
 
-def koldovsky_deconvolution(x, y, Lh, delay=0, lam=0):
+def koldovsky_deconvolution(y, x, Lh, delay=0, lam=0):
     '''
     Deconvolution with Koldowsky's method: using time-domain LS
 
@@ -103,7 +103,7 @@ def olivier_deconvolution(y, x):
     return np.real(np.fft.ifft(np.conj(np.fft.fft(x[::-1]))*np.fft.fft(y)))
 
 
-def wiener_deconvolution(y, x, pad):
+def wiener_deconvolution(y, x, pad=None):
     X = np.fft.fft(x, pad)
     Y = np.fft.fft(y, pad)
     Sxx = X * np.conj(X)

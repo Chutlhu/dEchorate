@@ -51,34 +51,34 @@ def make_test_data(Fs, duration_x, duration_h, signal_kind, snr_dB=200):
     return y, h, x
 
 
-def test_vincent_narrowband_ongrid_delays_synchronized():
+def test_classic_narrowband_ongrid_delays_synchronized():
     Fs = 16000
     y, h, x = make_test_data(Fs, 1, 0.2, 'narrowband')
 
     y, x = make_same_length(y, x, 'max')
-    h_est = vincent_deconvolution(y, x)
+    h_est = classic_deconvolution(y, x)
     h_est, h =  make_same_length(h_est, h, 'max')
 
     assert np.allclose(h_est, h, atol=1e-5)
 
 
-def test_vincent_broadband_ongrid_delays_synchronized():
+def test_classic_broadband_ongrid_delays_synchronized():
     Fs = 16000
     y, h, x = make_test_data(Fs, 1, 0.2, 'broadband')
 
     y, x = make_same_length(y, x, 'max')
-    h_est = vincent_deconvolution(y, x)
+    h_est = classic_deconvolution(y, x)
     h_est, h =  make_same_length(h_est, h, 'max')
 
     assert np.allclose(h_est, h, atol=1e-5)
 
 
-def test_vincent_speech_ongrid_delays_synchronized():
+def test_classic_speech_ongrid_delays_synchronized():
     Fs = 16000
     y, h, x = make_test_data(Fs, 1, 0.2, 'speech')
 
     y, x = make_same_length(y, x, 'max')
-    h_est = vincent_deconvolution(y, x)
+    h_est = classic_deconvolution(y, x)
     h_est, h =  make_same_length(h_est, h, 'max')
 
     assert np.allclose(h_est, h, atol=1e-4)
@@ -90,7 +90,7 @@ def test_wiener_narrowband_ongrid_delays_synchronized():
 
     y, x = make_same_length(y, x, 'max')
 
-    h_est = wiener_deconvolution(y, x, None)
+    h_est = wiener_deconvolution(y, x)
 
     h_est, h =  make_same_length(h_est, h, 'max')
 
@@ -103,7 +103,7 @@ def test_wiener_broadband_ongrid_delays_synchronized():
 
     y, x = make_same_length(y, x, 'max')
 
-    h_est = wiener_deconvolution(y, x, None)
+    h_est = wiener_deconvolution(y, x)
 
     h_est, h =  make_same_length(h_est, h, 'max')
 
@@ -116,7 +116,7 @@ def test_wiener_speech_ongrid_delays_synchronized():
 
     y, x = make_same_length(y, x, 'max')
 
-    h_est = wiener_deconvolution(y, x, None)
+    h_est = wiener_deconvolution(y, x)
 
     h_est, h =  make_same_length(h_est, h, 'max')
 
@@ -129,7 +129,7 @@ def test_koldovsky_broadband_ongrid_delays_synchronized():
 
     y, x = make_same_length(y, x)
 
-    h_est = koldovsky_deconvolution(x, y, int(0.2*Fs), 0, 0)
+    h_est = koldovsky_deconvolution(y, x, int(0.2*Fs), 0, 0)
 
     h_est, h =  make_same_length(h_est, h, 'max')
 
@@ -142,7 +142,7 @@ def test_koldovsky_narrowband_ongrid_delays_synchronized():
 
     y, x = make_same_length(y, x)
 
-    h_est = koldovsky_deconvolution(x, y, int(0.2*Fs), 0, 0)
+    h_est = koldovsky_deconvolution(y, x, int(0.2*Fs), 0, 0)
 
     h_est, h = make_same_length(h_est, h, 'max')
 
@@ -155,9 +155,12 @@ def test_koldovsky_speech_ongrid_delays_synchronized():
 
     y, x = make_same_length(y, x)
 
-    h_est = koldovsky_deconvolution(x, y, int(0.2*Fs), 0, 0)
+    h_est = koldovsky_deconvolution(y, x, int(0.2*Fs), 0, 0)
 
     h_est, h = make_same_length(h_est, h, 'max')
 
     assert np.allclose(h_est, h)
+
+
+def test_koldovsky_broadband_synth_rir_synchronized():
 
