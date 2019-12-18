@@ -160,7 +160,3 @@ def test_koldovsky_speech_ongrid_delays_synchronized():
     h_est, h = make_same_length(h_est, h, 'max')
 
     assert np.allclose(h_est, h)
-
-
-def test_koldovsky_broadband_synth_rir_synchronized():
-

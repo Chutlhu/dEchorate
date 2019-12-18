@@ -174,15 +174,16 @@ def block_levinson(y, L):
         fn1 = np.concatenate([f, zeros(d)], axis=0)
         fn2 = np.concatenate([zeros(d), b], axis=0)
         fn = np.concatenate([fn1, fn2], axis=1)
-        fn = fn @ A[:, :d]
+        f = fn @ A[:, :d]
 
-        bn1 = np.concatenate([f, zeros(d)], axis=0)
-        bn2 = np.concatenate([zeros(d), b], axis=0)
-        bn = np.concatenate([fn1, fn2], axis=1)
-        bn = bn @ A[:, d:]
+        # bn1 = np.concatenate([f, zeros(d)], axis=0)
+        # bn2 = np.concatenate([zeros(d), b], axis=0)
+        # bn = np.concatenate([bn1, bn2], axis=1)
+        # bn = bn @ A[:, d:]
+        b = fn @ A[:, d:]
 
-        f = fn.copy()
-        b = bn.copy()
+        # f = fn.copy()
+        # b = bn.copy()
         x1 = np.concatenate([x, np.zeros([d, 1])], axis=0)
         x = x1 + b @ (y[(n-1)*d:n*d] - ex)
 
