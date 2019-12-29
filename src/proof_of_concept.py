@@ -1,4 +1,5 @@
-import numpy as no
+import numpy as np
+import scipy as sp
 import soundfile as sf
 import pyroomacoustics as pra
 import matplotlib.pyplot as plt
@@ -23,39 +24,45 @@ from risotto.deconvolution import *
 # rt60 est
 # cosine distance
 
-path_to_data = './data/raw/'
-path_to_x = path_to_data + '01-chirp_log_14kHz_iter3-consolidated.wav'
-path_to_y = path_to_data + '02-array 1-consolidated.wav'
 
-## load audio
-x, fs_x = sf.read(path_to_x, always_2d=True)
-y, fs_y = sf.read(path_to_y, always_2d=True)
-assert fs_y == fs_x
-Fs = fs_y
+path_to_data = './data/raw/recordings/'
+path_to_x = path_to_data + 'chirp_log_14kHz_iter3.wav'
+path_to_y = path_to_data + '2019-12-26__17-45-32_full_refl.wav'
 
-y = y - np.mean(y, axis=0)
-x = x - np.mean(x, axis=0)
-# # plot audio
-# plt.subplot(211)
-# plt.imshow(10*np.log10(np.abs(X)**2))
-# plt.subplot(212)
-# plt.imshow(10*np.log10(np.abs(Y)**2))
-# plt.show()
-# 1/0
+for path_to_y in [path_to_data + '2019-12-26__17-45-32_full_refl.wav',
+                  path_to_data + '2019-12-26__17-53-36_wall_c_abs.wav']:
+    ## load audio
+    x, fs_x = sf.read(path_to_x, always_2d=True)
+    y, fs_y = sf.read(path_to_y, always_2d=True)
+    assert fs_y == fs_x
+    Fs = fs_y
+    N = x.shape[0]
+    J = y.shape[1]
 
-sframe, eframe = 0*Fs, 11*Fs
+    ## chirp repetition
+    n_chirps = 3
+    sample_per_iter = N/n_chirps
+    nfft = int(2*sample_per_iter)
 
-Lh = len(y[sframe:eframe, 0])
-freq_mask = np.zeros(Lh)
-freq_mask[800:136260] = 1
-freq_mask[Lh-136260:Lh-800] = 1
+    # BP - from 80 to 7900 Hz, linear phase
+    freq_mask = bandpass_blackman(4001, 110, 7950, Fs)
 
-h = classic_deconvolution(
-    y[sframe:eframe, 0],
-    x[sframe:eframe, 0],
-    freq_mask = freq_mask
-)
+    H = np.zeros([nfft, J, n_chirps], dtype=np.complex64)
 
-plt.plot(np.arange(len(h))/Fs, h)
+    for c in range(n_chirps):
+        ssample, esample = int(c*sample_per_iter), int((c+1)*sample_per_iter)
+        for j in range(J):
+            H[:, j, c] = classic_deconvolution(
+                            y[ssample:esample, 0],
+                            x[ssample:esample, 0],
+                            nfft=nfft,
+                            freq_mask=freq_mask,
+                            return_freq=True
+            )
+
+    H = np.sum(H, axis=-1)
+    h = np.real(np.fft.ifft(H, axis=0))
+
+    plt.plot(envelope(h[:, 0]))
+
 plt.show()
-1/0
