@@ -73,19 +73,19 @@ class ProbeSignal():
             np.sin(w1*(n_samples-1)/lw * (np.exp(taxis*lw)-1))
         self.ampl_ranges = [-amplitude, amplitude]
 
-        # Find the last zero crossing to avoid the need for fadeout
-        # Comment the whole block to remove this
-        k = np.flipud(sinsweep)
-        error = 1
-        counter = 0
-        while error > 0.001:
-            error = np.abs(k[counter])
-            counter = counter+1
+        # # Find the last zero crossing to avoid the need for fadeout
+        # # Comment the whole block to remove this
+        # k = np.flipud(sinsweep)
+        # error = 1
+        # counter = 0
+        # while error > 0.001:
+        #     error = np.abs(k[counter])
+        #     counter = counter+1
 
-        k = k[counter::]
-        sinsweep_hat = np.flipud(k)
-        sinsweep = np.zeros(shape=(n_samples,))
-        sinsweep[0:sinsweep_hat.shape[0]] = sinsweep_hat
+        # k = k[counter::]
+        # sinsweep_hat = np.flipud(k)
+        # sinsweep = np.zeros(shape=(n_samples,))
+        # sinsweep[0:sinsweep_hat.shape[0]] = sinsweep_hat
 
         # the convolutional inverse
         envelope = (w2/w1)**(-taxis)  # Holters2009, Eq.(9)
@@ -99,6 +99,11 @@ class ProbeSignal():
         taperStart = sg.tukey(n_samples, 1/16)
         taperWindow = np.ones(shape=(n_samples,))
         taperWindow[0:int(n_samples/2)] = taperStart[0:int(n_samples/2)]
+        sinsweep = sinsweep*taperWindow
+
+        taperEnding = sg.tukey(n_samples, 1/128)
+        taperWindow = np.ones(shape=(n_samples,))
+        taperWindow[int(n_samples/2):] = taperEnding[int(n_samples/2):]
         sinsweep = sinsweep*taperWindow
 
         # Final excitation including repetition and pauses
@@ -160,7 +165,7 @@ if __name__ == "__main__":
     Fs = 48000
     ps = ProbeSignal('exp_sine_sweep', Fs)
     n_seconds = 10
-    amplitude = 0.7
+    amplitude = 0.3
     n_repetitions = 3
     silence_at_start = 2
     silence_at_end = 2
