@@ -1,5 +1,11 @@
 import numpy as np
+import scipy.signal as sg
 import soundfile as sf
+
+import matplotlib.pyplot as plt
+
+from src.utils.file_utils import save_to_pickle, load_from_mat
+
 
 # =============================================================
 # Credits to PyRirTool
@@ -9,7 +15,7 @@ import soundfile as sf
 class ProbeSignal():
     def __init__(self, kind='exp_sine_sweep', fs=48000):
 
-        if kind not in ['exp_sine_sweep', 'hadamard_noise', 'white_noise']
+        if kind not in ['exp_sine_sweep', 'hadamard_noise', 'white_noise']:
             raise NameError('Excitation type not implemented')
 
         self.kind = kind
@@ -26,24 +32,24 @@ class ProbeSignal():
         self.signal = None
         self.invfilter = None
 
+        self.w = load_from_mat('./data/raw/bp_filt_blackman_4000.mat')['Num'].squeeze()
+
     def save(self, path_to_output):
         sf.write(path_to_output, self.signal, self.fs)
 
 
     # Generate the stimulus and set requred attributes
     def generate(self, n_seconds, amplitude, n_repetitions, silence_at_start, silence_at_end, sweeprange):
-
-        if self.kind == 'sinesweep':
-            return self._generate_exponential_sine_sweep(fs, n_seconds, amplitude, sweeprange, silence_at_start, silence_at_end, n_repetitions)
-        if self.kind == 'white_noise':
-            return self._generate_white_noise(fs, n_seconds, amplitude, silence_at_start, silence_at_end, n_repetitions)
-        if self.kind == 'hadamard_noise':
-            return self._generate_white_noise(fs, n_seconds, amplitude, silence_at_start, silence_at_end, n_repetitions)
+        if self.kind == 'exp_sine_sweep':
+            return self._generate_exponential_sine_sweep(n_seconds, amplitude, sweeprange, silence_at_start, silence_at_end, n_repetitions)
+        # if self.kind == 'white_noise':
+        #     return self._generate_white_noise(n_seconds, amplitude, silence_at_start, silence_at_end, n_repetitions)
+        # if self.kind == 'hadamard_noise':
+        #     return self._generate_white_noise(n_seconds, amplitude, silence_at_start, silence_at_end, n_repetitions)
 
         return None
 
-
-    def _generate_exponential_sine_sweep(self, n_seconds, amplitude, sweeprange, n_repetitions, silence_at_start, silence_at_end):
+    def _generate_exponential_sine_sweep(self, n_seconds, amplitude, sweeprange, silence_at_start, silence_at_end, n_repetitions):
         fs = self.fs
 
         f1=np.max((sweeprange[0], 1)) # start of sweep in Hz.
@@ -54,17 +60,17 @@ class ProbeSignal():
             f2 = sweeprange[1]
         self.freq_ranges = [f1, f2]
 
-        w1 = 2*pi*f1/fs     # start of sweep in rad/sample
-        w2 = 2*pi*f2/fs     # end of sweep in rad/sample
+        w1 = 2*np.pi*f1/fs     # start of sweep in rad/sample
+        w2 = 2*np.pi*f2/fs     # end of sweep in rad/sample
 
         n_samples = n_seconds*fs
         sinsweep = np.zeros(shape=(n_samples, 1))
         taxis = np.arange(0, n_samples, 1)/(n_samples-1)
 
         # for exponential sine sweeping
-        lw = log(w2/w1)
+        lw = np.log(w2/w1)
         sinsweep = amplitude * \
-            sin(w1*(n_samples-1)/lw * (exp(taxis*lw)-1))
+            np.sin(w1*(n_samples-1)/lw * (np.exp(taxis*lw)-1))
         self.ampl_ranges = [-amplitude, amplitude]
 
         # Find the last zero crossing to avoid the need for fadeout
@@ -84,12 +90,13 @@ class ProbeSignal():
         # the convolutional inverse
         envelope = (w2/w1)**(-taxis)  # Holters2009, Eq.(9)
         invfilter = np.flipud(sinsweep)*envelope
-        scaling = pi*n_samples * \
-            (w1/w2-1)/(2*(w2-w1)*log(w1/w2)) * \
-            (w2-w1)/pi  # Holters2009, Eq.10
+        scaling = np.pi*n_samples * \
+            (w1/w2-1)/(2*(w2-w1)*np.log(w1/w2)) * \
+            (w2-w1)/np.pi  # Holters2009, Eq.10
+        invfilter = invfilter/amplitude**2/scaling
 
         # fade-in window. Fade out removed because causes ringing - cropping at zero cross instead
-        taperStart = signal.tukey(n_samples, 0)
+        taperStart = sg.tukey(n_samples, 1/16)
         taperWindow = np.ones(shape=(n_samples,))
         taperWindow[0:int(n_samples/2)] = taperStart[0:int(n_samples/2)]
         sinsweep = sinsweep*taperWindow
@@ -103,24 +110,61 @@ class ProbeSignal():
         sinsweep = np.transpose(
             np.tile(np.transpose(sinsweep), n_repetitions))
 
+        times = np.arange(len(sinsweep))/fs
+
         # Set the attributes
-        self.total_duration = (silence_at_start + silence_at_end + n_seconds)*fs
-        self.invfilter = invfilter/amplitude**2/scaling
+        self.total_duration = fs*(silence_at_start + n_seconds + silence_at_end)
+        self.invfilter = invfilter
         self.n_repetitions = n_repetitions
         self.signal = sinsweep
-        self.times = np.arange(self.total_duration)/Fs
+        self.times = times
         self.n_seconds = n_seconds
         self.n_repetitions = n_repetitions
         self.time_ranges = [silence_at_start, silence_at_end]
 
-        return self.times.copy(), self.signal.copy()
+        return times.copy(), sinsweep.copy()
 
 
-if if __name__ == "__main__":
-    ps = ProbeSignal('exp_sine_sweep', 48000)
-    t, s = ps.generate(10, 0.9, 3, 2, 2, [20, 20e3])
+    def compute_rir(self, recording):
 
-    import matplotlib.pyplot as plt
-    plt.plot(t, s)
-    plt.show()
+        if self.kind == 'exp_sine_sweep':
+
+            I = recording.shape[1]
+            Lr = self.total_duration
+
+            nfft = 2*Lr
+            Hinv = np.fft.fft(self.invfilter, n=nfft)
+            W = np.fft.fft(self.w, n=nfft)
+            t = len(self.invfilter)+2*self.fs
+            Lh = 10*self.fs
+            RIRs = np.zeros(shape=(Lh, I))
+            for i in range(I):
+
+                x = recording[:3*Lr, i]
+                x = x.reshape(3, Lr)
+
+                X = np.fft.fft(x, n=nfft)
+                H = np.mean(Hinv * X, 0)
+
+                RIRs[:, i] = np.real(np.fft.ifft(H * W))[t:t+Lh]
+
+            return RIRs
+
+        else:
+
+            raise NameError('Excitation type not implemented')
+            return
+
+
+if __name__ == "__main__":
+    Fs = 48000
+    ps = ProbeSignal('exp_sine_sweep', Fs)
+    n_seconds = 10
+    amplitude = 0.7
+    n_repetitions = 3
+    silence_at_start = 2
+    silence_at_end = 2
+    sweeprange = [100, 14e3]
+    t, s = ps.generate(n_seconds, amplitude, n_repetitions, silence_at_start, silence_at_end, sweeprange)
+    sf.write('./data/processed/exp_sine_chirp_3rep_100-14kHz.wav', s, Fs)
     pass

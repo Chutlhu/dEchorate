@@ -87,7 +87,6 @@ for j in range(J):
                  (j+1, bar[0], bar[1], bar[2]))
 plt.show()
 
-
 Fs = 48000
 K = 3
 room = pra.ShoeBox(room_size, fs=48000, max_order=K)
