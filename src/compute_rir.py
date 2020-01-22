@@ -27,7 +27,7 @@ times, signal = ps.generate(n_seconds, amplitude, n_repetitions,
 rec, fs = sf.read('./data/recordings/2020-01-21__20-25-38_ch16_mic1.wav')
 rec = rec[:, None]
 
-mic_pos = [0.85771319, 3.90990039, 1.055]
+mic_pos = [0.91171319, 3.91, 1.038]
 src_pos = [3.65, 1.00, 1.415]
 room_size = [5.741, 5.763, 2.353]
 
@@ -66,12 +66,13 @@ h_hrt = np.abs(sg.hilbert(h))
 h_sqr = h**2
 
 amp = amp / amp[0, 0, 0]
-toa = Fs*(toa+0.13552)
+toa = Fs*(toa+0.13556)
 
 # plt.plot(h_hrt/np.max(h_hrt))
-plt.plot((h_sqr/np.max(h_sqr))[:20000])
+plt.plot((h_sqr/np.max(h_sqr))[:20000], 'C1')
 
-plt.stem(toa[0, 0, :], amp[0, 0, :])
+stem = plt.stem(toa[0, 0, :], amp[0, 0, :], linefmt='--', use_line_collection=True)
+stem.stemlines.set_alpha(0.5)
 
 for k in range(K):
     wall_idx = int(walls[0, 0, k])

@@ -50,7 +50,8 @@ mics[:, 10:15] = rotate_and_translate(nULA, mic_bar_pos[:, 2], mic_theta[2])
 mics[:, 15:20] = rotate_and_translate(nULA, mic_bar_pos[:, 3], mic_theta[3])
 mics[:, 20:25] = rotate_and_translate(nULA, mic_bar_pos[:, 4], mic_theta[4])
 mics[:, 25:30] = rotate_and_translate(nULA, mic_bar_pos[:, 5], mic_theta[5])
-print(mics)
+print(mics[:, 0])
+1/0
 
 srcs = np.zeros([3, J])
 srcs[:, :Jd] = src_dir_pos
