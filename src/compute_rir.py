@@ -62,6 +62,9 @@ for i in range(I):
             order[i, j, o] = room.sources[j].orders[k]
 
 h = ps.compute_rir(rec)
+
+np.save('./data/interim/rir.npy', h)
+
 h_hrt = np.abs(sg.hilbert(h))
 h_sqr = h**2
 

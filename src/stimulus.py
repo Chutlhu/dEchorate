@@ -160,6 +160,26 @@ class ProbeSignal():
             raise NameError('Excitation type not implemented')
             return
 
+    def compute_delay(self, recording, start=3, duration=0.5):
+        s = int(self.fs*start)
+        e = int(self.fs*duration + s)
+        x = self.signal[s:e].squeeze()
+        y = recording[s:e]
+        # X = np.fft.rfft(x)
+        # Y = np.fft.rfft(y)
+        # freqs = np.linspace(0, self.fs//2, len(X))
+        # Yh = np.conj(Y)
+        # lags = np.arange(-0.5, 0.5, step=0.001)
+        # scores = np.zeros_like(lags)
+        # for l, lag in enumerate(lags):
+        #     d = np.exp(-1j*2*np.pi*freqs*lag)
+        #     scores[l] = np.sum(np.real(d*X*Yh/np.abs(X*Y)))
+        # plt.plot(lags, scores)
+        # plt.show()
+        return lag
+
+
+
 
 if __name__ == "__main__":
     Fs = 48000
