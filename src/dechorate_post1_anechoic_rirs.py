@@ -103,8 +103,11 @@ def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_da
 
         # compute the global delay from the playback:
         playback = x[:, -1]
-        delay_sample = ps.compute_delay(playback[:, None], start=1, duration=10)
+        rir_playback = ps.compute_rir(playback[:, None])
+        delay_sample = np.argmax(np.abs(rir_playback))
+        # delay_sample = ps.compute_delay(playback[:, None], start=1, duration=10)
         delay = delay_sample/Fs
+        print(delay_sample)
 
         try:
             assert delay > 0
@@ -116,90 +119,16 @@ def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_da
         # estimate the rir in the remaining channels:
         for i in tqdm(range(30)):
             recording = x[:, i]
+
             rir_i = ps.compute_rir(recording[:, None])
             # for anechoic signal crop after 1 second
             rir_i = rir_i[0:int(0.5*Fs)]
+
             # store info in the anechoic dataset
             f_rir.create_dataset('rir/%s/%d' % (wavefile, i), data=rir_i)
-            f_rir.create_dataset('delay/%s/%d' % (wavefile, i), data=delay)
-    return
-
-
-def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset_note):
-    f_rir = h5py.File(path_to_anechoic_dataset_rir, 'r')
-    I = 30
-    J = len(wavfile_chirps)
-
-    Fs = 48000
-    T = 24
-    speed_of_sound = 331.3 + 0.606 * T
-
-    src_mic_dist = np.zeros([I, J])
-    L = int(0.5*Fs)
-    rirs = np.zeros([L, I*J])
-    direct_path_positions = np.zeros([I*J])
-
-    ij = 0
-    for j in tqdm(range(J)):
-        for i in range(30):
-            wavefile = wavfile_chirps[j]
-            src_id = dataset_note.loc[dataset_note['filename'] == wavefile]['id']
-            mic_id = j+33
-
-            rir = f_rir['rir/%s/%d' % (wavefile, i)][()]
-            rir = np.abs(rir).squeeze()
-            rir = rir/np.max(rir)
-            rirs[:, ij] = rir
-
-            peaks, _ = sg.find_peaks(rir, height=0.2, distance=50, width=2, prominence=0.6)
-            # plt.plot(rir)
-            # plt.plot(peaks, rir[peaks], "x")
-            # plt.plot(np.zeros_like(rir), "--", color="gray")
-            # plt.show()
-
-            direct_path_positions[ij] = np.min(peaks)
-            recording_offset = f_rir['delay/%s/%d' % (wavefile, i)][()]
-            toa = direct_path_positions[ij]/Fs
-            print(recording_offset)
-
-            fig, ax = plt.subplots()
-            newax1 = ax.twiny()
-            newax2 = ax.twiny()
-            fig.subplots_adjust(bottom=0.40)
-
-            newax1.set_frame_on(True)
-            newax2.set_frame_on(True)
-            newax1.patch.set_visible(False)
-            newax2.patch.set_visible(False)
-            newax1.xaxis.set_ticks_position('bottom')
-            newax2.xaxis.set_ticks_position('bottom')
-            newax1.xaxis.set_label_position('bottom')
-            newax2.xaxis.set_label_position('bottom')
-            newax1.spines['bottom'].set_position(('outward', 40))
-            newax2.spines['bottom'].set_position(('outward', 80))
-
-            ax.plot(np.arange(len(rir)), rir)
-            ax.axvline(recording_offset*Fs)
-            newax1.plot(np.arange(len(rir))/Fs, rir)
-            newax2.plot(np.arange(len(rir))/Fs*speed_of_sound, rir)
-
-            ax.set_xlabel('Time [samples]')
-            newax1.set_xlabel('Time [seconds]')
-            newax2.set_xlabel('Distance [meter]')
-
+            f_rir.create_dataset('delay/%s/%d' % (wavefile, i), data=delay_sample)
             plt.show()
-
-            src_mic_dist[i, j] = (toa - recording_offset)*speed_of_sound
-            ij += 1
-
-    plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
-    for j in range(J):
-        plt.axvline(j*30)
-    plt.scatter(np.arange(I*J)+0.5, L-direct_path_positions, c='C1')
-    plt.tight_layout()
-    plt.show()
-
-    return src_mic_dist
+    return
 
 
 if __name__ == "__main__":
@@ -222,12 +151,7 @@ if __name__ == "__main__":
 
     ## DECONVOLVE THE CHIRPS
     path_to_anechoic_dataset_rir = path_to_processed + 'anechoic_rir_data.hdf5'
-    # build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_dataset_rir)
+    build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_dataset_rir)
 
-    ## COMPUTE MICROPHONES-SOURCE DISTANCES
-    src_mic_dist = compute_distances_from_rirs(
-        path_to_anechoic_dataset_rir, dataset_note)
 
-    plt.imshow(src_mic_dist)
-    plt.show()
     pass
