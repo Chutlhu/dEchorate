@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import pandas as pd
 import pyroomacoustics as pra
 import matplotlib.pyplot as plt
 
@@ -13,7 +14,6 @@ max_dist = 5.741/2
 step_distances = (max_dist - min_dist)/6
 
 distances_from_walls = np.array([min_dist + i*step_distances for i in range(6)])
-print(distances_from_walls)
 
 mic0_center = np.array(
     [distances_from_walls[1], 3.5*distances_from_walls[1] + 0.2])
@@ -76,13 +76,10 @@ room.plot()
 plt.show()
 
 
-# room = pra.ShoeBox(room_size)
-# room.add_microphone_array(pra.MicrophoneArray(mics, room.fs))
 room.add_source(src4)
 room.add_source(src5)
 room.add_source(src6)
 room.add_source(src7)
-
 
 srcs = np.zeros([3, 7])
 srcs[:, 0] = np.array(src1)
@@ -92,14 +89,6 @@ srcs[:, 3] = np.array(src4)
 srcs[:, 4] = np.array(src5)
 srcs[:, 5] = np.array(src6)
 srcs[:, 6] = np.array(src7)
-
-print(srcs.T)
-1/0
-
-room.plot()
-plt.show()
-
-print(srcs)
 
 
 I = 6
@@ -152,36 +141,36 @@ plt.show()
 # plt.legend()
 # plt.show()
 
-# recompute the image-method
-room.image_source_model()
-# total number of refletion
-K = len(room.sources[0].damping)
-tdoas = np.zeros([I, J, K])
-alphas = np.zeros([I, J, K])
-# sort the number of reflection according to the distance
-# to the reference microphones and build the ATF and AIR
-# matrices Lh/F x I x J x K
-for i in range(I):
-    for j in range(J):
-        images = room.sources[j].images
-        center = room.mic_array.center
-        distances = np.linalg.norm(
-            images - room.mic_array.R[:, 0][:, None], axis=0)
-        # order in loc
-        ordering = np.argsort(distances)[:K]
-        for o, k in enumerate(ordering):
-            tdoas[i,j,o] = np.linalg.norm(room.mic_array.R[:, i] - room.sources[j].images[:, k])/343
-            alphas[i, j, o] = room.sources[j].damping[k]
+# # recompute the image-method
+# room.image_source_model()
+# # total number of refletion
+# K = len(room.sources[0].damping)
+# tdoas = np.zeros([I, J, K])
+# alphas = np.zeros([I, J, K])
+# # sort the number of reflection according to the distance
+# # to the reference microphones and build the ATF and AIR
+# # matrices Lh/F x I x J x K
+# for i in range(I):
+#     for j in range(J):
+#         images = room.sources[j].images
+#         center = room.mic_array.center
+#         distances = np.linalg.norm(
+#             images - room.mic_array.R[:, 0][:, None], axis=0)
+#         # order in loc
+#         ordering = np.argsort(distances)[:K]
+#         for o, k in enumerate(ordering):
+#             tdoas[i,j,o] = np.linalg.norm(room.mic_array.R[:, i] - room.sources[j].images[:, k])/343
+#             alphas[i, j, o] = room.sources[j].damping[k]
 
 
-plt.figure(figsize=(10, 5))
-plt.suptitle('Distribution Distances')
-for i in range(7):
-    plt.subplot(1,7,i+1)
-    plt.hist(343*tdoas[:, :, i].flatten())
-    plt.xlabel('K = %d' % i)
-plt.tight_layout()
-plt.show()
+# plt.figure(figsize=(10, 5))
+# plt.suptitle('Distribution Distances')
+# for i in range(7):
+#     plt.subplot(1,7,i+1)
+#     plt.hist(343*tdoas[:, :, i].flatten())
+#     plt.xlabel('K = %d' % i)
+# plt.tight_layout()
+# plt.show()
 
-plt.hist(sp.spatial.distance.cdist(mics.T, srcs.T).flatten())
-plt.show()
+# plt.hist(sp.spatial.distance.cdist(mics.T, srcs.T).flatten())
+# plt.show()

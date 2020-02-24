@@ -5,6 +5,7 @@ import soundfile as sf
 import matplotlib.pyplot as plt
 
 from src.utils.file_utils import save_to_pickle, load_from_mat
+from src.utils.dsp_utils import *
 
 
 # =============================================================
@@ -134,6 +135,7 @@ class ProbeSignal():
 
         if self.kind == 'exp_sine_sweep':
 
+            assert len(recording.shape)  == 2
             I = recording.shape[1]
             Lr = self.total_duration
 
@@ -142,7 +144,7 @@ class ProbeSignal():
             W = np.fft.fft(self.w, n=nfft)
             t = len(self.invfilter)+2*self.fs
             Lh = 10*self.fs
-            RIRs = np.zeros(shape=(Lh, I))
+            rirs = np.zeros(shape=(Lh, I))
             for i in range(I):
 
                 x = recording[:3*Lr, i]
@@ -151,34 +153,26 @@ class ProbeSignal():
                 X = np.fft.fft(x, n=nfft)
                 H = np.mean(Hinv * X, 0)
 
-                RIRs[:, i] = np.real(np.fft.ifft(H * W))[t:t+Lh]
+                rirs[:, i] = np.real(np.fft.ifft(H * W))[t:t+Lh]
 
-            return RIRs
+            return rirs
 
         else:
-
             raise NameError('Excitation type not implemented')
-            return
-
-    def compute_delay(self, recording, start=3, duration=0.5):
-        s = int(self.fs*start)
-        e = int(self.fs*duration + s)
-        x = self.signal[s:e].squeeze()
-        y = recording[s:e]
-        # X = np.fft.rfft(x)
-        # Y = np.fft.rfft(y)
-        # freqs = np.linspace(0, self.fs//2, len(X))
-        # Yh = np.conj(Y)
-        # lags = np.arange(-0.5, 0.5, step=0.001)
-        # scores = np.zeros_like(lags)
-        # for l, lag in enumerate(lags):
-        #     d = np.exp(-1j*2*np.pi*freqs*lag)
-        #     scores[l] = np.sum(np.real(d*X*Yh/np.abs(X*Y)))
-        # plt.plot(lags, scores)
-        # plt.show()
-        return lag
 
 
+    def compute_delay(self, y, start=0, duration=10):
+        s = int(start*self.fs)
+        e = s + int(duration*self.fs)
+        x = normalize(center(self.signal[s:e, :]))
+        y = normalize(center(y[s:e, :]))
+
+        # Cross-correlation of the two channels (same as convolution with one reversed)
+        corr = sg.correlate(x, y, mode='same')
+
+        # Find the offset of the peak. Zero delay would produce a peak at the midpoint
+        delay = int(len(corr)/2) - np.argmax(corr)
+        return delay
 
 
 if __name__ == "__main__":
