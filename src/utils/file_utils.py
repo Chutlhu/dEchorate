@@ -1,5 +1,5 @@
 import pickle as pkl
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 
 def save_to_pickle(filename, obj):
     with open(filename, 'wb') as handle:
@@ -11,5 +11,8 @@ def load_from_pickle(filename):
         b = pkl.load(handle)
     return b
 
-def load_from_mat(filename):
+def load_from_matlab(filename):
     return loadmat(filename)
+
+def save_to_matlab(filename, obj):
+    return savemat(filename, {'a':obj})
