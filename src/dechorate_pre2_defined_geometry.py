@@ -4,17 +4,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pyroomacoustics as pra
 
-from src.utils.file_utils import load_from_mat
+from src.utils.file_utils import load_from_matlab
 
 ## LOAD POSITIONS
 # load arrays' barycenters positions from file generated in excell
-# using data from dechorate_pre1_study_for_goem.py
-path_to_positions = './data/raw/positions.csv'
+# using data from the beacon and sketchUp (for theta)
+path_to_positions = './data/dECHORATE/positions.csv'
 audio_scene_positions = pd.read_csv(path_to_positions)
 
 mic_bar_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'array']
 mic_theta = np.array(mic_bar_pos['theta'])
-mic_aim = np.array(mic_bar_pos['aiming at'])
+mic_aim = np.array(mic_bar_pos['aiming_at'])
 mic_bar_pos = np.vstack([mic_bar_pos['x'], mic_bar_pos['y'], mic_bar_pos['z']])
 
 I = 5 * mic_bar_pos.shape[-1]
@@ -29,6 +29,7 @@ src_dir_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'dir']
 src_dir_pos = np.vstack([src_dir_pos['x'], src_dir_pos['y'], src_dir_pos['z']])
 Jd = src_dir_pos.shape[-1]
 Jo = src_omni_pos.shape[-1]
+Jn = src_noise_pos.shape[-1]
 J = Jd + Jo
 
 room_size = [5.543, 5.675, 2.353]
@@ -56,41 +57,27 @@ mics[:, 15:20] = rotate_and_translate(nULA, mic_bar_pos[:, 3], mic_theta[3])
 mics[:, 20:25] = rotate_and_translate(nULA, mic_bar_pos[:, 4], mic_theta[4])
 mics[:, 25:30] = rotate_and_translate(nULA, mic_bar_pos[:, 5], mic_theta[5])
 
+# built sources
 srcs = np.zeros([3, J])
+# directional sound sources
 srcs[:, :Jd] = src_dir_pos
+# omnidirectional sound sources
 srcs[:, Jd:] = src_omni_pos
 
-mics[2, :] += room_size[2]
-srcs[2, :] += room_size[2]
-src_noise_pos[2, :] += room_size[2]
-mic_bar_pos[2, :] += room_size[2]
-
+## BUILD THE DATABASE
 df = pd.DataFrame()
 
-## BUILD THE DATABASE
 # directional source
 c = 0
-for j in range(6):
+for j in range(Jd):
     df.at[c, 'id'] = int(j)+1
     df.at[c, 'type'] = 'directional'
     df.at[c, 'channel'] = int(33+j)
-    if j == 4:  # the 5th loudspeaker is on top of the 2nd one
-        df.at[c, 'x'] = srcs[0, 1]
-        df.at[c, 'y'] = srcs[1, 1]
-        df.at[c, 'z'] = srcs[2, 1]
-    elif j == 5:  # the 6th loudspeaker is on top of the 3rd one
-        df.at[c, 'x'] = srcs[0, 2]
-        df.at[c, 'y'] = srcs[1, 2]
-        df.at[c, 'z'] = srcs[2, 2]
-    else:
-        df.at[c, 'x'] = srcs[0, j]
-        df.at[c, 'y'] = srcs[1, j]
-        df.at[c, 'z'] = srcs[2, j]
     c += 1
 
 # omndirectional source
 c = len(df)
-for j in range(3):
+for j in range(Jo):
     df.at[c, 'id'] = int(j)+7
     df.at[c, 'type'] = 'omnidirectional'
     df.at[c, 'channel'] = 16
@@ -109,7 +96,7 @@ for j in range(3):
     c += 1
 
 c = len(df)
-for j in range(4):
+for j in range(Jn):
     df.at[c, 'id'] = int(j)+1
     df.at[c, 'type'] = 'babble noise'
     df.at[c, 'channel'] = int(45+j)
@@ -119,7 +106,7 @@ for j in range(4):
     c += 1
 
 c = len(df)
-for i in range(mics.shape[1]):
+for i in range(I):
     df.at[c, 'channel'] = int(33 + i)
     df.at[c, 'id'] = int(i)+1
     df.at[c, 'type'] = 'mic'
@@ -130,7 +117,7 @@ for i in range(mics.shape[1]):
     c += 1
 
 c = len(df)
-for i in range(mic_bar_pos.shape[1]):
+for i in range(I//5):
     df.at[c, 'channel'] = int(33 + i*5)
     df.at[c, 'id'] = int(i)+1
     df.at[c, 'type'] = 'array'
@@ -146,6 +133,7 @@ csv_filename = './data/dECHORATE/annotations/dECHORATE_positioning_note.csv'
 df.to_csv(csv_filename, sep=',')
 
 ## PRINT FIGURES
+# Blueprint 2D
 plt.gca().add_patch(
     plt.Rectangle((0, 0),
                    room_size[0], room_size[1], fill=False,
@@ -172,84 +160,17 @@ for j in range(J):
         plt.scatter(bar[0], bar[1], marker='o')
         plt.text(bar[0], bar[1], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
                  (j+1, bar[0], bar[1], bar[2]))
-plt.savefig('./data/dECHORATE/pictures/positioning.pdf')
+plt.savefig('./data/dECHORATE/pictures/positioning2D.pdf')
 plt.show()
 
-# Fs = 48000
-# K = 3
-# room = pra.ShoeBox(room_size, fs=48000, max_order=K)
+# plot with pyroomacoustics
+room = pra.ShoeBox(room_size, fs=48000)
 
-# mics = mics[:, 15:20]
-# mics[2, :] = 1.405
-
-# room.add_microphone_array(pra.MicrophoneArray(mics, room.fs))
-# room.add_source(list(srcs[:, 4]))
-
-# room.image_source_model(use_libroom=False)
-
-# # room.plot_rir()
-# # plt.show()
-# K = 20  # len(room.sources[0].damping)
-# toa = np.zeros([I, J, K])
-# amp = np.zeros([I, J, K])
-# walls = np.zeros([I, J, K])
-# order = np.zeros([I, J, K])
-# for i in range(5):
-#     for j in range(1):
-#         images = room.sources[j].images
-#         center = room.mic_array.center
-#         distances = np.linalg.norm(
-#             images - room.mic_array.R[:, i, None], axis=0)
-#         # order in loc
-#         ordering = np.argsort(distances)[:K]
-#         for o, k in enumerate(ordering):
-#             amp[i, j, o] = room.sources[j].damping[k] / \
-#                 (4 * np.pi * distances[k])
-#             toa[i, j, o] = distances[k]/340
-#             walls[i, j, o] = room.sources[j].walls[k]
-#             order[i, j, o] = room.sources[j].orders[k]
-
-# h = load_from_mat('./data/recordings/omni/rir_omni.mat')['H']
-# times = np.arange(h.shape[0])/Fs
-# h = h[:, 0] / np.max(np.abs(h[:, 0]))
-# h *= amp[0, 0, 0]
-
-# plt.plot(times[6000:8720], np.abs(sp.signal.hilbert(h[6000:8720])))
-# plt.stem(toa[0, 0, :]+0.1356, amp[0, 0, :])
-
-# for k in range(K):
-#     wall_idx = int(walls[0, 0, k])
-#     if wall_idx == -1:
-#         wall_name = 'direct'
-#     else:
-#         wall_name = '%s:%d' % (room.wall_names[wall_idx], order[0, 0, k])
-#     plt.text(toa[0, 0, k]+0.1356, amp[0, 0, k], wall_name)
-# plt.show()
+room.add_microphone_array(pra.MicrophoneArray(mics, room.fs))
+for j in range(J):
+    room.add_source(srcs[:, j])
+plt.savefig('./data/dECHORATE/pictures/positioning3D.pdf')
+room.plot()
+plt.show()
 
 
-# save geometry in database
-# df = pd.DataFrame()
-# c = 0
-# for i in range(mics.shape[1]):
-#     df.at[c, 'object'] = 'microphone'
-#     df.at[c, 'position'] = mics[:, i]
-#     df.at[c, 'channel'] = i + 33
-#     df.at[c, 'id'] = i
-#     df.at[c, 'array'] = i//5
-
-#     c += 1
-
-# for j in range(J):
-#     df.at[c, 'object'] = 'sources'
-#     df.at[c, 'position'] = srcs[:, i]
-#     df.at[c, 'channel'] = j
-#     df.at[c, 'id'] = j
-#     if j < 4:
-#         df.at[c, 'type'] = 'directional'
-#     else:
-#         df.at[c, 'type'] = 'omnidirectional'
-
-#     c += 1
-
-# print(df)
-# 1/0
