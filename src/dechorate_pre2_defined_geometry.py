@@ -15,18 +15,18 @@ audio_scene_positions = pd.read_csv(path_to_positions)
 mic_bar_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'array']
 mic_theta = np.array(mic_bar_pos['theta'])
 mic_aim = np.array(mic_bar_pos['aiming_at'])
-mic_bar_pos = np.vstack([mic_bar_pos['x'], mic_bar_pos['y'], mic_bar_pos['z']])
+mic_bar_pos = np.vstack([mic_bar_pos['x'], mic_bar_pos['y'], mic_bar_pos['2.353']])
 
 I = 5 * mic_bar_pos.shape[-1]
 
 src_omni_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'omni']
-src_omni_pos = np.vstack([src_omni_pos['x'], src_omni_pos['y'], src_omni_pos['z']])
+src_omni_pos = np.vstack([src_omni_pos['x'], src_omni_pos['y'], src_omni_pos['2.353']])
 
 src_noise_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'noise']
-src_noise_pos = np.vstack([src_noise_pos['x'], src_noise_pos['y'], src_noise_pos['z']])
+src_noise_pos = np.vstack([src_noise_pos['x'], src_noise_pos['y'], src_noise_pos['2.353']])
 
 src_dir_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'dir']
-src_dir_pos = np.vstack([src_dir_pos['x'], src_dir_pos['y'], src_dir_pos['z']])
+src_dir_pos = np.vstack([src_dir_pos['x'], src_dir_pos['y'], src_dir_pos['2.353']])
 Jd = src_dir_pos.shape[-1]
 Jo = src_omni_pos.shape[-1]
 Jn = src_noise_pos.shape[-1]
@@ -73,26 +73,20 @@ for j in range(Jd):
     df.at[c, 'id'] = int(j)+1
     df.at[c, 'type'] = 'directional'
     df.at[c, 'channel'] = int(33+j)
+    df.at[c, 'x'] = srcs[0, j]
+    df.at[c, 'y'] = srcs[1, j]
+    df.at[c, 'z'] = srcs[2, j]
     c += 1
 
 # omndirectional source
 c = len(df)
-for j in range(Jo):
-    df.at[c, 'id'] = int(j)+7
+for j in range(Jd, Jd+Jo):
+    df.at[c, 'id'] = int(j)+1
     df.at[c, 'type'] = 'omnidirectional'
     df.at[c, 'channel'] = 16
-    if j == 0:
-        df.at[c, 'x'] = srcs[0, 4]
-        df.at[c, 'y'] = srcs[1, 4]
-        df.at[c, 'z'] = srcs[2, 4]
-    if j == 1:
-        df.at[c, 'x'] = srcs[0, 6]
-        df.at[c, 'y'] = srcs[1, 6]
-        df.at[c, 'z'] = srcs[2, 6]
-    if j == 2:
-        df.at[c, 'x'] = srcs[0, 5]
-        df.at[c, 'y'] = srcs[1, 5]
-        df.at[c, 'z'] = srcs[2, 5]
+    df.at[c, 'x'] = srcs[0, j]
+    df.at[c, 'y'] = srcs[1, j]
+    df.at[c, 'z'] = srcs[2, j]
     c += 1
 
 c = len(df)
@@ -133,7 +127,8 @@ csv_filename = './data/dECHORATE/annotations/dECHORATE_positioning_note.csv'
 df.to_csv(csv_filename, sep=',')
 
 ## PRINT FIGURES
-# Blueprint 2D
+# Blueprint 2D xy plane
+plt.figure(figsize=(16,9))
 plt.gca().add_patch(
     plt.Rectangle((0, 0),
                    room_size[0], room_size[1], fill=False,
@@ -147,7 +142,7 @@ for i in range(I):
     if i % 5 == 0:
         bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
         plt.text(bar[0]+0.1, bar[1]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (i//5 + 1, bar[0], bar[1], bar[2]))
+                 (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
 
 
 for j in range(J):
@@ -155,12 +150,74 @@ for j in range(J):
     if j < Jd:
         plt.scatter(bar[0], bar[1], marker='v')
         plt.text(bar[0], bar[1], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[0], bar[1], bar[2]))
+                 (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
     else:
         plt.scatter(bar[0], bar[1], marker='o')
         plt.text(bar[0], bar[1], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[0], bar[1], bar[2]))
-plt.savefig('./data/dECHORATE/pictures/positioning2D.pdf')
+                 (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+plt.savefig('./reports/figures/positioning2D_xy.pdf')
+plt.show()
+
+# Blueprint 2D xz plane
+plt.figure(figsize=(16, 9))
+plt.gca().add_patch(
+    plt.Rectangle((0, 0),
+                  room_size[0], room_size[2], fill=False,
+                  edgecolor='g', linewidth=1)
+)
+
+for i in range(I):
+    plt.scatter(mics[0, i], mics[2, i], marker='X')
+    plt.text(mics[0, i], mics[2, i], '$%d$' %
+             (i+33), fontdict={'fontsize': 8})
+    if i % 5 == 0:
+        bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
+        plt.text(bar[0]+0.1, bar[2]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
+                 (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+
+
+for j in range(J):
+    bar = srcs[:, j]
+    if j < Jd:
+        plt.scatter(bar[0], bar[2], marker='v')
+        plt.text(bar[0], bar[2], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
+                 (j+1, bar[0], bar[2], bar[2]), fontdict={'fontsize': 8})
+    else:
+        plt.scatter(bar[0], bar[2], marker='o')
+        plt.text(bar[0], bar[2], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
+                 (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+plt.savefig('./reports/figures/positioning2D_xz.pdf')
+plt.show()
+
+# Blueprint 2D yz plane
+plt.figure(figsize=(16, 9))
+plt.gca().add_patch(
+    plt.Rectangle((0, 0),
+                  room_size[1], room_size[2], fill=False,
+                  edgecolor='g', linewidth=1)
+)
+
+for i in range(I):
+    plt.scatter(mics[1, i], mics[2, i], marker='X')
+    plt.text(mics[1, i], mics[2, i], '$%d$' %
+             (i+33), fontdict={'fontsize': 8})
+    if i % 5 == 0:
+        bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
+        plt.text(bar[1]+0.1, bar[2]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
+                 (i//5 + 1, bar[1], bar[1], bar[2]), fontdict={'fontsize': 8})
+
+
+for j in range(J):
+    bar = srcs[:, j]
+    if j < Jd:
+        plt.scatter(bar[1], bar[2], marker='v')
+        plt.text(bar[1], bar[2], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
+                 (j+1, bar[1], bar[2], bar[2]), fontdict={'fontsize': 8})
+    else:
+        plt.scatter(bar[1], bar[2], marker='o')
+        plt.text(bar[1], bar[2], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
+                 (j+1, bar[1], bar[1], bar[2]), fontdict={'fontsize': 8})
+plt.savefig('./reports/figures/positioning2D_yz.pdf')
 plt.show()
 
 # plot with pyroomacoustics
@@ -168,9 +225,12 @@ room = pra.ShoeBox(room_size, fs=48000)
 
 room.add_microphone_array(pra.MicrophoneArray(mics, room.fs))
 for j in range(J):
-    room.add_source(srcs[:, j])
-plt.savefig('./data/dECHORATE/pictures/positioning3D.pdf')
+    try:
+        room.add_source(srcs[:, j])
+    except:
+        print('src', j, srcs[:, j])
 room.plot()
+plt.savefig('./reports/figures/positioning3D.pdf')
 plt.show()
 
 

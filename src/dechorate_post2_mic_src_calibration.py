@@ -61,11 +61,6 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
             peaks, _ = sg.find_peaks(
                 rir, height=0.2, distance=50, width=2, prominence=0.6)
 
-            # plt.plot(rir)
-            # plt.plot(peaks, rir[peaks], "x")
-            # plt.plot(np.zeros_like(rir), "--", color="gray")
-            # plt.show()
-
             # compute the theoretical distance
             mic_pos = [entry['mic_pos_x'].values, entry['mic_pos_y'].values, entry['mic_pos_z'].values]
             mics_pos[:, i] = np.array(mic_pos).squeeze()
@@ -75,6 +70,13 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
 
             d = np.linalg.norm(mics_pos[:, i] - srcs_pos[:, j])
             tof_geom = d / speed_of_sound
+
+            # if j == 7:
+            #     plt.plot(rir)
+            #     plt.plot(peaks, rir[peaks], "x")
+            #     plt.plot(np.min(peaks), rir[np.min(peaks)], "o")
+            #     plt.plot(np.zeros_like(rir), "--", color="gray")
+            #     plt.show()
 
             # extract the time of arrival from the RIR
             direct_path_positions[ij] = np.min(peaks)
@@ -126,18 +128,7 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
 
             ij += 1
 
-    plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
-    for j in range(J):
-        plt.axvline(j*30, color='C7')
-    plt.axhline(y=L-recording_offset, label='Time of Emission')
-    plt.scatter(np.arange(I*J)+0.5, L-direct_path_positions, c='C1', label='Peak Picking')
-    plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_simulation.T.flatten()*Fs, c='C2', label='Pyroom')
-    plt.tight_layout()
-    plt.legend()
-    plt.savefig('./reports/figures/rir_skyline.pdf')
-    plt.show()
-
-    return tofs_simulation, tofs_rir, mics_pos, srcs_pos
+    return rirs, recording_offset, tofs_simulation, tofs_rir, mics_pos, srcs_pos
 
 def nlls_mds(D, init):
     X = init['X']
@@ -157,13 +148,43 @@ def nlls_mds(D, init):
         return cost
 
     x0 = np.concatenate([X, A], axis=1).flatten()
-    res = least_squares(fun, x0, args=(I, J))
-    print(res)
+    ub = np.zeros_like(x0)
+    ub[:] = np.inf
+    lb = -ub
+    # sources in +-5 cm from the guess
+    for j in range(J):
+        for d in range(dim):
+            ub[x0 == A[d, j]] = A[d, j] + 0.50
+            lb[x0 == A[d, j]] = A[d, j] - 0.50
+    # micros in +-5 cm from the guess
+    for i in range(I):
+        for d in range(dim):
+            ub[x0 == X[d, i]] = X[d, i] + 0.50
+            lb[x0 == X[d, i]] = X[d, i] - 0.50
+
+    # set the origin in speaker 1
+    bounds = sp.optimize.Bounds(lb, ub)
+    res = sp.optimize.minimize(fun, x0, args=(I, J), bounds=bounds, options={'maxiter':10e3, 'maxfun':100e3})
+    print('Optimization')
+    print('message', res.message)
+    print('nit', res.nit)
+    print('nfev', res.nfev)
+    print('success', res.success)
+    print('fun', res.fun)
     solution = res.x
     solution = solution.reshape(3, I+J)
     X = solution[:, :I]
     A = solution[:, I:]
     return X, A
+
+def edm(X, Y):
+    # norm_X2 = sum(X. ^ 2);
+    norm_X2 = np.sum(X ** 2, axis=0)[None, :]
+    # norm_Y2 = sum(Y. ^ 2);
+    norm_Y2 = np.sum(Y ** 2, axis=0)[None, :]
+    # D = bsxfun(@plus, norm_X2', norm_Y2) - 2*X'*Y;
+    D = norm_X2.T + norm_Y2 - 2 * X.T @ Y
+    return D
 
 def crcc_mds(sqT, init):
     X = init['X']
@@ -194,14 +215,6 @@ def crcc_mds(sqT, init):
     # a1 = sqT(1, 1) * c
     a1 = sqT[1, 1]
     # function C = costC2(C, U, Sigma, V, D, a1)
-    def edm(X, Y):
-        # norm_X2 = sum(X. ^ 2);
-        norm_X2 = np.sum(X ** 2, axis=0)[None, :]
-        # norm_Y2 = sum(Y. ^ 2);
-        norm_Y2 = np.sum(Y ** 2, axis=0)[None, :]
-        # D = bsxfun(@plus, norm_X2', norm_Y2) - 2*X'*Y;
-        D = norm_X2.T + norm_Y2 - 2 * X.T @ Y
-        return D
 
     def fun(C, U, Sigma, V, D, a1):
         C = C.reshape([3,3])
@@ -258,11 +271,23 @@ if __name__ == "__main__":
         & (dataset['src_signal'] == 'chirp')
     ]
 
-    ## COMPUTE MICROPHONES-SOURCE DISTANCES
-    tofs_simulation, tofs_rir, mics_pos, srcs_pos = compute_distances_from_rirs(
+    ## COMPUTE DIRECT PATH POSITIONS
+    rirs, recording_offset, tofs_simulation, tofs_rir, mics_pos, srcs_pos = compute_distances_from_rirs(
         path_to_anechoic_dataset_rir, anechoic_dataset_chirp)
 
-    # plt.imshow(tofs_rir)
+    L, IJ = rirs.shape
+    D, I = mics_pos.shape
+    D, J = srcs_pos.shape
+
+    # plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
+    # for j in range(J):
+    #     plt.axvline(j*30, color='C7')
+    # plt.axhline(y=L-recording_offset, label='Time of Emission')
+    # plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_rir.T.flatten()*Fs, c='C1', label='Peak Picking')
+    # plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_simulation.T.flatten()*Fs, c='C2', label='Pyroom')
+    # plt.tight_layout()
+    # plt.legend()
+    # plt.savefig('./reports/figures/rir_skyline.pdf')
     # plt.show()
 
     save_to_matlab(path_to_processed + 'src_mic_dist.mat', tofs_rir)
@@ -270,21 +295,74 @@ if __name__ == "__main__":
     # ## MULTIDIMENSIONAL SCALING
     # # nonlinear least square problem with good initialization
     X = mics_pos
-    A = srcs_pos
-    # D = tofs_rir * speed_of_sound  # tofs_rir
-    D = tofs_simulation * speed_of_sound
-    # mics_pos_est, srcs_pos_est = nlls_mds(D, init={'X': X, 'A': A})
+    A = srcs_pos[:, :4]
+    # D = tofs_simulation * speed_of_sound
+    Dedm = edm(X, A) ** (.5)
+    Dtof = tofs_rir[:, :4] * speed_of_sound
+    Dgeo = tofs_simulation[:, :4] * speed_of_sound
+    assert np.allclose(Dedm, Dgeo)
+
+    sp.io.savemat('./data/processed/calibration_data.mat', {'D':D, 'X':X, 'A':A})
+    mics_pos_est, srcs_pos_est = nlls_mds(Dtof, init={'X': X, 'A': A})
+
     # mics_pos_est, srcs_pos_est = crcc_mds(D, init={'X': X, 'A': A})
-    # np.save(path_to_processed + 'mics_pos_est_nlls.npy', mics_pos_est)
-    # np.save(path_to_processed + 'srcs_pos_est_nlls.npy', srcs_pos_est)
-    mics_pos_est = np.load(path_to_processed + 'mics_pos_est_nlls.npy')
-    srcs_pos_est = np.load(path_to_processed + 'srcs_pos_est_nlls.npy')
+    # # np.save(path_to_processed + 'mics_pos_est_nlls.npy', mics_pos_est)
+    # # np.save(path_to_processed + 'srcs_pos_est_nlls.npy', srcs_pos_est)
+    # mics_pos_est = np.load(path_to_processed + 'mics_pos_est_nlls.npy')
+    # srcs_pos_est = np.load(path_to_processed + 'srcs_pos_est_nlls.npy')
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics')
-    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs')
-    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics')
-    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='mics')
+    ax.scatter(X[0, :], X[1, :], X[2, :], marker='o', label='mics init')
+    ax.scatter(A[0, :], A[1, :], A[2, :], marker='o', label='srcs init')
+    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
+    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
+    plt.legend()
     plt.show()
+
+    new_tofs = (edm(mics_pos_est, srcs_pos_est) ** .5) / speed_of_sound
+
+    # plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
+    for j in range(J):
+        plt.axvline(j*30, color='C7')
+    plt.axhline(y=L-recording_offset, label='Time of Emission')
+    plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_rir.T.flatten()*Fs, c='C1', label='Peak Picking')
+    plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_simulation.T.flatten()*Fs, c='C2', label='Pyroom')
+    plt.scatter(np.arange(len(new_tofs.flatten()))+0.5, L - recording_offset - new_tofs.T.flatten()*Fs, c='C3', marker='X', label='After EDM')
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig('./reports/figures/rir_skyline_after_calibration.pdf')
+    plt.show()
+
+    # Blueprint 2D xz plane
+    room_size = [5.543, 5.675, 2.353]
+    plt.figure(figsize=(16, 9))
+    plt.gca().add_patch(
+        plt.Rectangle((0, 0),
+                    room_size[0], room_size[2], fill=False,
+                    edgecolor='g', linewidth=1)
+    )
+
+    plt.scatter(mics_pos_est[0, :], mics_pos_est[2, :], marker='X')
+    plt.scatter(srcs_pos_est[0, :], srcs_pos_est[2, :], marker='v')
+    # for i in range(I):
+        # plt.text(mics_pos_est[0, i], mics_pos_est[2, i], '$%d$' %
+        #         (i+33), fontdict={'fontsize': 8})
+        # if i % 5 == 0:
+        #     bar = np.mean(mics_pos_est[:, 5*i//5:5*(i//5+1)], axis=1)
+        #     plt.text(bar[0]+0.1, bar[2]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
+        #             (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+
+    # for j in range(J):
+    #     bar = srcs_pos_est[:, j]
+    #     if j < 6:
+    #         plt.text(bar[0], bar[2], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
+    #                 (j+1, bar[0], bar[2], bar[2]), fontdict={'fontsize': 8})
+    #     else:
+    #         plt.scatter(bar[0], bar[2], marker='o')
+    #         plt.text(bar[0], bar[2], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
+                    # (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+    plt.savefig('./reports/figures/cal_positioning2D_xz.pdf')
+    plt.show()
+
     pass

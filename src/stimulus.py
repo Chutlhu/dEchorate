@@ -4,7 +4,7 @@ import soundfile as sf
 
 import matplotlib.pyplot as plt
 
-from src.utils.file_utils import save_to_pickle, load_from_mat
+from src.utils.file_utils import save_to_pickle, load_from_matlab
 from src.utils.dsp_utils import *
 
 
@@ -33,7 +33,7 @@ class ProbeSignal():
         self.signal = None
         self.invfilter = None
 
-        self.w = load_from_mat('./data/raw/bp_filt_blackman_4000.mat')['Num'].squeeze()
+        self.w = load_from_matlab('./data/raw/bp_filt_blackman_4000.mat')['Num'].squeeze()
 
     def save(self, path_to_output):
         sf.write(path_to_output, self.signal, self.fs)
