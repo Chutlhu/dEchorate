@@ -11,10 +11,14 @@ from tqdm import tqdm
 from sklearn import manifold
 from scipy.optimize import least_squares
 
-
 from src.utils.file_utils import save_to_matlab
+from src.utils.dsp_utils import envelope
+from src import constants
 
-Fs = 48000 # Sampling frequency
+from risotto import deconvolution as deconv
+
+Fs = constants['Fs'] # Sampling frequency
+recording_offset = constants['recording_offset']
 T = 24     # temperature
 speed_of_sound = 331.3 + 0.606 * T # speed of sound
 L = int(0.5*Fs) # max length of the filter
@@ -53,13 +57,10 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
 
             wavefile = entry['filename'].values[0]
 
-            rir = f_rir['rir/%s/%d' % (wavefile, i)][()]
-            rir = np.abs(rir).squeeze()
-            rir = rir/np.max(rir)
-            rirs[:, ij] = rir
-
-            peaks, _ = sg.find_peaks(
-                rir, height=0.2, distance=50, width=2, prominence=0.6)
+            rir = f_rir['rir/%s/%d' % (wavefile, i)][()].squeeze()
+            rir_abs = np.abs(rir)
+            rir_abs = rir_abs/np.max(rir_abs)
+            rirs[:, ij] = rir_abs
 
             # compute the theoretical distance
             mic_pos = [entry['mic_pos_x'].values, entry['mic_pos_y'].values, entry['mic_pos_z'].values]
@@ -71,19 +72,54 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
             d = np.linalg.norm(mics_pos[:, i] - srcs_pos[:, j])
             tof_geom = d / speed_of_sound
 
-            # if j == 7:
-            #     plt.plot(rir)
-            #     plt.plot(peaks, rir[peaks], "x")
-            #     plt.plot(np.min(peaks), rir[np.min(peaks)], "o")
-            #     plt.plot(np.zeros_like(rir), "--", color="gray")
-            #     plt.show()
+            # image wtr to the ceiling
+            imag_src_pos_ceiling = srcs_pos[:, j].copy()
+            imag_src_pos_ceiling[2] = 2.353 + (2.353 - imag_src_pos_ceiling[2])
+            imag_src_pos_floor = srcs_pos[:, j].copy()
+            imag_src_pos_floor[2] = -imag_src_pos_floor[2]
+            d_ceiling = np.linalg.norm(imag_src_pos_ceiling - mics_pos[:, i])
+            d_floor   = np.linalg.norm(imag_src_pos_floor - mics_pos[:, i])
+            tof_geom_ceiling = d_ceiling / speed_of_sound
+            tof_geom_floor = d_floor / speed_of_sound
+
+            thr1 = int(recording_offset + Fs*(tof_geom + np.abs(np.min([tof_geom_ceiling,tof_geom_floor])-tof_geom)/2))
+            thr2 = int(recording_offset + Fs*(np.max([tof_geom_ceiling, tof_geom_floor])) + 200)
+
+            # direct path peak
+            peaks, _ = sg.find_peaks(rir_abs, height=0.2, distance=50, width=2, prominence=0.6)
+            dp_peak = np.min(peaks)
+            # floor
+            d_min_floor_ceiling = np.abs(tof_geom_ceiling - tof_geom_floor)*Fs
+            peaks, _ = sg.find_peaks(
+                rir_abs[thr1:thr2], height=0.2, distance=50, width=2, prominence=0.2)
+            peaks = peaks + thr1
+
+            # # direct path deconvolution
+            # x = np.zeros_like(rir)
+            # a = 30
+            # x[:2*a] = rir[dp_peak-a:dp_peak+a]
+            # y = rir.copy()
+            # h = np.zeros_like(rir)
+            # h_tmp = deconv.wiener_deconvolution(y, x)
+            # h[a:] = h_tmp[:-a]
+            # rir_abs = np.abs(h)
+
+
+            # # if j == 7:
+            plt.title('Source %d, array %d, microphone %d' % (j+1, i//5 + 1, i % 5+1))
+            plt.plot(rir_abs)
+            plt.plot(peaks, rir_abs[peaks], "x")
+            plt.plot(dp_peak, rir_abs[dp_peak], "o")
+            plt.axvline(x=recording_offset, color='C0', label='offset')
+            plt.axvline(x=tof_geom*Fs+recording_offset, color='C0', label='direct')
+            # plt.axvline(x=tof_geom_ceiling*Fs+recording_offset, color='C1', label='ceiling')
+            plt.axvline(x=tof_geom_floor*Fs+recording_offset, color='C2', label='floor')
+            plt.legend()
+            plt.xlim([recording_offset-100, recording_offset+800])
+            plt.show()
 
             # extract the time of arrival from the RIR
-            direct_path_positions[ij] = np.min(peaks)
-            recording_offset = f_rir['delay/%s/%d' % (wavefile, i)][()]
-            # for recording with source j=5, the loopback is empty => wrong offset
-            if j == 5:
-                recording_offset = 6444
+            direct_path_positions[ij] = dp_peak
 
             toa = direct_path_positions[ij]/Fs
 
@@ -256,18 +292,21 @@ if __name__ == "__main__":
     dataset_dir = './data/dECHORATE/'
     path_to_processed = './data/processed/'
 
-    path_to_anechoic_dataset_rir = path_to_processed + 'anechoic_rir_data.hdf5'
+    session_id = '000000' # '010000'
+    path_to_anechoic_dataset_rir = path_to_processed + '%s_rir_data.hdf5' % session_id
 
     path_to_database = dataset_dir + 'annotations/dECHORATE_database.csv'
     dataset = pd.read_csv(path_to_database)
-    # select dataset with anechoic entries
+    # select dataset with entries according to session_id
+    f, c, w, e, n, s = [int(i) for i in list(session_id)]
     anechoic_dataset_chirp = dataset.loc[
-          (dataset['room_rfl_floor'] == 0)
-        & (dataset['room_rfl_ceiling'] == 0)
-        & (dataset['room_rfl_west'] == 0)
-        & (dataset['room_rfl_east'] == 0)
-        & (dataset['room_rfl_north'] == 0)
-        & (dataset['room_rfl_south'] == 0)
+          (dataset['room_rfl_floor'] == f)
+        & (dataset['room_rfl_ceiling'] == c)
+        & (dataset['room_rfl_west'] == w)
+        & (dataset['room_rfl_east'] == e)
+        & (dataset['room_rfl_north'] == n)
+        & (dataset['room_rfl_south'] == s)
+        & (dataset['room_fornitures'] == False)
         & (dataset['src_signal'] == 'chirp')
     ]
 
@@ -279,16 +318,16 @@ if __name__ == "__main__":
     D, I = mics_pos.shape
     D, J = srcs_pos.shape
 
-    # plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
-    # for j in range(J):
-    #     plt.axvline(j*30, color='C7')
-    # plt.axhline(y=L-recording_offset, label='Time of Emission')
-    # plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_rir.T.flatten()*Fs, c='C1', label='Peak Picking')
-    # plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_simulation.T.flatten()*Fs, c='C2', label='Pyroom')
-    # plt.tight_layout()
-    # plt.legend()
-    # plt.savefig('./reports/figures/rir_skyline.pdf')
-    # plt.show()
+    plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
+    for j in range(J):
+        plt.axvline(j*30, color='C7')
+    plt.axhline(y=L-recording_offset, label='Time of Emission')
+    plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_rir.T.flatten()*Fs, c='C1', label='Peak Picking')
+    plt.scatter(np.arange(I*J)+0.5, L - recording_offset - tofs_simulation.T.flatten()*Fs, c='C2', label='Pyroom')
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig('./reports/figures/rir_skyline.pdf')
+    plt.show()
 
     save_to_matlab(path_to_processed + 'src_mic_dist.mat', tofs_rir)
 

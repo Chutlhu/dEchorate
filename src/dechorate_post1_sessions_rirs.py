@@ -24,26 +24,27 @@ def get_zipped_file(filename, path_to_zipfile, path_to_output):
 
 
 def silence_and_chirps_names(path_to_note, session_id):
-    print([int(i) for i in list(session_id)])
-    f, c, w, e, s = [int(i) for i in list(session_id)]
+    f, c, w, e, n, s = [int(i) for i in list(session_id)]
     dataset_note = pd.read_csv(path_to_note)
     # select the annechoic recordings and only chirps
     anechoic_chirps = dataset_note.loc[
-        (dataset_note['floor'] == 0 )
-        & (dataset_note['ceiling'] == 1)
-        & (dataset_note['west'] == 0)
-        & (dataset_note['east'] == 0)
-        & (dataset_note['north'] == 0)
-        & (dataset_note['south'] == 0)
+        (dataset_note['floor'] == f)
+        & (dataset_note['ceiling'] == c)
+        & (dataset_note['west'] == w)
+        & (dataset_note['east'] == e)
+        & (dataset_note['north'] == n)
+        & (dataset_note['south'] == s)
+        & (dataset_note['fornitures'] == False)
         & (dataset_note['signal'] == 'chirp')
     ]
     anechoic_silence = dataset_note.loc[
-        (dataset_note['floor'] == 0)
-        & (dataset_note['ceiling'] == 1)
-        & (dataset_note['west'] == 0)
-        & (dataset_note['east'] == 0)
-        & (dataset_note['north'] == 0)
-        & (dataset_note['south'] == 0)
+        (dataset_note['floor'] == f)
+        & (dataset_note['ceiling'] == c)
+        & (dataset_note['west'] == w)
+        & (dataset_note['east'] == e)
+        & (dataset_note['north'] == n)
+        & (dataset_note['south'] == s)
+        & (dataset_note['fornitures'] == False)
         & (dataset_note['signal'] == 'silence')
     ]
     # check that there are not detrimental artifacts
@@ -106,6 +107,7 @@ def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_da
         # compute the global delay from the playback:
         playback = x[:, -1]
         rir_playback = ps.compute_rir(playback[:, None])
+
         delay_sample = np.argmax(np.abs(rir_playback))
         # delay_sample = ps.compute_delay(playback[:, None], start=1, duration=10)
         delay = delay_sample/Fs
@@ -129,7 +131,7 @@ def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_da
             # store info in the anechoic dataset
             f_rir.create_dataset('rir/%s/%d' % (wavefile, i), data=rir_i)
             f_rir.create_dataset('delay/%s/%d' % (wavefile, i), data=delay_sample)
-            plt.show()
+
     return
 
 
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     path_to_tmp = '/tmp/'
     path_to_processed = './data/processed/'
 
-    session_id = '010000'
+    session_id = '000000'
     session_filename = "recordings/room-%s.zip" % session_id
     path_to_session_data = dataset_dir + session_filename
 
