@@ -37,8 +37,6 @@ def silence_and_chirps_names(path_to_note, session_id):
         & (dataset_note['fornitures'] == False)
         & (dataset_note['signal'] == 'chirp')
     ]
-    print(dataset_note)
-    print(chirps)
 
     silence = dataset_note.loc[
         (dataset_note['floor'] == f)
@@ -51,8 +49,16 @@ def silence_and_chirps_names(path_to_note, session_id):
         & (dataset_note['signal'] == 'silence')
     ]
     # check that there are not detrimental artifacts
-    assert np.all(chirps['artifacts'] < 2)
-    assert np.all(silence['artifacts'] < 2)
+    try:
+        assert np.all(chirps['artifacts'] < 2)
+    except:
+        print('Artifacts in')
+        print(chirps['artifacts'])
+    try:
+        assert np.all(silence['artifacts'] < 2)
+    except:
+        print(silence['artifacts'])
+
     # get only the filename
     wavfile_chirps = list(chirps['filename'])
     wavfile_silence = list(silence['filename'])
@@ -144,7 +150,7 @@ if __name__ == "__main__":
     path_to_tmp = '/tmp/'
     path_to_processed = './data/processed/'
 
-    session_id = '001000'
+    session_id = '000010'
     session_filename = "recordings/room-%s.zip" % session_id
     path_to_session_data = dataset_dir + session_filename
 
