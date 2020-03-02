@@ -24,10 +24,10 @@ def get_zipped_file(filename, path_to_zipfile, path_to_output):
 
 
 def silence_and_chirps_names(path_to_note, session_id):
-    f, c, w, e, n, s = [int(i) for i in list(session_id)]
+    f, c, w, s, e, n = [int(i) for i in list(session_id)]
     dataset_note = pd.read_csv(path_to_note)
     # select the annechoic recordings and only chirps
-    anechoic_chirps = dataset_note.loc[
+    chirps = dataset_note.loc[
         (dataset_note['floor'] == f)
         & (dataset_note['ceiling'] == c)
         & (dataset_note['west'] == w)
@@ -37,7 +37,10 @@ def silence_and_chirps_names(path_to_note, session_id):
         & (dataset_note['fornitures'] == False)
         & (dataset_note['signal'] == 'chirp')
     ]
-    anechoic_silence = dataset_note.loc[
+    print(dataset_note)
+    print(chirps)
+
+    silence = dataset_note.loc[
         (dataset_note['floor'] == f)
         & (dataset_note['ceiling'] == c)
         & (dataset_note['west'] == w)
@@ -48,11 +51,11 @@ def silence_and_chirps_names(path_to_note, session_id):
         & (dataset_note['signal'] == 'silence')
     ]
     # check that there are not detrimental artifacts
-    assert np.all(anechoic_chirps['artifacts'] < 2)
-    assert np.all(anechoic_silence['artifacts'] < 2)
+    assert np.all(chirps['artifacts'] < 2)
+    assert np.all(silence['artifacts'] < 2)
     # get only the filename
-    wavfile_chirps = list(anechoic_chirps['filename'])
-    wavfile_silence = list(anechoic_silence['filename'])
+    wavfile_chirps = list(chirps['filename'])
+    wavfile_silence = list(silence['filename'])
     return dataset_note, wavfile_chirps, wavfile_silence
 
 
@@ -141,7 +144,7 @@ if __name__ == "__main__":
     path_to_tmp = '/tmp/'
     path_to_processed = './data/processed/'
 
-    session_id = '000000'
+    session_id = '001000'
     session_filename = "recordings/room-%s.zip" % session_id
     path_to_session_data = dataset_dir + session_filename
 

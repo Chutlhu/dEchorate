@@ -174,29 +174,35 @@ def nlls_mds(D, init):
     assert D.shape == (I, J)
 
     def fun(xXA, I, J):
-        xXA = xXA.reshape(3, I+J)
-        X = xXA[:, :I]
-        A = xXA[:, I:]
+        X = xXA[:3*I].reshape(3, I)
+        A = xXA[3*I:].reshape(3, J)
         cost = 0
         for i in range(I):
             for j in range(J):
-                cost += (np.linalg.norm(X[:, i] - A[:, j]) - D[i, j])**2
+                cost += (np.linalg.norm(X[:, i] - A[:, j])**2 - D[i, j]**2)**2
         return cost
 
-    x0 = np.concatenate([X, A], axis=1).flatten()
+    x0 = np.concatenate([X.flatten(), A.flatten()])
     ub = np.zeros_like(x0)
     ub[:] = np.inf
     lb = -ub
     # sources in +-5 cm from the guess
+    dims_slacks = [.5, .5, .5]
     for j in range(J):
         for d in range(dim):
-            ub[x0 == A[d, j]] = A[d, j] + 0.50
-            lb[x0 == A[d, j]] = A[d, j] - 0.50
+            ub[x0 == A[d, j]] = A[d, j] + dims_slacks[d]
+            lb[x0 == A[d, j]] = A[d, j] - dims_slacks[d]
     # micros in +-5 cm from the guess
+    dims_slacks = [.02, .02, .02]
     for i in range(I):
         for d in range(dim):
-            ub[x0 == X[d, i]] = X[d, i] + 0.50
-            lb[x0 == X[d, i]] = X[d, i] - 0.50
+            ub[x0 == X[d, i]] = X[d, i] + dims_slacks[d]
+            lb[x0 == X[d, i]] = X[d, i] - dims_slacks[d]
+
+    plt.plot(ub)
+    plt.plot(lb)
+    plt.plot(x0)
+    plt.show()
 
     # set the origin in speaker 1
     bounds = sp.optimize.Bounds(lb, ub)
@@ -207,10 +213,12 @@ def nlls_mds(D, init):
     print('nfev', res.nfev)
     print('success', res.success)
     print('fun', res.fun)
-    solution = res.x
-    solution = solution.reshape(3, I+J)
-    X = solution[:, :I]
-    A = solution[:, I:]
+    sol = res.x
+    # solution = solution.reshape(3, I+J)
+    # X = solution[:, :I]
+    # A = solution[:, I:]
+    X = sol[:3*I].reshape(3, I)
+    A = sol[3*I:].reshape(3, J)
     return X, A
 
 def edm(X, Y):
@@ -340,13 +348,13 @@ if __name__ == "__main__":
     Dtof = tofs_rir[:, :] * speed_of_sound
     Dgeo = tofs_simulation[:, :] * speed_of_sound
     assert np.allclose(Dedm, Dgeo)
-
-    # mics_pos_est, srcs_pos_est = nlls_mds(Dtof, init={'X': X, 'A': A})
     # sp.io.savemat('./data/processed/calibration_data.mat', {'D':D, 'X':X, 'A':A})
+
+    mics_pos_est, srcs_pos_est = nlls_mds(Dtof, init={'X': X, 'A': A})
     # mics_pos_est, srcs_pos_est = crcc_mds(D, init={'X': X, 'A': A})
 
-    # np.save(path_to_processed + 'mics_pos_est_nlls.npy', mics_pos_est)
-    # np.save(path_to_processed + 'srcs_pos_est_nlls.npy', srcs_pos_est)
+    np.save(path_to_processed + 'mics_pos_est_nlls.npy', mics_pos_est)
+    np.save(path_to_processed + 'srcs_pos_est_nlls.npy', srcs_pos_est)
     mics_pos_est = np.load(path_to_processed + 'mics_pos_est_nlls.npy')
     srcs_pos_est = np.load(path_to_processed + 'srcs_pos_est_nlls.npy')
 

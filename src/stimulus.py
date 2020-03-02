@@ -35,6 +35,7 @@ class ProbeSignal():
 
         self.w = load_from_matlab('./data/raw/bp_filt_blackman_4000.mat')['Num'].squeeze()
 
+
     def save(self, path_to_output):
         sf.write(path_to_output, self.signal, self.fs)
 
