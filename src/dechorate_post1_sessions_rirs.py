@@ -6,6 +6,7 @@ import pandas as pd
 import soundfile as sf
 import matplotlib.pyplot as plt
 
+from shutil import rmtree
 from zipfile import ZipFile
 from tqdm import tqdm
 
@@ -90,6 +91,8 @@ def built_anechoeic_hdf5_dataset(wavfile_chirps, path_to_anechoic_dataset, wavfi
         wav, fs = sf.read(path_to_wavfile)
         f.create_dataset('silence/48k/' + wavefile, data=wav)
 
+    rmtree(path_to_tmp + 'room-' + session_id)
+
     return path_to_anechoic_dataset
 
 
@@ -134,7 +137,7 @@ def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_da
             recording = x[:, i]
 
             rir_i = ps.compute_rir(recording[:, None])
-            # for anechoic signal crop after 1 second
+            # for anechoic signal crop after 0.5 second
             rir_i = rir_i[0:int(0.5*Fs)]
 
             # store info in the anechoic dataset
@@ -150,20 +153,23 @@ if __name__ == "__main__":
     path_to_tmp = '/tmp/'
     path_to_processed = './data/processed/'
 
-    session_id = '000010'
+    session_id = '000001'
     session_filename = "recordings/room-%s.zip" % session_id
     path_to_session_data = dataset_dir + session_filename
 
     ## GET FILENAMES FROM THE CSV ANNOTATION DATABASE
+    print('Getting filenames...')
     note_filename = 'annotations/dECHORATE_recordings_note.csv'
     path_to_note = dataset_dir + note_filename
     dataset_note, wavfile_chirps, wavfile_silence = silence_and_chirps_names(path_to_note, session_id)
 
     ## MAKE JUST THE HDF5 ANECHOIC DATASET
+    print('Extracting the raw data...')
     path_to_anechoic_dataset = path_to_processed + '%s_raw_data.hdf5' % session_id
     built_anechoeic_hdf5_dataset(wavfile_chirps, path_to_anechoic_dataset, wavfile_silence, session_id)
 
     ## DECONVOLVE THE CHIRPS
+    print('Estimating RIRs...')
     path_to_anechoic_dataset_rir = path_to_processed + '%s_rir_data.hdf5' % session_id
     build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_dataset_rir)
 

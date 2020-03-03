@@ -7,7 +7,7 @@ def save_to_pickle(filename, obj):
 
 
 def load_from_pickle(filename):
-    with open('filename', 'rb') as handle:
+    with open(filename, 'rb') as handle:
         b = pkl.load(handle)
     return b
 

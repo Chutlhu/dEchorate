@@ -11,20 +11,22 @@ import pyroomacoustics as pra
 
 dataset_dir = './data/dECHORATE/'
 path_to_processed = './data/processed/'
-
 path_to_note_csv = dataset_dir + 'annotations/dECHORATE_database.csv'
 
 class RIR:
     def __init__(self):
-        self.room_size = [6, 5, 4]
         self.x = [2, 2, 2]
         self.s = [4, 3, 1]
         self.Fs = 48000
         self.c = 343
 
+        self.room_size = None
         self.amp = None
         self.toa = None
         self.order = None
+
+    def set_room_size(self, room_size):
+        self.room_size = room_size
 
     def set_c(self, c):
         self.c = c
@@ -172,7 +174,8 @@ rir = RIR()
 rec = REC()
 
 rec.set_dataset('000000')
-rec.set_entry(0, 0)
+rec.set_room_size([5.741, 5.763, 2.353])
+rec.set_entry(0, 1)
 mic_pos, src_pos = rec.get_mic_and_src_pos()
 times, h_rec = rec.get_rir()
 
@@ -222,7 +225,7 @@ def update(val=None):
     ax1.clear()
     ax2.clear()
 
-    rec.set_entry(0, 0)
+    rec.set_entry(0, 1)
     mic_pos, src_pos = rec.get_mic_and_src_pos()
     times, h_rec = rec.get_rir()
     ax1.plot(times, h_rec, color='C0')
