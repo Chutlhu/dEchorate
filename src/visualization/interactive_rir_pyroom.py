@@ -173,9 +173,10 @@ class REC():
 rir = RIR()
 rec = REC()
 
+rir.set_room_size([5.741, 5.763, 2.353])
+
 rec.set_dataset('000000')
-rec.set_room_size([5.741, 5.763, 2.353])
-rec.set_entry(0, 1)
+rec.set_entry(0, 0)
 mic_pos, src_pos = rec.get_mic_and_src_pos()
 times, h_rec = rec.get_rir()
 

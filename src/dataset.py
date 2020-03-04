@@ -67,6 +67,8 @@ class SyntheticDataset:
         self.s = [4, 3, 1]
         self.Fs = 48000
         self.c = 343
+        self.k_order = None
+        self.k_reflc = None
 
         self.room_size = None
         self.amp = None
@@ -74,12 +76,12 @@ class SyntheticDataset:
         self.order = None
 
         self.absorption = {
-            'north': 0.3,
-            'south': 0.3,
-            'east': 0.3,
-            'west': 0.3,
-            'floor': 0.3,
-            'ceiling': 0.3,
+            'north': 0.8,
+            'south': 0.8,
+            'east': 0.8,
+            'west': 0.8,
+            'floor': 0.8,
+            'ceiling': 0.8,
         }
 
     def set_room_size(self, room_size):
@@ -98,22 +100,28 @@ class SyntheticDataset:
         self.s[1] = y
         self.s[2] = z
 
+    def set_k_reflc(self, K):
+        self.k_reflc = K
+
+    def set_k_order(self, K):
+        self.k_order = K
+
     def set_dataset(self, dset_code):
         f, c, w, s, e, n = [int(i) for i in list(dset_code)]
         self.absorption = {
-            'north': 0.8 if n else 0.1,
-            'south': 0.8 if s else 0.1,
-            'east': 0.8 if e else 0.1,
-            'west': 0.8 if w else 0.1,
-            'floor': 0.8 if f else 0.1,
-            'ceiling': 0.8 if c else 0.1,
+            'north': 0.2 if n else 0.8,
+            'south': 0.2 if s else 0.8,
+            'east': 0.2 if e else 0.8,
+            'west': 0.2 if w else 0.8,
+            'floor': 0.2 if f else 0.8,
+            'ceiling': 0.2 if c else 0.8,
         }
 
     def make_room(self):
 
         room = pra.ShoeBox(
             self.room_size, fs=self.Fs,
-            absorption=self.absorption, max_order=2)
+            absorption=self.absorption, max_order=self.k_order)
 
         room.add_microphone_array(
             pra.MicrophoneArray(
@@ -159,7 +167,7 @@ class SyntheticDataset:
         room.image_source_model(use_libroom=False)
 
         j = 0
-        K = 15
+        K = self.k_reflc
         toa = np.zeros(K)
         amp = np.zeros(K)
         walls = np.zeros(K)

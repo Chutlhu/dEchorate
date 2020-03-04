@@ -127,9 +127,13 @@ def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_da
 
         try:
             assert delay > 0
+            assert delay_sample == 6444
         except:
+            plt.subplot(211)
             plt.plot(normalize(playback))
             plt.plot(normalize(ps.signal))
+            plt.subplot(212)
+            plt.plot(np.abs(rir_playback))
             plt.show()
 
         # estimate the rir in the remaining channels:
