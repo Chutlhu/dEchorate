@@ -43,3 +43,13 @@ def test_toeplitz_as_mulan():
     assert Th1.shape == Th2.shape
     assert np.allclose(Th1, Th2)
 
+def test_frobenius_weights():
+    N = 20
+    L = 8
+    x = np.random.randn(N) + 1j*np.random.randn(N)
+    Tx = make_toepliz_as_in_mulan(x, L)
+
+    W = build_frobenius_weights(Tx)
+
+    assert np.allclose(W[0,:], np.arange(1, W.shape[1]+1)[::-1])
+    assert W.shape == Tx.shape

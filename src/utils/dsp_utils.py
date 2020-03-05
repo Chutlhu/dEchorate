@@ -35,3 +35,23 @@ def reconstruct_toeplitz(Ta):
 def reshape_toeplitz(Ta, L):
     a = reconstruct_toeplitz(Ta)
     return make_toepliz_as_in_mulan(a, L)
+
+
+def build_frobenius_weights(A):
+    N, L = A.shape
+    D = N + L - 1
+
+    # matrix of weights for the weighted Frobenius norm
+    r = np.arange(1, L+1)[::-1]
+    c = np.concatenate([np.arange(1,L+1), L*np.ones(N-L)])[::-1]
+    W = sp.linalg.toeplitz(c, r)
+    return W
+
+def enforce_toeplitz(A):
+    N, P = A.shape
+    z = np.zeros(N + P - 1, dtype=np.complex64)
+    for i in range(z.shape[0]):
+        z[i] = np.mean(np.diag(A, P - i - 1))
+
+    return make_toepliz_as_in_mulan(z, P)
+
