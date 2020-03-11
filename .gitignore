@@ -91,3 +91,4 @@ target/
 venv/
 references/BarIlan_matlab
 externals/
+reports/figures/rirs

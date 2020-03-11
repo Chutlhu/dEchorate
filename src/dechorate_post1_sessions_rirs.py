@@ -96,7 +96,7 @@ def built_anechoeic_hdf5_dataset(wavfile_chirps, path_to_anechoic_dataset, wavfi
     return path_to_anechoic_dataset
 
 
-def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_dataset_rir):
+def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_dataset_rir, session_id):
     f_raw = h5py.File(path_to_anechoic_dataset, 'r')
     f_rir = h5py.File(path_to_anechoic_dataset_rir, 'w')
     f_rir = h5py.File(path_to_anechoic_dataset_rir, 'a')
@@ -116,37 +116,59 @@ def build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_da
     for wavefile in wavfile_chirps:
         x = f_raw['recordings/48k/' + wavefile]
 
+        assert x.shape[1] == 31
+        I = 30
+
         # compute the global delay from the playback:
         playback = x[:, -1]
-        rir_playback = ps.compute_rir(playback[:, None])
+        rir_playback = ps.compute_rir(playback[:, None], windowing=False)
+        f_rir.create_dataset('rir/%s/playback/' % (wavefile), data=rir_playback)
 
         delay_sample = np.argmax(np.abs(rir_playback))
-        # delay_sample = ps.compute_delay(playback[:, None], start=1, duration=10)
-        delay = delay_sample/Fs
-        print(delay_sample)
+        delay_second = delay_sample/Fs
+        print('Delay sample', delay_sample)
+
+        plt.subplot(211)
+        plt.plot(times, signal, label='Probe')
+        plt.plot(np.arange(len(playback))/Fs, playback, alpha=0.5, label='Playback')
+        plt.legend(loc=1)
+        plt.subplot(212)
+        plt.plot(np.arange(len(rir_playback))/Fs, rir_playback, alpha=0.8, label='playback')
+        plt.legend(loc=1)
+        plt.suptitle('Playback. Delay %d => %1.3f ms' % (delay_sample, delay_second*1000))
+        plt.savefig('./reports/figures/rirs/room-%s/%s_%s_playback.png' % (session_id, session_id, wavefile))
+        plt.close()
+
 
         try:
             assert delay > 0
-            assert delay_sample == 6444
+            assert int(delay_sample) == 4444
         except:
-            plt.subplot(211)
-            plt.plot(normalize(playback))
-            plt.plot(normalize(ps.signal))
-            plt.subplot(212)
-            plt.plot(np.abs(rir_playback))
-            plt.show()
+            print('Delay assert Error', wavefile, 'with delay', delay_sample)
 
         # estimate the rir in the remaining channels:
-        for i in tqdm(range(30)):
+        for i in tqdm(range(I)):
             recording = x[:, i]
 
-            rir_i = ps.compute_rir(recording[:, None])
+            rir_i = ps.compute_rir(recording[:, None], windowing=False)
             # for anechoic signal crop after 0.5 second
             rir_i = rir_i[0:int(0.5*Fs)]
 
+            plt.subplot(211)
+            plt.plot(np.arange(len(signal))/Fs, signal, label='Probe')
+            plt.plot(np.arange(len(recording))/Fs, recording, alpha=0.5, label='Recording')
+            plt.legend(loc=1)
+            plt.subplot(212)
+            plt.plot(np.arange(len(rir_i))/Fs, rir_i, alpha=0.8, label='RIR')
+            plt.legend(loc=1)
+            plt.suptitle('RIR mic %d. Delay %d => %1.3f ms' % (i, delay_sample, delay_second*1000))
+            plt.savefig('./reports/figures/rirs/room-%s/%s_%s_mic-%d.png' % (session_id, session_id, wavefile, i))
+            plt.close()
+
             # store info in the anechoic dataset
             f_rir.create_dataset('rir/%s/%d' % (wavefile, i), data=rir_i)
-            f_rir.create_dataset('delay/%s/%d' % (wavefile, i), data=delay_sample)
+            f_rir.create_dataset('delay_sample/%s/%d' % (wavefile, i), data=delay_sample)
+            f_rir.create_dataset('delay_second/%s/%d' % (wavefile, i), data=delay_second)
 
     return
 
@@ -175,7 +197,7 @@ if __name__ == "__main__":
     ## DECONVOLVE THE CHIRPS
     print('Estimating RIRs...')
     path_to_anechoic_dataset_rir = path_to_processed + '%s_rir_data.hdf5' % session_id
-    build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_dataset_rir)
+    build_rir_hdf5(wavfile_chirps, path_to_anechoic_dataset, path_to_anechoic_dataset_rir, session_id)
 
 
     pass

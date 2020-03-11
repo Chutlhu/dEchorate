@@ -34,7 +34,7 @@ class ProbeSignal():
         self.invfilter = None
 
         self.w = load_from_matlab('./data/raw/bp_filt_blackman_4000.mat')['Num'].squeeze()
-
+        self.win_delay = 2000
 
     def save(self, path_to_output):
         sf.write(path_to_output, self.signal, self.fs)
@@ -132,7 +132,7 @@ class ProbeSignal():
         return times.copy(), sinsweep.copy()
 
 
-    def compute_rir(self, recording):
+    def compute_rir(self, recording, windowing=True):
 
         if self.kind == 'exp_sine_sweep':
 
@@ -146,6 +146,7 @@ class ProbeSignal():
             t = len(self.invfilter)+2*self.fs
             Lh = 10*self.fs
             rirs = np.zeros(shape=(Lh, I))
+            assert I == 1
             for i in range(I):
 
                 x = recording[:3*Lr, i]
@@ -154,7 +155,12 @@ class ProbeSignal():
                 X = np.fft.fft(x, n=nfft)
                 H = np.mean(Hinv * X, 0)
 
+            if windowing:
+                # compensate for the windows shift
+                t = t + self.win_delay
                 rirs[:, i] = np.real(np.fft.ifft(H * W))[t:t+Lh]
+            else:
+                rirs[:, i] = np.real(np.fft.ifft(H))[t:t+Lh]
 
             return rirs
 

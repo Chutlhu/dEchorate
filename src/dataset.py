@@ -47,7 +47,7 @@ class DechorateDataset():
     def get_rir(self):
         wavefile = self.entry['filename'].values[0]
         self.rir = self.dataset_data['rir/%s/%d' % (wavefile, self.mic_i)][()].squeeze()
-        self.rir = self.rir[6444:]
+        self.rir = self.rir[4444:]
         # rir_abs = np.abs(rir[6444:])
         # self.rir = rir_abs/np.max(rir_abs)
         return np.arange(len(self.rir))/self.Fs, self.rir
@@ -162,6 +162,13 @@ class SyntheticDataset:
         rir = rir[40:]
         return np.arange(len(rir))/self.Fs, rir/np.max(np.abs(rir))
 
+    def get_walls_name_from_id(self, wallsId, wall_id):
+        for wall_name in wallsId:
+            curr_wall_id = wallsId[wall_name]
+            if int(curr_wall_id) == int(wall_id):
+                return wall_name
+
+
     def get_note(self):
         room = self.make_room()
         room.image_source_model(use_libroom=False)
@@ -170,18 +177,23 @@ class SyntheticDataset:
         K = self.k_reflc
         toa = np.zeros(K)
         amp = np.zeros(K)
-        walls = np.zeros(K)
+        walls = []
         order = np.zeros(K)
         images = room.sources[j].images
         center = room.mic_array.center
         distances = np.linalg.norm(
             images - room.mic_array.R, axis=0)
-        # order in loc
+        # order for location
         ordering = np.argsort(distances)[:K]
+        # order for orders
+        ordering = np.argsort(room.sources[j].orders)[:K]
         for o, k in enumerate(ordering):
             amp[o] = room.sources[j].damping[k] / (4 * np.pi * distances[k])
             toa[o] = distances[k]/self.c
-            walls[o] = room.sources[j].walls[k]
+            wall_id = self.get_walls_name_from_id(room.wallsId, room.sources[j].walls[k])
+            if wall_id is None:
+                wall_id = 'direct'
+            walls.append(wall_id)
             order[o] = room.sources[j].orders[k]
 
         amp = amp/amp[0]
