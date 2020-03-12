@@ -1,3 +1,6 @@
+import soundfile as sf
+import os
+import os.path as pat
 import h5py
 import numpy as np
 import scipy as sp
@@ -33,7 +36,9 @@ def build_all_rirs_matrix_and_annotation(params):
 
     all_rirs = np.zeros([L, I, J, D])
     toa_sym = np.zeros([K, I, J, D])
-    amp_sym = np.zeros([K, I, J, D])
+    amp_sym = np.zeros_like(toa_sym)
+    ord_sym = np.zeros_like(toa_sym)
+    wal_sym = np.chararray([K, I, J, D])
 
     for i in range(0, I):
         for j in range(0, J):
@@ -61,6 +66,8 @@ def build_all_rirs_matrix_and_annotation(params):
 
                 toa_sym[:, i, j, d] = tau
                 amp_sym[:, i, j, d] = amp
+                wal_sym[:, i, j, d] = wall
+                ord_sym[:, i, j, d] = order
 
                 # plt.plot(np.abs(h[:L])**p + .5*d, label=dataset)
                 # if d == 0:
@@ -89,9 +96,14 @@ def build_all_rirs_matrix_and_annotation(params):
             # print(res)
             # print(res.x)
 
+    toa_note = {
+        'toa': toa_sym,
+        'amp': amp_sym,
+        'wall': wal_sym,
+        'order': ord_sym,
+    }
     np.save('./data/tmp/all_rirs.npy', all_rirs)
-    np.save('./data/tmp/toa_sym.npy', toa_sym)
-    np.save('./data/tmp/amp_sym.npy', amp_sym)
+    save_to_pickle('./data/tmp/toa_note.pkl', toa_note)
     return all_rirs
 
 def direct_path_deconvolution(all_rirs, params):
@@ -111,12 +123,6 @@ def direct_path_deconvolution(all_rirs, params):
 
             for d in range(D):
                 rir = all_rirs[:, i, j, d]
-
-                # wall_code_name = 'fcwsen'
-                # wall_code = [int(i) for i in list(datasets[d])]
-                # curr_walls = [wall_code_name[w]
-                #                 for w, code in enumerate(wall_code) if code == 1]
-
                 dp_deconv = np.real(np.fft.ifft(np.fft.fft(rir, L) / np.fft.fft(dp, L)))
                 # restore the direct path
                 offset = int(0.001*Fs)
@@ -124,6 +130,7 @@ def direct_path_deconvolution(all_rirs, params):
 
                 all_rirs_dconv[offset:, i, j, d] = dp_deconv[:-offset]
     return all_rirs_dconv
+
 
 def plot_rir_skyline(rirs, dataset, toa_sym, toa_peak, params):
     K = params['K']
@@ -150,48 +157,102 @@ def plot_rir_skyline(rirs, dataset, toa_sym, toa_peak, params):
 
     plt.imshow(rirs_skyline, extent=[0, I*J, 0, L], aspect='auto')
     for k in range(7):
-        plt.scatter(np.arange(IJ)+0.5, L - toa_sym_skyline[k, :, dataset]*params['Fs'], c='C%d'%k, alpha=.2, label='Pyroom DP %d' % k)
+        plt.scatter(np.arange(IJ)+0.5, L - toa_sym_skyline[k, :, dataset]*params['Fs'], c='C%d'%(k+1), alpha=.6, label='Pyroom DP %d' % k)
 
-    # plt.scatter(np.arange(I*J)+0.5, L - tofs_simulation.T.flatten()*Fs, c='C2', label='Pyroom')
     plt.tight_layout()
     plt.legend()
     plt.savefig('./reports/figures/rir_dp_dconv_skyline_after_calibration.pdf')
     plt.show()
 
-# 1/0
-#
-# rirs_skyline = rirs_skyline[:2000, :, :, :]
-# L, I, J, D = rirs_skyline.shape
+
+def plot_overlapped_rirs(rirs, toa_note, params):
+    L, I, J, D = rirs.shape
+    K, I, J, D = toa_note['toa'].shape
+    Fs = params['Fs']
+
+    for j in range(J):
+        for i in range(I):
+            plt.figure(figsize=(16, 9))
+
+            for d in range(D):
+
+                rir = rirs[:, i, j, d]
+
+                # if d == 0:
+                #     plt.plot(rir**2 + 0.2*d, alpha=.2, color='C1')
+                rir_to_plot = (normalize(rir))**2
+                rir_to_plot = np.clip(rir_to_plot, 0, 0.34)
+                rir_to_plot = normalize(rir_to_plot)
+                plt.plot(rir_to_plot + 0.2*d)
+
+                # Print the dataset name
+                wall_code_name = 'fcwsen'
+                wall_code = [int(i) for i in list(datasets[d])]
+                curr_walls = [wall_code_name[w]
+                              for w, code in enumerate(wall_code) if code == 1]
+                plt.text(50, 0.07 + 0.2*d, datasets[d])
+                plt.text(50, 0.03 + 0.2*d, curr_walls)
+
+            # plot the echo information
+            for k in range(K):
+                toa = toa_note['toa'][k, i, j, d]
+                amp = toa_note['amp'][k, i, j, d]
+                wall = toa_note['wall'][k, i, j, d]
+                order = toa_note['order'][k, i, j, d]
+                plt.axvline(x=int(toa*Fs), alpha=0.5)
+                plt.text(toa*Fs, 0.025, r'$\tau_{%s}^{%d}$' % (wall.decode(), order), fontsize=12)
+            plt.xlim([0, 2000])
+            plt.title('RIRs dataset %s\nmic %d, src %d' % (datasets[d], i, j))
+            plt.show()
+
+
+def write_rir_and_note_as_file(rirs, toa_note, params):
+    L, I, J, D = rirs.shape
+    K, I, J, D = toa_note['toa'].shape
+    Fs = params['Fs']
+
+    os.system('mkdir -p ./data/processed/rirs_manual_annotation/')
+
+    for j in range(J):
+        print('Processing src', j)
+
+        os.system('mkdir -p ./data/processed/rirs_manual_annotation/src_%d/' % j)
+
+        for i in range(I):
+
+            path = './data/processed/rirs_manual_annotation/src_%d/mic_%d/' % (j,i)
+            os.system('mkdir -p ' + path)
+
+            for d in range(D):
+
+                rir = rirs[:, i, j, d]
+
+                rir_to_plot = (normalize(rir))**2
+                rir_to_plot = np.clip(rir_to_plot, 0, 0.34)
+                rir_to_plot = normalize(rir_to_plot)
 
 
 
-# d = 3
+                # Print the dataset name
+                wall_code_name = 'fcwsen'
+                wall_code = [int(i) for i in list(datasets[d])]
+                curr_walls = [wall_code_name[w]
+                              for w, code in enumerate(wall_code) if code == 1]
+                str_curr_wall = '_'.join(curr_walls)
+                sf.write(path + '%s_%s_rir.wav' % (datasets[d], str_curr_wall), rir_to_plot, Fs)
 
-# for j in range(J):
-#     plt.axvline(j*30, color='C7')
-# plt.imshow(rirs_skyline_to_plot[:, :, d]**2, extent=[0, I*J, 0, L], aspect='auto')
-# # plt.scatter(np.arange(I*J)+0.5, L - tofs_rir.T.flatten()*Fs, c='C1', label='Peak Picking')
-# # plt.scatter(np.arange(I*J)+0.5, L - tofs_simulation.T.flatten()*Fs, c='C2', label='Pyroom')
-# plt.tight_layout()
-# plt.legend()
-# plt.savefig('./reports/figures/rir_skyline_after_calibration.pdf')
-# plt.show()
+            # plot the echo information
+            path_to_curr_note = path + '%s_note.txt' % (datasets[d])
+            text = ''
+            for k in range(K):
+                toa = toa_note['toa'][k, i, j, d]
+                amp = toa_note['amp'][k, i, j, d]
+                wall = toa_note['wall'][k, i, j, d]
+                order = toa_note['order'][k, i, j, d]
+                text += '%1.6f\t%1.6f\ttau_%s_%d\n' % (toa, toa, wall.decode(), order)
 
-#     if r == 0:
-#         plt.plot(rir**2 + 0.2*r, alpha=.2, color='C1')
-#     plt.plot((dp_deconv/np.max(np.abs(dp_deconv)))**2 + 0.2*r)
-
-#     plt.stem(tau*dset.Fs, amp)
-#     for k in range(K):
-#             plt.text(tau[k]*dset.Fs, 0.025, r'$\tau_{%s}^{%d}$' % (
-#                 wall[k][0], order[k]))
-
-#     plt.text(50, 0.07 + 0.2*r, datasets[r])
-#     plt.text(50, 0.03 + 0.2*r, curr_walls)
-
-# plt.xlim([0, 1700])
-
-# plt.show()
+            with open(path_to_curr_note, "w") as text_file:
+                text_file.write(text)
 
 
 # # FFT domain
@@ -301,15 +362,19 @@ if __name__ == "__main__":
 
     ## LOAD BACK THE DATA
     all_rirs = np.load('./data/tmp/all_rirs.npy')
-    toa_sym = np.load('./data/tmp/toa_sym.npy')
-    amp_sym = np.load('./data/tmp/amp_sym.npy')
+    toa_note = load_from_pickle('./data/tmp/toa_note.pkl')
 
     ## DIRECT-PATH DECOVOLUTION
     all_rirs_clean = direct_path_deconvolution(all_rirs, params)
 
     ## RIR SKYLINE
-    plot_rir_skyline(all_rirs_clean, 5, toa_sym, None, params)
+    # plot_rir_skyline(all_rirs_clean, 5, toa_sym, None, params)
 
+    ## PLOT OVERLAPPED RIRS
+    plot_overlapped_rirs(all_rirs, toa_note, params)
+
+    ## WRITE RIR as WAV to file for manual annotation with audacity
+    # write_rir_and_note_as_file(all_rirs_clean, toa_note, params)
 
     denoising = True
     concatenate = False
