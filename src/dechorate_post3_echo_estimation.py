@@ -366,6 +366,7 @@ if __name__ == "__main__":
 
     ## DIRECT-PATH DECOVOLUTION
     all_rirs_clean = direct_path_deconvolution(all_rirs, params)
+    np.save('./data/tmp/all_rirs_clean.npy', all_rirs_clean)
 
     ## RIR SKYLINE
     # plot_rir_skyline(all_rirs_clean, 5, toa_sym, None, params)
