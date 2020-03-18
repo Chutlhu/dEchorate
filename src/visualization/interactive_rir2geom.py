@@ -5,7 +5,7 @@ import pyroomacoustics as pra
 
 from copy import deepcopy as cp
 
-from matplotlib.widgets import Slider, RadioButtons
+from matplotlib.widgets import Slider, RadioButtons, Button
 from mpl_toolkits.mplot3d import Axes3D
 
 from src.dataset import SyntheticDataset, DechorateDataset
@@ -47,7 +47,7 @@ fig = plt.figure(figsize=(16*scaling, 9*scaling))
 ax1 = fig.add_subplot(121, xlim=(-0.1, 2), ylim=(-0.1, 1))
 ax2 = fig.add_subplot(122, xlim=(-0.1, 2), ylim=(-0.1, 1), sharex=ax1)
 # ax2 = fig.add_subplot(122, projection='3d')
-plt.subplots_adjust(bottom=0.15)
+plt.subplots_adjust(bottom=0.20)
 plt.subplots_adjust(left=0.15)
 
 all_rirs = np.load('./data/tmp/all_rirs.npy')
@@ -81,8 +81,6 @@ def plot_rirs_and_note(rirs, curr_toa_note, i, j, ax):
         ax.text(50, 0.07 + 0.2*d, datasets[d])
         ax.text(50, 0.03 + 0.2*d, curr_walls)
 
-    print(curr_toa_note['toa'][0, i, j, 0])
-
     # plot the echo information
     for k in range(K):
         toa = curr_toa_note['toa'][k, i, j, 0]
@@ -92,7 +90,6 @@ def plot_rirs_and_note(rirs, curr_toa_note, i, j, ax):
         ax.axvline(x=int(toa*Fs), alpha=0.5)
         ax.text(toa*Fs, 0.025, r'$\tau_{%s}^{%d}$' %
                     (wall.decode(), order), fontsize=12)
-    ax.set_xlim([0, 2000])
     ax.set_ylim([-0.05, 2.2])
     ax.set_title('RIRs dataset %s\nmic %d, src %d' % (datasets[d], i, j))
 
@@ -101,44 +98,97 @@ def plot_rirs_and_note(rirs, curr_toa_note, i, j, ax):
 ax_which_tau = plt.axes([0.01, 0.15, 0.12, 0.40])  # x, y, w, h
 bt_select_tau = RadioButtons(ax_which_tau, taus_list)
 
+ax_xlim0_prev = plt.axes([0.87, 0.04, 0.02, 0.02])
+ax_xlim0_next = plt.axes([0.90, 0.04, 0.02, 0.02])
+ax_xlim1_prev = plt.axes([0.87, 0.07, 0.02, 0.02])
+ax_xlim1_next = plt.axes([0.90, 0.07, 0.02, 0.02])
+ax_move_tau_prev = plt.axes([0.87, 0.01, 0.02, 0.02])
+ax_move_tau_next = plt.axes([0.90, 0.01, 0.02, 0.02])
+bt_xlim0_prev = Button(ax_xlim0_prev, '<')
+bt_xlim0_next = Button(ax_xlim0_next, '>')
+bt_xlim1_prev = Button(ax_xlim1_prev, '<')
+bt_xlim1_next = Button(ax_xlim1_next, '>')
+bt_move_tau_prev = Button(ax_move_tau_prev, '<')
+bt_move_tau_next = Button(ax_move_tau_next, '>')
+
 # Slider
-ax_move_tau = plt.axes([0.1, 0.05, 0.80, 0.02])  # x, y, w, h
+ax_move_tau = plt.axes([0.1, 0.01, 0.70, 0.02])  # x, y, w, h
 sl_move_tau = Slider(ax_move_tau, r'current $\tau$', 0, 2000, valinit=200, valstep=0.01)
+ax_set_xlim0 = plt.axes([0.1, 0.04, 0.70, 0.02])  # x, y, w, h
+ax_set_xlim1 = plt.axes([0.1, 0.07, 0.70, 0.02])  # x, y, w, h
+sl_set_xlim0 = Slider(ax_set_xlim0, 'x min', 0, 7990, valinit=0, valstep=1)
+sl_set_xlim1 = Slider(ax_set_xlim1, 'x max', 10, 8000, valinit=3000, valstep=1)
 
-status = {
-    'idx' : 0,
-    'val' : 0,
-    'i' : i,
-    'j' : j,
-    'toa_note': cp(toa_note)
-}
 
-def update_taus(idx, val, toa_note, i, j):
-    toa_note['toa'][idx, i, j, 0] = val
-    return toa_note
 
-def update(status, val=None, idx=None):
-    ax1.clear()
-    ax2.clear()
+class Callbacks():
 
-    if idx is not None:
-        status['idx'] = int(idx.split(' ')[0])
+    def __init__(self, toa_note, i, j, fig, ax1, ax2):
+        self.xlim = [0, 3000]
+        self.toa_note = toa_note
+        self.i = i
+        self.j = j
+        self.Fs = 48000
 
-    if val is not None:
-        status['val'] = val/48000
+        self.ax1 = ax1
+        self.ax2 = ax2
+        self.fig = fig
 
-    toa_note = update_taus(status['idx'], status['val'],
-                           status['toa_note'], status['i'], status['j'])
+        self.idx = 0
+        self.val = self.toa_note['toa'][self.idx, self.i, self.j, 0]
+        self._update()
 
-    plot_rirs_and_note(all_rirs, toa_note, i, j, ax1)
-    plot_rirs_and_note(all_rirs_clean, toa_note, i, j, ax2)
+    def set_idx(self, idx):
+        if idx is not None:
+            self.idx = int(idx.split(' ')[0])
+        self._update_tau()
+        self._update()
 
-    fig.canvas.draw_idle()
+    def set_val(self, val=None, proc=None):
+        if val is not None:
+            self.val = val/self.Fs
+
+        if proc is not None:
+            self.val += proc/self.Fs
+
+        self._update_tau()
+        self._update()
+
+    def set_xlim(self, i, val=None, proc=None):
+        if val is not None:
+            self.xlim[i] = val
+        if proc is not None:
+            self.xlim[i] += proc
+        self._update()
+
+    def _update_tau(self):
+        self.toa_note['toa'][self.idx, self.i, self.j, 0] = self.val
+        self._update()
+
+    def _update(self):
+        self.ax1.clear()
+        self.ax2.clear()
+
+        self.ax1.set_xlim(self.xlim)
+
+        plot_rirs_and_note(all_rirs, self.toa_note, i, j, self.ax1)
+        plot_rirs_and_note(all_rirs_clean, self.toa_note, i, j, self.ax2)
+
+        self.fig.canvas.draw_idle()
 
 
 # init
-update(status)
-sl_move_tau.on_changed(lambda val: update(status, val=val, idx=None))
-bt_select_tau.on_clicked(lambda idx: update(status, val=None, idx=idx))
+cb = Callbacks(cp(toa_note), i, j, fig, ax1, ax2)
+sl_move_tau.on_changed(lambda val: cb.set_val(val))
+sl_set_xlim0.on_changed(lambda val: cb.set_xlim(0, val))
+sl_set_xlim1.on_changed(lambda val: cb.set_xlim(1, val))
 
+bt_select_tau.on_clicked(lambda idx: cb.set_idx(idx=idx))
+bt_move_tau_prev.on_clicked(lambda idx: cb.set_val(proc=-1))
+bt_move_tau_next.on_clicked(lambda idx: cb.set_val(proc=+1))
+
+bt_xlim0_prev.on_clicked(lambda x: cb.set_xlim(0, proc=-1))
+bt_xlim0_next.on_clicked(lambda x: cb.set_xlim(0, proc=+1))
+bt_xlim1_prev.on_clicked(lambda x: cb.set_xlim(1, proc=-1))
+bt_xlim1_next.on_clicked(lambda x: cb.set_xlim(1, proc=+1))
 plt.show()
