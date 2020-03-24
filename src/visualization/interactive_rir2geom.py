@@ -1,15 +1,16 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import pyroomacoustics as pra
 
 from copy import deepcopy as cp
 
-from matplotlib.widgets import Slider, RadioButtons, Button
+from matplotlib.widgets import Slider, RadioButtons, Button, TextBox
 from mpl_toolkits.mplot3d import Axes3D
 
 from src.dataset import SyntheticDataset, DechorateDataset
-from src.utils.file_utils import load_from_pickle
+from src.utils.file_utils import load_from_pickle, save_to_pickle
 from src.utils.dsp_utils import normalize
 
 
@@ -58,10 +59,11 @@ L, I, J, D = all_rirs.shape
 K, I, J, D = toa_note['toa'].shape
 Fs = params['Fs']
 
+
 taus_list = [r'%d $\tau$' % i for i in range(K)]
 
 
-def plot_rirs_and_note(rirs, curr_toa_note, i, j, ax):
+def plot_rirs_and_note(rirs, curr_toa_note, i, j, selected_k, ax):
     for d in range(D):
 
         rir = rirs[:, i, j, d]
@@ -69,7 +71,7 @@ def plot_rirs_and_note(rirs, curr_toa_note, i, j, ax):
         # if d == 0:
         #     plt.plot(rir**2 + 0.2*d, alpha=.2, color='C1')
         rir_to_plot = (normalize(rir))**2
-        rir_to_plot = np.clip(rir_to_plot, 0, 0.34)
+        rir_to_plot = np.clip(rir_to_plot, 0, 1)
         rir_to_plot = normalize(rir_to_plot)
         ax.plot(rir_to_plot + 0.2*d)
 
@@ -87,7 +89,11 @@ def plot_rirs_and_note(rirs, curr_toa_note, i, j, ax):
         amp = curr_toa_note['amp'][k, i, j, 0]
         wall = curr_toa_note['wall'][k, i, j, 0]
         order = curr_toa_note['order'][k, i, j, 0]
-        ax.axvline(x=int(toa*Fs), alpha=0.5)
+        if k == selected_k:
+            ax.axvline(x=int(toa*Fs), c='C5', alpha=1)
+        else:
+            ax.axvline(x=int(toa*Fs), c='C0', alpha=0.5)
+
         ax.text(toa*Fs, 0.025, r'$\tau_{%s}^{%d}$' %
                     (wall.decode(), order), fontsize=12)
     ax.set_ylim([-0.05, 2.2])
@@ -98,27 +104,49 @@ def plot_rirs_and_note(rirs, curr_toa_note, i, j, ax):
 ax_which_tau = plt.axes([0.01, 0.15, 0.12, 0.40])  # x, y, w, h
 bt_select_tau = RadioButtons(ax_which_tau, taus_list)
 
-ax_xlim0_prev = plt.axes([0.87, 0.04, 0.02, 0.02])
-ax_xlim0_next = plt.axes([0.90, 0.04, 0.02, 0.02])
-ax_xlim1_prev = plt.axes([0.87, 0.07, 0.02, 0.02])
-ax_xlim1_next = plt.axes([0.90, 0.07, 0.02, 0.02])
-ax_move_tau_prev = plt.axes([0.87, 0.01, 0.02, 0.02])
-ax_move_tau_next = plt.axes([0.90, 0.01, 0.02, 0.02])
+ax_save_tau = plt.axes([0.01, 0.90, 0.04, 0.02])  # x, y, w, h
+bt_save_tau = Button(ax_save_tau, 'save')
+ax_reset_curr_tau = plt.axes([0.01, 0.87, 0.04, 0.02])  # x, y, w, h
+bt_reset_curr_tau = Button(ax_reset_curr_tau, r'reset $\tau$')
+
+ax_xlim0_pprev = plt.axes([0.87, 0.04, 0.02, 0.02])
+bt_xlim0_pprev = Button(ax_xlim0_pprev, '<<')
+ax_xlim0_prev = plt.axes([0.89, 0.04, 0.02, 0.02])
 bt_xlim0_prev = Button(ax_xlim0_prev, '<')
+ax_xlim0_next = plt.axes([0.915, 0.04, 0.02, 0.02])
 bt_xlim0_next = Button(ax_xlim0_next, '>')
-bt_xlim1_prev = Button(ax_xlim1_prev, '<')
+ax_xlim0_nnext = plt.axes([0.935, 0.04, 0.02, 0.02])
+bt_xlim0_nnext = Button(ax_xlim0_nnext, '>>')
+
+ax_xlim1_pprev = plt.axes([0.87, 0.07, 0.02, 0.02])
+ax_xlim1_prev = plt.axes([0.89, 0.07, 0.02, 0.02])
+ax_xlim1_next = plt.axes([0.915, 0.07, 0.02, 0.02])
+ax_xlim1_nnext = plt.axes([0.935, 0.07, 0.02, 0.02])
+bt_xlim1_pprev = Button(ax_xlim1_pprev, '<<')
 bt_xlim1_next = Button(ax_xlim1_next, '>')
+bt_xlim1_prev = Button(ax_xlim1_prev, '<')
+bt_xlim1_nnext = Button(ax_xlim1_nnext, '>>')
+
+ax_move_tau_pprev = plt.axes([0.87, 0.01, 0.02, 0.02])
+ax_move_tau_prev = plt.axes([0.89, 0.01, 0.02, 0.02])
+ax_move_tau_next = plt.axes([0.915, 0.01, 0.02, 0.02])
+ax_move_tau_nnext = plt.axes([0.935, 0.01, 0.02, 0.02])
+bt_move_tau_pprev = Button(ax_move_tau_pprev, '<<')
 bt_move_tau_prev = Button(ax_move_tau_prev, '<')
 bt_move_tau_next = Button(ax_move_tau_next, '>')
+bt_move_tau_nnext = Button(ax_move_tau_nnext, '>>')
 
 # Slider
 ax_move_tau = plt.axes([0.1, 0.01, 0.70, 0.02])  # x, y, w, h
-sl_move_tau = Slider(ax_move_tau, r'current $\tau$', 0, 2000, valinit=200, valstep=0.01)
+sl_move_tau = Slider(ax_move_tau, r'current $\tau$', 0, 8000, valinit=200, valstep=0.01)
 ax_set_xlim0 = plt.axes([0.1, 0.04, 0.70, 0.02])  # x, y, w, h
 ax_set_xlim1 = plt.axes([0.1, 0.07, 0.70, 0.02])  # x, y, w, h
 sl_set_xlim0 = Slider(ax_set_xlim0, 'x min', 0, 7990, valinit=0, valstep=1)
 sl_set_xlim1 = Slider(ax_set_xlim1, 'x max', 10, 8000, valinit=3000, valstep=1)
 
+# Text
+ax_text_tau = plt.axes([0.01, 0.84, 0.04, 0.02])  # x, y, w, h
+tx_text_tau = TextBox(ax_text_tau, 'Curr Tau')
 
 
 class Callbacks():
@@ -126,9 +154,11 @@ class Callbacks():
     def __init__(self, toa_note, i, j, fig, ax1, ax2):
         self.xlim = [0, 3000]
         self.toa_note = toa_note
+        self.toa_note_backup = cp(toa_note)
         self.i = i
         self.j = j
         self.Fs = 48000
+        self.k = 0
 
         self.ax1 = ax1
         self.ax2 = ax2
@@ -138,10 +168,18 @@ class Callbacks():
         self.val = self.toa_note['toa'][self.idx, self.i, self.j, 0]
         self._update()
 
+    def save_tau_to_file(self, foo):
+        path = './data/interim/manual_annotation/'
+        filename = 'src-%d-mic-%d_aeu.pkl' % (self.j, self.i)
+        save_to_pickle(path + filename, self.toa_note)
+        print('Annotation saved to file:', filename)
+
     def set_idx(self, idx):
         if idx is not None:
             self.idx = int(idx.split(' ')[0])
-        self._update_tau()
+
+        tau = self.toa_note['toa'][self.idx, self.i, self.j, 0]*self.Fs
+        self.xlim = [tau-100, tau+100]
         self._update()
 
     def set_val(self, val=None, proc=None):
@@ -162,7 +200,12 @@ class Callbacks():
         self._update()
 
     def _update_tau(self):
-        self.toa_note['toa'][self.idx, self.i, self.j, 0] = self.val
+        self.toa_note['toa'][self.idx, self.i, self.j, :] = self.val
+        self._update()
+
+    def reset_tau(self, bar):
+        self.toa_note['toa'][self.idx, self.i, self.j, 0] =  \
+            self.toa_note_backup['toa'][self.idx, self.i, self.j, 0]
         self._update()
 
     def _update(self):
@@ -171,8 +214,8 @@ class Callbacks():
 
         self.ax1.set_xlim(self.xlim)
 
-        plot_rirs_and_note(all_rirs, self.toa_note, i, j, self.ax1)
-        plot_rirs_and_note(all_rirs_clean, self.toa_note, i, j, self.ax2)
+        plot_rirs_and_note(all_rirs, self.toa_note, i, j, self.idx, self.ax1)
+        plot_rirs_and_note(all_rirs_clean, self.toa_note, i, j, self.idx, self.ax2)
 
         self.fig.canvas.draw_idle()
 
@@ -184,11 +227,22 @@ sl_set_xlim0.on_changed(lambda val: cb.set_xlim(0, val))
 sl_set_xlim1.on_changed(lambda val: cb.set_xlim(1, val))
 
 bt_select_tau.on_clicked(lambda idx: cb.set_idx(idx=idx))
-bt_move_tau_prev.on_clicked(lambda idx: cb.set_val(proc=-1))
-bt_move_tau_next.on_clicked(lambda idx: cb.set_val(proc=+1))
+bt_move_tau_pprev.on_clicked(lambda idx: cb.set_val(proc=-1))
+bt_move_tau_prev.on_clicked(lambda idx: cb.set_val(proc=-.1))
+bt_move_tau_next.on_clicked(lambda idx: cb.set_val(proc=+.1))
+bt_move_tau_nnext.on_clicked(lambda idx: cb.set_val(proc=+1))
 
+bt_xlim0_pprev.on_clicked(lambda x: cb.set_xlim(0, proc=-5))
 bt_xlim0_prev.on_clicked(lambda x: cb.set_xlim(0, proc=-1))
 bt_xlim0_next.on_clicked(lambda x: cb.set_xlim(0, proc=+1))
+bt_xlim0_nnext.on_clicked(lambda x: cb.set_xlim(0, proc=+5))
+
+bt_xlim1_pprev.on_clicked(lambda x: cb.set_xlim(1, proc=-5))
 bt_xlim1_prev.on_clicked(lambda x: cb.set_xlim(1, proc=-1))
 bt_xlim1_next.on_clicked(lambda x: cb.set_xlim(1, proc=+1))
+bt_xlim1_nnext.on_clicked(lambda x: cb.set_xlim(1, proc=+5))
+
+bt_save_tau.on_clicked(cb.save_tau_to_file)
+bt_reset_curr_tau.on_clicked(cb.reset_tau)
+
 plt.show()
