@@ -25,14 +25,14 @@ params = {
     'Fs' : 48000,
 }
 
-i, j = (0, 0)
+i, j = (1, 0)
 
 imag_dset.set_room_size([5.741, 5.763, 2.353])
 imag_dset.set_c(343)
 imag_dset.set_k_order(4)
 imag_dset.set_k_reflc(15)
-datasets = ['000000', '010000', '001000', '000100', '000010',
-            '000001', '011000', '011100', '011110', '011111']
+datasets = ['000000', '010000', '011000', '011100', '011110', '011111',
+            '001000', '000100', '000010', '000001']
 
 real_dset.set_dataset('000000')
 real_dset.set_entry(i, j)
@@ -60,7 +60,7 @@ K, I, J, D = toa_note['toa'].shape
 Fs = params['Fs']
 
 
-taus_list = [r'%d $\tau$' % i for i in range(K)]
+taus_list = [r'%d $\tau_{%s}^{%d}$' % (k, toa_note['wall'][k, i, j, 0].decode(), toa_note['order'][k, i, j, 0]) for k in range(K)]
 
 
 def plot_rirs_and_note(rirs, curr_toa_note, i, j, selected_k, ax):
@@ -106,6 +106,8 @@ bt_select_tau = RadioButtons(ax_which_tau, taus_list)
 
 ax_save_tau = plt.axes([0.01, 0.90, 0.04, 0.02])  # x, y, w, h
 bt_save_tau = Button(ax_save_tau, 'save')
+ax_load_tau = plt.axes([0.05, 0.90, 0.04, 0.02])  # x, y, w, h
+bt_load_tau = Button(ax_load_tau, 'load')
 ax_reset_curr_tau = plt.axes([0.01, 0.87, 0.04, 0.02])  # x, y, w, h
 bt_reset_curr_tau = Button(ax_reset_curr_tau, r'reset $\tau$')
 
@@ -170,9 +172,16 @@ class Callbacks():
 
     def save_tau_to_file(self, foo):
         path = './data/interim/manual_annotation/'
-        filename = 'src-%d-mic-%d_aeu.pkl' % (self.j, self.i)
+        filename = 'src-%d-mic-%d.pkl' % (self.j, self.i)
         save_to_pickle(path + filename, self.toa_note)
         print('Annotation saved to file:', filename)
+
+    def load_tau_note(self, bar):
+        path = './data/interim/manual_annotation/'
+        filename = 'src-%d-mic-%d.pkl' % (self.j, self.i)
+        self.toa_note = load_from_pickle(path + filename)
+        print('Annotation loaded from:', filename)
+        self._update()
 
     def set_idx(self, idx):
         if idx is not None:
@@ -243,6 +252,7 @@ bt_xlim1_next.on_clicked(lambda x: cb.set_xlim(1, proc=+1))
 bt_xlim1_nnext.on_clicked(lambda x: cb.set_xlim(1, proc=+5))
 
 bt_save_tau.on_clicked(cb.save_tau_to_file)
+bt_load_tau.on_clicked(cb.load_tau_note)
 bt_reset_curr_tau.on_clicked(cb.reset_tau)
 
 plt.show()

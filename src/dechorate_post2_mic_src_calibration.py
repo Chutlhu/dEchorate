@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import scipy as sp
 import pandas as pd
+import scipy.interpolate as intp
 import scipy.signal as sg
 
 import matplotlib.pyplot as plt
@@ -24,8 +25,8 @@ speed_of_sound = 331.3 + 0.606 * T # speed of sound
 L = int(0.5*Fs) # max length of the filter
 
 
-def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
-    f_rir = h5py.File(path_to_anechoic_dataset_rir, 'r')
+def compute_distances_from_rirs(path_to_dataset_rir, dataset):
+    f_rir = h5py.File(path_to_dataset_rir, 'r')
 
     all_src_ids = np.unique(dataset['src_id'])
     all_src_ids = all_src_ids[~np.isnan(all_src_ids)]
@@ -35,11 +36,11 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
     I = len(all_mic_ids)
     J = len(all_src_ids)
 
-
     mics_pos = np.zeros([3, I])
     srcs_pos = np.zeros([3, J])
 
     tofs_simulation = np.zeros([I, J])
+    manual_toa = np.zeros([I, J])
     toes_rir = np.zeros([I, J])
     tofs_rir = np.zeros([I, J])
     toas_rir = np.zeros([I, J])
@@ -58,6 +59,14 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
             wavefile = entry['filename'].values[0]
 
             rir = f_rir['rir/%s/%d' % (wavefile, i)][()].squeeze()
+
+            x = np.arange(0, len(rir))
+            y = rir
+            f = intp.interp1d(x, y, kind='cubic')
+            xnew = np.arange(0, len(rir)-1, 0.1)
+            ynew = f(xnew)
+            ynew = np.abs(ynew / np.max(np.abs(ynew)))
+
             rir_abs = np.abs(rir)
             rir_abs = rir_abs/np.max(rir_abs)
             rirs[:, ij] = rir_abs
@@ -86,13 +95,33 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
             thr2 = int(recording_offset + Fs*(np.max([tof_geom_ceiling, tof_geom_floor])) + 200)
 
             # direct path peak
-            peaks, _ = sg.find_peaks(rir_abs, height=0.2, distance=50, width=2, prominence=0.6)
+            # peaks, _ = sg.find_peaks(rir_abs, height=0.2, distance=50, width=2, prominence=0.6)
+            # dp_peak = np.min(peaks)
+
+            peaks, _ = sg.find_peaks(ynew, height=0.2, distance=50, width=2, prominence=0.6)
             dp_peak = np.min(peaks)
-            # floor
-            d_min_floor_ceiling = np.abs(tof_geom_ceiling - tof_geom_floor)*Fs
-            peaks, _ = sg.find_peaks(
-                rir_abs[thr1:thr2], height=0.2, distance=50, width=2, prominence=0.2)
-            peaks = peaks + thr1
+
+            # # floor
+            # d_min_floor_ceiling = np.abs(tof_geom_ceiling - tof_geom_floor)*Fs
+            # peaks, _ = sg.find_peaks(rir_abs[thr1:thr2], height=0.2, distance=50, width=2, prominence=0.2)
+            # peaks = peaks + thr1
+
+            # ## MANUAL ANNOTATION
+            # print("mic %d/%d\tsrc %d/%d" % (i, I, j, J))
+            # plt.plot(rir_abs)
+            # plt.plot(rir_abs**2, alpha=0.5)
+            # plt.plot(xnew, ynew)
+            # plt.scatter(xnew[dp_peak], ynew[dp_peak])
+            # plt.axvline(tof_geom*Fs + recording_offset)
+            # plt.xlim(xnew[dp_peak] - 20, xnew[dp_peak] + 20)
+            # plt.show()
+
+            # txt = input()
+            # print(txt)
+            # if txt == '':
+            #     manual_toa[i, j] = xnew[dp_peak]/Fs - recording_offset/Fs
+            # else:
+            #     manual_toa[i, j] = float(txt)/Fs - recording_offset/Fs
 
             # # direct path deconvolution
             # x = np.zeros_like(rir)
@@ -119,7 +148,7 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
             # plt.show()
 
             # extract the time of arrival from the RIR
-            direct_path_positions[ij] = dp_peak
+            direct_path_positions[ij] = xnew[dp_peak]
 
             toa = direct_path_positions[ij]/Fs
 
@@ -127,6 +156,8 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
             toes_rir[i, j] = recording_offset/Fs
             toas_rir[i, j] = toa
             tofs_rir[i, j] = toa - recording_offset/Fs
+
+            # np.savetxt('./data/processed/rirs_manual_annotation/from_post2.csv', manual_toa)
 
             # try:
             #     assert tofs_rir[i, j] > 0
@@ -166,148 +197,20 @@ def compute_distances_from_rirs(path_to_anechoic_dataset_rir, dataset):
 
     return rirs, recording_offset, tofs_simulation, tofs_rir, mics_pos, srcs_pos
 
-def nlls_mds(D, init):
-    X = init['X']
-    A = init['A']
-    dim, I = X.shape
-    dim, J = A.shape
-    assert D.shape == (I, J)
-
-    def fun(xXA, I, J):
-        X = xXA[:3*I].reshape(3, I)
-        A = xXA[3*I:].reshape(3, J)
-        cost = 0
-        for i in range(I):
-            for j in range(J):
-                cost += (np.linalg.norm(X[:, i] - A[:, j])**2 - D[i, j]**2)**2
-        return cost
-
-    x0 = np.concatenate([X.flatten(), A.flatten()])
-    ub = np.zeros_like(x0)
-    ub[:] = np.inf
-    lb = -ub
-    # sources in +-5 cm from the guess
-    dims_slacks = [.5, .5, .5]
-    for j in range(J):
-        for d in range(dim):
-            ub[x0 == A[d, j]] = A[d, j] + dims_slacks[d]
-            lb[x0 == A[d, j]] = A[d, j] - dims_slacks[d]
-    # micros in +-5 cm from the guess
-    dims_slacks = [.02, .02, .02]
-    for i in range(I):
-        for d in range(dim):
-            ub[x0 == X[d, i]] = X[d, i] + dims_slacks[d]
-            lb[x0 == X[d, i]] = X[d, i] - dims_slacks[d]
-
-    plt.plot(ub)
-    plt.plot(lb)
-    plt.plot(x0)
-    plt.show()
-
-    # set the origin in speaker 1
-    bounds = sp.optimize.Bounds(lb, ub)
-    res = sp.optimize.minimize(fun, x0, args=(I, J), bounds=bounds, options={'maxiter':10e3, 'maxfun':100e3})
-    print('Optimization')
-    print('message', res.message)
-    print('nit', res.nit)
-    print('nfev', res.nfev)
-    print('success', res.success)
-    print('fun', res.fun)
-    sol = res.x
-    # solution = solution.reshape(3, I+J)
-    # X = solution[:, :I]
-    # A = solution[:, I:]
-    X = sol[:3*I].reshape(3, I)
-    A = sol[3*I:].reshape(3, J)
-    return X, A
-
-def edm(X, Y):
-    # norm_X2 = sum(X. ^ 2);
-    norm_X2 = np.sum(X ** 2, axis=0)[None, :]
-    # norm_Y2 = sum(Y. ^ 2);
-    norm_Y2 = np.sum(Y ** 2, axis=0)[None, :]
-    # D = bsxfun(@plus, norm_X2', norm_Y2) - 2*X'*Y;
-    D = norm_X2.T + norm_Y2 - 2 * X.T @ Y
-    return D
-
-def crcc_mds(sqT, init):
-    X = init['X']
-    A = init['A']
-    # [M, K] = size(sqT)
-    I, J = sqT.shape
-    # convert to squared "distances"
-    T = sqT ** 2
-    # T   = bsxfun(@minus, T, T(: , 1))
-    # T   = bsxfun(@minus, T, T(1, : ))
-    T = T - T[1, 1]
-    # T = T(2: end, 2: end)
-    T = T[1:, 1:]
-    # D = (sqT * c). ^ 2
-    D = sqT ** 2
-    # [U, Sigma, V] = svd(T)
-    U, Sigma, V = np.linalg.svd(T)
-    Sigma = np.diag(Sigma)
-    assert np.allclose(U[:, :Sigma.shape[0]] @ Sigma @ V, T)
-    # Sigma = Sigma(1: 3, 1: 3)
-    Sigma = Sigma[:3, :3]
-    # U     = U(:, 1: 3)
-    U = U[:, :3]
-    # V     = V(:, 1: 3)
-    V = V[:, :3]
-    # Assume we know the distance between the first sensor and the first
-    # microphone. This is realistic.
-    # a1 = sqT(1, 1) * c
-    a1 = sqT[1, 1]
-    # function C = costC2(C, U, Sigma, V, D, a1)
-
-    def fun(C, U, Sigma, V, D, a1):
-        C = C.reshape([3,3])
-        # X_tilde = (U*C)'
-        X_tilde = (U @ C).T
-        # Y_tilde = -1/2*inv(C)*Sigma*V'
-        Y_tilde = -1/2 * np.linalg.inv(C) @ Sigma @ V.T
-        # X = [[0 0 0]' X_tilde]
-        X = np.concatenate([np.zeros([3, 1]), X_tilde], axis=1)
-        # Y = [[0 0 0]' Y_tilde]
-        Y = np.concatenate([np.zeros([3, 1]), Y_tilde], axis=1)
-        # Y(1, :) = Y(1, : ) + a1
-        Y[0, :] = Y[0, :] + a1
-        # C = norm(edm(X, Y) - D, 'fro') ^ 2
-        cost = np.linalg.norm(edm(X, Y) - D)**2
-        return cost
-
-    _, c0, _ = np.linalg.svd(edm(X, A))
-    c0 = np.diag(c0[:3]).flatten()
-    res = sp.optimize.minimize(fun, c0, args=(U, Sigma, V, D, a1), options={'disp':True})
-    C = res.x.reshape([3,3])
-
-    # tilde_R = (U*C)'
-    R_tilde = (U@C).T
-    # tilde_S = -1/2 * C\(Sigma*V')
-    S_tilde = -1/2 * np.linalg.inv(C) @ Sigma @ V.T
-    # R = [[0 0 0]' tilde_R]
-    R = np.concatenate([np.zeros([3, 1]), R_tilde], axis=1)
-    # This doesn't work for some reason(S)!!!
-    # tilde_S(1, :) = tilde_S(1, : ) + a1
-    S = np.concatenate([np.zeros([3, 1]), S_tilde], axis=1)
-    # Y(1, :) = Y(1, : ) + a1
-    S[0, :] = S[0, :] + a1
-    # S = [[a1 0 0]' tilde_S]
-    # D = edm([R S], [R S])
-    return R, S
 
 if __name__ == "__main__":
     dataset_dir = './data/dECHORATE/'
     path_to_processed = './data/processed/'
 
     session_id = '000000' # '010000'
-    path_to_anechoic_dataset_rir = path_to_processed + '%s_rir_data.hdf5' % session_id
+
+    path_to_dataset_rir = path_to_processed + '%s_rir_data.hdf5' % session_id
 
     path_to_database = dataset_dir + 'annotations/dECHORATE_database.csv'
     dataset = pd.read_csv(path_to_database)
     # select dataset with entries according to session_id
     f, c, w, e, n, s = [int(i) for i in list(session_id)]
-    anechoic_dataset_chirp = dataset.loc[
+    dataset = dataset.loc[
           (dataset['room_rfl_floor'] == f)
         & (dataset['room_rfl_ceiling'] == c)
         & (dataset['room_rfl_west'] == w)
@@ -316,11 +219,18 @@ if __name__ == "__main__":
         & (dataset['room_rfl_south'] == s)
         & (dataset['room_fornitures'] == False)
         & (dataset['src_signal'] == 'chirp')
+        & (dataset['src_id'] < 5)
     ]
 
     ## COMPUTE DIRECT PATH POSITIONS
-    rirs, recording_offset, tofs_simulation, tofs_rir, mics_pos, srcs_pos = compute_distances_from_rirs(
-        path_to_anechoic_dataset_rir, anechoic_dataset_chirp)
+    rirs, recording_offset, tofs_simulation, tofs_rir, mics_pos, srcs_pos \
+        = compute_distances_from_rirs(path_to_dataset_rir, dataset)
+
+    # some hard coded variables
+    tofs_rir[20, 0] = (4715 - 4444)/Fs
+    tofs_rir[21, 0] = (4714 - 4444)/Fs
+    tofs_rir[22, 0] = (4711 - 4444)/Fs
+
 
     L, IJ = rirs.shape
     D, I = mics_pos.shape
@@ -336,20 +246,23 @@ if __name__ == "__main__":
     plt.legend()
     plt.savefig('./reports/figures/rir_skyline.pdf')
     plt.show()
+    plt.close()
 
-    save_to_matlab(path_to_processed + 'src_mic_dist.mat', tofs_rir)
+    # save_to_matlab(path_to_processed + 'src_mic_dist.mat', tofs_rir)
 
     # ## MULTIDIMENSIONAL SCALING
+    # select sub set of microphones and sources
+
     # # nonlinear least square problem with good initialization
-    X = mics_pos
-    A = srcs_pos[:, :]
+    X = mics_pos[:, :I]
+    A = srcs_pos[:, 0:4]
+    print(A.shape)
+
     # D = tofs_simulation * speed_of_sound
     Dedm = edm(X, A) ** (.5)
-    Dtof = tofs_rir[:, :] * speed_of_sound
-    Dgeo = tofs_simulation[:, :] * speed_of_sound
+    Dtof = tofs_rir[:I, 0:4] * speed_of_sound
+    Dgeo = tofs_simulation[:I, 0:4] * speed_of_sound
     assert np.allclose(Dedm, Dgeo)
-    # sp.io.savemat('./data/processed/calibration_data.mat', {'D':D, 'X':X, 'A':A})
-
     mics_pos_est, srcs_pos_est = nlls_mds(Dtof, init={'X': X, 'A': A})
     # mics_pos_est, srcs_pos_est = crcc_mds(D, init={'X': X, 'A': A})
 
@@ -380,7 +293,7 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.legend()
     plt.savefig('./reports/figures/rir_skyline_after_calibration.pdf')
-    plt.show()
+    plt.close()
 
     # Blueprint 2D xz plane
     room_size = [5.543, 5.675, 2.353]
