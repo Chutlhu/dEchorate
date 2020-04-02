@@ -12,9 +12,13 @@ from tqdm import tqdm
 from sklearn import manifold
 from scipy.optimize import least_squares
 
-from src.utils.file_utils import save_to_matlab
-from src.utils.dsp_utils import envelope
 from src import constants
+
+from src.calibration_and_mds import nlls_mds, nlls_mds_array
+
+from src.utils.file_utils import save_to_matlab
+from src.utils.dsp_utils import envelope, normalize
+from src.utils.mds_utils import edm
 
 from risotto import deconvolution as deconv
 
@@ -22,7 +26,6 @@ Fs = constants['Fs'] # Sampling frequency
 recording_offset = constants['recording_offset']
 T = 24     # temperature
 speed_of_sound = 331.3 + 0.606 * T # speed of sound
-L = int(0.5*Fs) # max length of the filter
 
 
 def compute_distances_from_rirs(path_to_dataset_rir, dataset):
@@ -45,6 +48,7 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset):
     tofs_rir = np.zeros([I, J])
     toas_rir = np.zeros([I, J])
 
+    L = int(0.5*Fs) # max length of the filter
     rirs = np.zeros([L, I*J])
     direct_path_positions = np.zeros([I*J])
     ij = 0
@@ -60,16 +64,16 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset):
 
             rir = f_rir['rir/%s/%d' % (wavefile, i)][()].squeeze()
 
+            rir_abs = np.abs(rir)
+            rir_abs = rir_abs/np.max(rir_abs)
+            rirs[:, ij] = rir_abs
+
             x = np.arange(0, len(rir))
             y = rir
             f = intp.interp1d(x, y, kind='cubic')
             xnew = np.arange(0, len(rir)-1, 0.1)
             ynew = f(xnew)
             ynew = np.abs(ynew / np.max(np.abs(ynew)))
-
-            rir_abs = np.abs(rir)
-            rir_abs = rir_abs/np.max(rir_abs)
-            rirs[:, ij] = rir_abs
 
             # compute the theoretical distance
             mic_pos = [entry['mic_pos_x'].values, entry['mic_pos_y'].values, entry['mic_pos_z'].values]
@@ -95,25 +99,44 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset):
             thr2 = int(recording_offset + Fs*(np.max([tof_geom_ceiling, tof_geom_floor])) + 200)
 
             # direct path peak
-            # peaks, _ = sg.find_peaks(rir_abs, height=0.2, distance=50, width=2, prominence=0.6)
-            # dp_peak = np.min(peaks)
-
             peaks, _ = sg.find_peaks(ynew, height=0.2, distance=50, width=2, prominence=0.6)
             dp_peak = np.min(peaks)
 
-            # # floor
-            # d_min_floor_ceiling = np.abs(tof_geom_ceiling - tof_geom_floor)*Fs
-            # peaks, _ = sg.find_peaks(rir_abs[thr1:thr2], height=0.2, distance=50, width=2, prominence=0.2)
-            # peaks = peaks + thr1
+            L = len(rir)
+            p = int(xnew[dp_peak])
+            offseti = int(0.0010*Fs)
+            offsetf = int(0.0005*Fs)
+            dp = rir[p-offseti:p+offsetf]
+            rir_deconv = np.real(np.fft.ifft(np.fft.fft(rir, L) / np.fft.fft(dp, L)))
+            rir_deconv = np.concatenate([np.zeros(offseti), rir_deconv[:-offsetf]])
+            # plt.plot(np.abs(normalize(rir)))
+            # plt.plot(np.abs(normalize(rir_deconv)))
+            # plt.show()
 
-            # ## MANUAL ANNOTATION
+            # x = np.arange(0, len(rir_deconv))
+            # y = rir_deconv
+            # f = intp.interp1d(x, y, kind='cubic')
+            # xnew_deconv = np.arange(0, len(rir_deconv)-1, 0.1)
+            # ynew_deconv = f(xnew_deconv)
+            # ynew_deconv = np.abs(ynew_deconv / np.max(np.abs(ynew_deconv)))
+
+            # peaks, _ = sg.find_peaks(ynew_deconv, distance=50, width=2, prominence=0.15)
+            # plt.plot(x, np.abs(normalize(y)))
+            # plt.plot(xnew_deconv, ynew_deconv)
+            # plt.scatter(xnew_deconv[peaks], ynew_deconv[peaks])
+            # plt.show()
+
+
+            ## MANUAL ANNOTATION
             # print("mic %d/%d\tsrc %d/%d" % (i, I, j, J))
             # plt.plot(rir_abs)
-            # plt.plot(rir_abs**2, alpha=0.5)
+            # # plt.plot(rir_abs**2, alpha=0.5)
             # plt.plot(xnew, ynew)
+            # plt.plot(xnew_deconv, ynew_deconv)
             # plt.scatter(xnew[dp_peak], ynew[dp_peak])
+            # plt.scatter(xnew_deconv[peaks], ynew_deconv[peaks])
             # plt.axvline(tof_geom*Fs + recording_offset)
-            # plt.xlim(xnew[dp_peak] - 20, xnew[dp_peak] + 20)
+            # # plt.xlim(xnew[dp_peak] - 20, xnew[dp_peak] + 20)
             # plt.show()
 
             # txt = input()
@@ -202,7 +225,7 @@ if __name__ == "__main__":
     dataset_dir = './data/dECHORATE/'
     path_to_processed = './data/processed/'
 
-    session_id = '000000' # '010000'
+    session_id = '010000' # '010000'
 
     path_to_dataset_rir = path_to_processed + '%s_rir_data.hdf5' % session_id
 
@@ -231,7 +254,6 @@ if __name__ == "__main__":
     tofs_rir[21, 0] = (4714 - 4444)/Fs
     tofs_rir[22, 0] = (4711 - 4444)/Fs
 
-
     L, IJ = rirs.shape
     D, I = mics_pos.shape
     D, J = srcs_pos.shape
@@ -255,15 +277,15 @@ if __name__ == "__main__":
 
     # # nonlinear least square problem with good initialization
     X = mics_pos[:, :I]
-    A = srcs_pos[:, 0:4]
-    print(A.shape)
+    A = srcs_pos[:, :J]
 
     # D = tofs_simulation * speed_of_sound
-    Dedm = edm(X, A) ** (.5)
-    Dtof = tofs_rir[:I, 0:4] * speed_of_sound
-    Dgeo = tofs_simulation[:I, 0:4] * speed_of_sound
+    Dedm = edm(X, A)
+    Dtof = tofs_rir[:I, :J] * speed_of_sound
+    Dgeo = tofs_simulation[:I, :J] * speed_of_sound
     assert np.allclose(Dedm, Dgeo)
-    mics_pos_est, srcs_pos_est = nlls_mds(Dtof, init={'X': X, 'A': A})
+    mics_pos_est, srcs_pos_est = nlls_mds(Dtof, X, A)
+    # mics_pos_est, srcs_pos_est = nlls_mds_array(Dtof, X, A)
     # mics_pos_est, srcs_pos_est = crcc_mds(D, init={'X': X, 'A': A})
 
     np.save(path_to_processed + 'mics_pos_est_nlls.npy', mics_pos_est)
@@ -281,7 +303,7 @@ if __name__ == "__main__":
     plt.savefig('./reports/figures/cal_positioning3D.pdf')
     plt.show()
 
-    new_tofs = (edm(mics_pos_est, srcs_pos_est) ** .5) / speed_of_sound
+    new_tofs = edm(mics_pos_est, srcs_pos_est) / speed_of_sound
 
     # plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
     for j in range(J):
@@ -293,75 +315,75 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.legend()
     plt.savefig('./reports/figures/rir_skyline_after_calibration.pdf')
-    plt.close()
-
-    # Blueprint 2D xz plane
-    room_size = [5.543, 5.675, 2.353]
-    plt.figure(figsize=(16, 9))
-    plt.gca().add_patch(
-        plt.Rectangle((0, 0),
-                    room_size[0], room_size[2], fill=False,
-                    edgecolor='g', linewidth=1)
-    )
-    plt.scatter(mics_pos[0, :], mics_pos[2, :], marker='X', label='mic init')
-    plt.scatter(mics_pos_est[0, :], mics_pos_est[2, :], marker='X', label='mic est')
-    plt.scatter(srcs_pos[0, :], srcs_pos[2, :], marker='v', label='src init')
-    plt.scatter(srcs_pos_est[0, :], srcs_pos_est[2, :], marker='v', label='src est')
-    for i in range(I):
-        if i % 5 == 0:
-            bar = np.mean(mics_pos[:, 5*i//5:5*(i//5+1)], axis=1)
-            plt.text(bar[0], bar[2], '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': 8})
-            bar = np.mean(mics_pos_est[:, 5*i//5:5*(i//5+1)], axis=1)
-            plt.text(bar[0], bar[2], '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': 8})
-    for j in range(J):
-        bar = srcs_pos[:, j]
-        if j < 6:
-            plt.text(bar[0], bar[2], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
-        else:
-            plt.text(bar[0], bar[2], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
-        bar = srcs_pos_est[:, j]
-        if j < 6:
-            plt.text(bar[0], bar[2], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
-        else:
-            plt.text(bar[0], bar[2], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
-    plt.legend()
-    plt.title('Projection: xz')
-    plt.savefig('./reports/figures/cal_positioning2D_xz.pdf')
     plt.show()
 
-    # Blueprint 2D xy plane
-    room_size = [5.543, 5.675, 2.353]
-    plt.figure(figsize=(16, 9))
-    plt.gca().add_patch(
-        plt.Rectangle((0, 0),
-                    room_size[0], room_size[1], fill=False,
-                    edgecolor='g', linewidth=1)
-    )
+    # # Blueprint 2D xz plane
+    # room_size = [5.543, 5.675, 2.353]
+    # plt.figure(figsize=(16, 9))
+    # plt.gca().add_patch(
+    #     plt.Rectangle((0, 0),
+    #                 room_size[0], room_size[2], fill=False,
+    #                 edgecolor='g', linewidth=1)
+    # )
+    # plt.scatter(mics_pos[0, :], mics_pos[2, :], marker='X', label='mic init')
+    # plt.scatter(mics_pos_est[0, :], mics_pos_est[2, :], marker='X', label='mic est')
+    # plt.scatter(srcs_pos[0, :], srcs_pos[2, :], marker='v', label='src init')
+    # plt.scatter(srcs_pos_est[0, :], srcs_pos_est[2, :], marker='v', label='src est')
+    # for i in range(I):
+    #     if i % 5 == 0:
+    #         bar = np.mean(mics_pos[:, 5*i//5:5*(i//5+1)], axis=1)
+    #         plt.text(bar[0], bar[2], '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': 8})
+    #         bar = np.mean(mics_pos_est[:, 5*i//5:5*(i//5+1)], axis=1)
+    #         plt.text(bar[0], bar[2], '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': 8})
+    # for j in range(J):
+    #     bar = srcs_pos[:, j]
+    #     if j < 6:
+    #         plt.text(bar[0], bar[2], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
+    #     else:
+    #         plt.text(bar[0], bar[2], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
+    #     bar = srcs_pos_est[:, j]
+    #     if j < 6:
+    #         plt.text(bar[0], bar[2], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
+    #     else:
+    #         plt.text(bar[0], bar[2], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
+    # plt.legend()
+    # plt.title('Projection: xz')
+    # plt.savefig('./reports/figures/cal_positioning2D_xz.pdf')
+    # plt.show()
 
-    plt.scatter(mics_pos[0, :], mics_pos[1, :], marker='X', label='mic init')
-    plt.scatter(mics_pos_est[0, :], mics_pos_est[1, :], marker='X', label='mic est')
-    plt.scatter(srcs_pos[0, :], srcs_pos[1, :], marker='v', label='src init')
-    plt.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], marker='v', label='src est')
-    for i in range(I):
-        if i % 5 == 0:
-            bar = np.mean(mics_pos[:, 5*i//5:5*(i//5+1)], axis=1)
-            plt.text(bar[0], bar[1], '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': 8})
-            bar = np.mean(mics_pos_est[:, 5*i//5:5*(i//5+1)], axis=1)
-            plt.text(bar[0], bar[1], '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': 8})
-    for j in range(J):
-        bar = srcs_pos[:, j]
-        if j < 6:
-            plt.text(bar[0], bar[1], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
-        else:
-            plt.text(bar[0], bar[1], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
-        bar = srcs_pos_est[:, j]
-        if j < 6:
-            plt.text(bar[0], bar[1], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
-        else:
-            plt.text(bar[0], bar[1], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
-    plt.legend()
-    plt.title('Projection: xy')
-    plt.savefig('./reports/figures/cal_positioning2D_xy.pdf')
-    plt.show()
+    # # Blueprint 2D xy plane
+    # room_size = [5.543, 5.675, 2.353]
+    # plt.figure(figsize=(16, 9))
+    # plt.gca().add_patch(
+    #     plt.Rectangle((0, 0),
+    #                 room_size[0], room_size[1], fill=False,
+    #                 edgecolor='g', linewidth=1)
+    # )
+
+    # plt.scatter(mics_pos[0, :], mics_pos[1, :], marker='X', label='mic init')
+    # plt.scatter(mics_pos_est[0, :], mics_pos_est[1, :], marker='X', label='mic est')
+    # plt.scatter(srcs_pos[0, :], srcs_pos[1, :], marker='v', label='src init')
+    # plt.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], marker='v', label='src est')
+    # for i in range(I):
+    #     if i % 5 == 0:
+    #         bar = np.mean(mics_pos[:, 5*i//5:5*(i//5+1)], axis=1)
+    #         plt.text(bar[0], bar[1], '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': 8})
+    #         bar = np.mean(mics_pos_est[:, 5*i//5:5*(i//5+1)], axis=1)
+    #         plt.text(bar[0], bar[1], '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': 8})
+    # for j in range(J):
+    #     bar = srcs_pos[:, j]
+    #     if j < 6:
+    #         plt.text(bar[0], bar[1], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
+    #     else:
+    #         plt.text(bar[0], bar[1], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
+    #     bar = srcs_pos_est[:, j]
+    #     if j < 6:
+    #         plt.text(bar[0], bar[1], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
+    #     else:
+    #         plt.text(bar[0], bar[1], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
+    # plt.legend()
+    # plt.title('Projection: xy')
+    # plt.savefig('./reports/figures/cal_positioning2D_xy.pdf')
+    # plt.show()
 
     pass

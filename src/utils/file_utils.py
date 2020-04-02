@@ -15,4 +15,4 @@ def load_from_matlab(filename):
     return loadmat(filename)
 
 def save_to_matlab(filename, obj):
-    return savemat(filename, {'a':obj})
+    return savemat(filename, obj)

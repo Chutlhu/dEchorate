@@ -64,24 +64,26 @@ taus_list = [r'%d $\tau_{%s}^{%d}$' % (k, toa_note['wall'][k, i, j, 0].decode(),
 
 
 def plot_rirs_and_note(rirs, curr_toa_note, i, j, selected_k, ax):
-    for d in range(D):
+    # for d in range(D):
 
-        rir = rirs[:, i, j, d]
+    # rir = rirs[:, i, j, d]
 
-        # if d == 0:
-        #     plt.plot(rir**2 + 0.2*d, alpha=.2, color='C1')
-        rir_to_plot = (normalize(rir))**2
-        rir_to_plot = np.clip(rir_to_plot, 0, 1)
-        rir_to_plot = normalize(rir_to_plot)
-        ax.plot(rir_to_plot + 0.2*d)
+    # if d == 0:
+    #     plt.plot(rir**2 + 0.2*d, alpha=.2, color='C1')
 
-        # Print the dataset name
-        wall_code_name = 'fcwsen'
-        wall_code = [int(i) for i in list(datasets[d])]
-        curr_walls = [wall_code_name[w]
-                        for w, code in enumerate(wall_code) if code == 1]
-        ax.text(50, 0.07 + 0.2*d, datasets[d])
-        ax.text(50, 0.03 + 0.2*d, curr_walls)
+    rir_to_plot = rirs[:, i, j, :]
+    rir_to_plot = rir_to_plot / np.max(np.abs(rir_to_plot), axis=0)
+    rir_to_plot = np.clip(rir_to_plot, 0, 1)
+    ax.imshow(rir_to_plot.T, aspect='equal', extent=[0, 3000, 0, 3000])
+
+
+        # # Print the dataset name
+        # wall_code_name = 'fcwsen'
+        # wall_code = [int(i) for i in list(datasets[d])]
+        # curr_walls = [wall_code_name[w]
+        #                 for w, code in enumerate(wall_code) if code == 1]
+        # ax.text(50, 0.07 + 0.2*d, datasets[d])
+        # ax.text(50, 0.03 + 0.2*d, curr_walls)
 
     # plot the echo information
     for k in range(K):
@@ -96,8 +98,8 @@ def plot_rirs_and_note(rirs, curr_toa_note, i, j, selected_k, ax):
 
         ax.text(toa*Fs, 0.025, r'$\tau_{%s}^{%d}$' %
                     (wall.decode(), order), fontsize=12)
-    ax.set_ylim([-0.05, 2.2])
-    ax.set_title('RIRs dataset %s\nmic %d, src %d' % (datasets[d], i, j))
+    # ax.set_ylim([-0.05, 2.2])
+    ax.set_title('RIRs dataset %s\nmic %d, src %d' % (datasets[0], i, j))
 
 
 # Buttons
