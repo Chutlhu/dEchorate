@@ -106,19 +106,18 @@ class SyntheticDataset:
     def set_k_order(self, K):
         self.k_order = K
 
-    def set_dataset(self, dset_code):
+    def set_dataset(self, dset_code, absb=0.2, refl=0.8):
         f, c, w, s, e, n = [int(i) for i in list(dset_code)]
         self.absorption = {
-            'north': 0.2 if n else 0.8,
-            'south': 0.2 if s else 0.8,
-            'east': 0.2 if e else 0.8,
-            'west': 0.2 if w else 0.8,
-            'floor': 0.2 if f else 0.8,
-            'ceiling': 0.2 if c else 0.8,
+            'north': refl if n else absb,
+            'south': refl if s else absb,
+            'east': refl if e else absb,
+            'west': refl if w else absb,
+            'floor': refl if f else absb,
+            'ceiling': refl if c else absb,
         }
 
     def make_room(self):
-
         room = pra.ShoeBox(
             self.room_size, fs=self.Fs,
             absorption=self.absorption, max_order=self.k_order)
