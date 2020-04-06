@@ -3,6 +3,7 @@ import scipy as sp
 import pandas as pd
 from scipy.optimize import minimize
 
+from src import constants
 from src.utils.mds_utils import edm
 
 
@@ -59,6 +60,66 @@ def nlls_mds(D, X, A, thr_mic=0.02, thr_src=0.50):
     X = sol[:3*I].reshape(3, I)
     A = sol[3*I:].reshape(3, J)
     return X, A
+
+
+def nlls_mds_ceiling(Ddp, De1, X, A, thr_mic=0.02, thr_src=0.50):
+    _, _, Rz = constants['room_size']
+
+    dim, I = X.shape
+    dim, J = A.shape
+    assert Ddp.shape == (I,J) == De1.shape
+
+    def fun_e1(xXA, I, J, Ddp, De1):
+        X = xXA[:3*I].reshape(3, I)
+        A = xXA[3*I:].reshape(3, J)
+
+        Ae1 = A.copy()
+        Ae1[2, :] = 2*Rz - Ae1[2, :]
+
+        cost = np.linalg.norm((edm(X, A) - Ddp))**2 + np.linalg.norm((edm(X, Ae1) - De1))**2
+
+        return cost
+
+    x0 = np.concatenate([X.flatten(), A.flatten()])
+    ub = np.zeros_like(x0)
+    ub[:] = np.inf
+    lb = -ub
+    # sources in +-5 cm from the guess
+    dims_slacks = [thr_src, thr_src, thr_src]
+    for j in range(J):
+        for d in range(dim):
+            ub[x0 == A[d, j]] = A[d, j] + dims_slacks[d]
+            lb[x0 == A[d, j]] = A[d, j] - dims_slacks[d]
+    # micros in +-5 cm from the guess
+    dims_slacks = [thr_mic, thr_mic, thr_mic]
+    for i in range(I):
+        for d in range(dim):
+            ub[x0 == X[d, i]] = X[d, i] + dims_slacks[d]
+            lb[x0 == X[d, i]] = X[d, i] - dims_slacks[d]
+
+    # set the origin in speaker 1
+    bounds = sp.optimize.Bounds(lb, ub, keep_feasible=True)
+    constraints = None
+    # constraints = sp.optimize.LinearConstraint(A, lb, ub)
+
+    res = sp.optimize.minimize(
+        fun_e1, x0, args=(I, J, Ddp, De1), bounds=bounds, constraints=constraints,
+        options={'maxiter': 10e3, 'maxfun': 100e3})
+
+    print('Optimization')
+    print('message', res.message)
+    print('nit', res.nit)
+    print('nfev', res.nfev)
+    print('success', res.success)
+    print('fun', res.fun)
+    sol = res.x
+    # solution = solution.reshape(3, I+J)
+    # X = solution[:, :I]
+    # A = solution[:, I:]
+    X = sol[:3*I].reshape(3, I)
+    A = sol[3*I:].reshape(3, J)
+    return X, A
+
 
 
 def nlls_mds_array(D, X, A):

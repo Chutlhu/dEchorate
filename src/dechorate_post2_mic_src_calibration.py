@@ -15,7 +15,7 @@ from scipy.optimize import least_squares
 from src import constants
 
 from src.dataset import DechorateDataset, SyntheticDataset
-from src.calibration_and_mds import nlls_mds, nlls_mds_array
+from src.calibration_and_mds import nlls_mds, nlls_mds_array, nlls_mds_ceiling
 
 from src.utils.file_utils import save_to_matlab
 from src.utils.dsp_utils import envelope, normalize
@@ -46,10 +46,10 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
     I = len(all_mic_ids)
     J = len(all_src_ids)
 
-    if mics_pos is None:
-        mics_pos = np.zeros([3, I])
-    if srcs_pos is None:
-        srcs_pos = np.zeros([3, J])
+    # if mics_pos is None:
+    # if srcs_pos is None:
+    mics_pos = np.zeros([3, I])
+    srcs_pos = np.zeros([3, J])
 
 
     toa_sym = np.zeros([7, I, J])
@@ -110,14 +110,9 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
             wal_sym[:, i, j] = wall
             ord_sym[:, i, j] = order
 
-            # print(mics_pos[:, i])
-            # print(srcs_pos[:, j])
-            # print(tau)
-
-            # print(mics_pos[:, i], srcs_pos[:, j])
             idx_walls = np.nonzero(amp_sym[:, i, j])[0]
             for c, k in enumerate(idx_walls):
-                t = (recording_offset + toa_sym[k, i, j]*Fs)
+                t = (recording_offset + tau[k]*Fs)
                 p = np.argmin(np.abs(xnew - t))
                 if k == 0:
                     idx = [p - 200, p + 200]
@@ -127,25 +122,43 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
                     peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
 
                 else:
-                    idx = [p - 200, p + 200]
+                    idx = [p - 300, p + 300]
                     # direct path peak from the interpolated
                     tmp = ynew[idx[0]:idx[1]]
                     peaks, _ = sg.find_peaks(tmp)
 
-                # if k > 0:
-                #     print(wal_sym[:, i, j])
-                #     print(toa_sym[:, i, j])
-                #     print(amp_sym[:, i, j])
-                #     plt.plot(ynew)
-                #     plt.axvline(p, color='red')
-                #     # plt.axvline(, color='blue')
-                #     plt.show()
-
-                assert len(peaks) > 0
 
                 peak = idx[0] + np.min(peaks[np.argmax(tmp[peaks])])
                 toa_peak[c, i, j] = (xnew[peak] - recording_offset)/Fs
                 toa_sym[c, i, j] = tau[k]
+
+                # if K > 1 and c>1:
+                #     plt.figure(figsize=(16, 9))
+                #     print(wal_sym[:, i, j])
+                #     print(toa_sym[:, i, j])
+                #     print(amp_sym[:, i, j])
+                #     plt.title('mic %d (%d), src %d' % (i, i+33, j))
+                #     plt.plot(ynew, label='recorded rir')
+                #     p0 = (recording_offset + toa_sym[0, i, j]*Fs)*10
+                #     p1 = (recording_offset + toa_sym[1, i, j]*Fs)*10
+                #     plt.axvline(p0, color='red', ls='--', label='dp sym')
+                #     plt.axvline(p1, color='green', ls='--', label='e1 sym')
+
+                #     p0 = (recording_offset + toa_peak[0, i, j]*Fs)*10
+                #     p1 = (recording_offset + toa_peak[1, i, j]*Fs)*10
+                #     plt.axvline(p0, color='red', label='dp peak')
+                #     plt.axvline(p1, color='green', label='e1 peak')
+                #     plt.legend()
+
+                #     for k in range(7):
+                #         pk = (recording_offset + tau[k]*Fs)*10
+                #         plt.axvline(pk, color='black', ls='--', alpha=0.3)
+                #         plt.annotate(r'$\tau_{%d}^{%s}$' % (pk, wal_sym[k, i, j].decode()), [pk, 0.5])
+
+                #     plt.xlim([p0-1000, p1+4000])
+                #     plt.show()
+
+                assert len(peaks) > 0
 
             # plt.axvline(toa_peak[:, i, j], color='C5', label='dp')
             # plt.plot(np.abs(normalize(rir)), label='original')
@@ -282,11 +295,15 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
         = compute_distances_from_rirs(
             path_to_dataset_rir, dataset, K, dataset_id, mics_pos, src_pos)
 
-
     # some hard coded variables
     toa_peak[0, 20, 0] = (4715 - 4444)/Fs
     toa_peak[0, 21, 0] = (4714 - 4444)/Fs
     toa_peak[0, 22, 0] = (4711 - 4444)/Fs
+
+    # toa_peak[0, 20, 0] = (4715 - 4444)/Fs
+    # toa_peak[0, 21, 0] = (4714 - 4444)/Fs
+    # toa_peak[0, 22, 0] = (4711 - 4444)/Fs
+
 
     assert toa_peak.shape == toa_sym.shape
     assert toa_peak.shape[1] == mics_pos.shape[1]
@@ -323,11 +340,22 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
     assert np.allclose(Dgeo, Dsym)
 
     print('Initial margin', np.linalg.norm(Dsym - Dobs))
-    X_est, A_est = nlls_mds(Dobs, X, A)
+    if K == 1:
+        X_est, A_est = nlls_mds(Dobs, X, A)
+    elif K == 2:
+        De1 = toa_peak[1, :I, :J] * speed_of_sound
+        X_est, A_est = nlls_mds_ceiling(Dobs, De1, X, A)
+    else:
+        pass
     # mics_pos_est, srcs_pos_est = nlls_mds_array(Dtof, X, A)
     # mics_pos_est, srcs_pos_est = crcc_mds(D, init={'X': X, 'A': A})
     Dgeo_est = edm(X_est, A_est)
     print('After unfolding nlls', np.linalg.norm(Dobs - Dgeo_est))
+
+    print(Dgeo_est)
+    print(Dobs)
+    print(np.abs(Dobs - Dgeo_est))
+    print(np.sqrt(np.mean(np.abs(Dobs - Dgeo_est)**2)))
 
     mics_pos_est = X_est
     srcs_pos_est = A_est
@@ -342,10 +370,9 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
     for j in range(J):
         plt.axvline(j*30, color='C7')
     plt.axhline(y=L-recording_offset, label='Time of Emission')
-
-
-    plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[0,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
-    plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[0,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
+    for k in range(K):
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[k,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[k,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
     plt.scatter(np.arange(I*J)+0.5, L - recording_offset - new_tofs.T.flatten()*Fs, c='C3', marker='X', label='After EDM')
     plt.tight_layout()
     plt.legend()
@@ -357,7 +384,7 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
 
 if __name__ == "__main__":
 
-    datasets = ['000000', '010000', '011000', '011100', '011110', '0111111']
+    datasets = ['010000', '010000', '011000', '011100', '011110', '0111111']
 
     mics_pos = None
     srcs_pos = None
