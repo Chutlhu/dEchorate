@@ -18,7 +18,7 @@ from src.dataset import DechorateDataset, SyntheticDataset
 from src.calibration_and_mds import nlls_mds, nlls_mds_array, nlls_mds_ceiling
 
 from src.utils.file_utils import save_to_matlab
-from src.utils.dsp_utils import envelope, normalize
+from src.utils.dsp_utils import envelope, normalize, peakdetect
 from src.utils.mds_utils import edm
 
 from risotto import deconvolution as deconv
@@ -114,12 +114,17 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
             for c, k in enumerate(idx_walls):
                 t = (recording_offset + tau[k]*Fs)
                 p = np.argmin(np.abs(xnew - t))
+                print(p)
                 if k == 0:
                     idx = [p - 200, p + 200]
                     # direct path peak from the interpolated
                     tmp = ynew[idx[0]:idx[1]]
-                    # peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
                     peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
+                    # peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
+
+                    plt.plot(ynew)
+                    plt.scatter(peaks + idx[0], ynew[peaks + idx[0]])
+                    plt.show()
 
                 else:
                     idx = [p - 300, p + 300]
@@ -132,23 +137,23 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
                 toa_peak[c, i, j] = (xnew[peak] - recording_offset)/Fs
                 toa_sym[c, i, j] = tau[k]
 
-                # if K > 1 and c>1:
-                #     plt.figure(figsize=(16, 9))
-                #     print(wal_sym[:, i, j])
-                #     print(toa_sym[:, i, j])
-                #     print(amp_sym[:, i, j])
-                #     plt.title('mic %d (%d), src %d' % (i, i+33, j))
-                #     plt.plot(ynew, label='recorded rir')
-                #     p0 = (recording_offset + toa_sym[0, i, j]*Fs)*10
-                #     p1 = (recording_offset + toa_sym[1, i, j]*Fs)*10
-                #     plt.axvline(p0, color='red', ls='--', label='dp sym')
-                #     plt.axvline(p1, color='green', ls='--', label='e1 sym')
+                plt.figure(figsize=(16, 9))
+                print(wal_sym[:, i, j])
+                print(toa_sym[:, i, j])
+                print(amp_sym[:, i, j])
+                plt.title('mic %d (%d), src %d' % (i, i+33, j))
+                plt.plot(ynew, label='recorded rir')
+                p0 = (recording_offset + toa_sym[0, i, j]*Fs)*10
+                p1 = (recording_offset + toa_sym[1, i, j]*Fs)*10
+                plt.axvline(p0, color='red', ls='--', label='dp sym')
+                plt.axvline(p1, color='green', ls='--', label='e1 sym')
 
-                #     p0 = (recording_offset + toa_peak[0, i, j]*Fs)*10
-                #     p1 = (recording_offset + toa_peak[1, i, j]*Fs)*10
-                #     plt.axvline(p0, color='red', label='dp peak')
-                #     plt.axvline(p1, color='green', label='e1 peak')
-                #     plt.legend()
+                p0 = (recording_offset + toa_peak[0, i, j]*Fs)*10
+                p1 = (recording_offset + toa_peak[1, i, j]*Fs)*10
+                plt.axvline(p0, color='red', label='dp peak')
+                plt.axvline(p1, color='green', label='e1 peak')
+                plt.legend()
+                plt.show()
 
                 #     for k in range(7):
                 #         pk = (recording_offset + tau[k]*Fs)*10
@@ -386,28 +391,32 @@ if __name__ == "__main__":
 
     datasets = ['010000', '010000', '011000', '011100', '011110', '0111111']
 
+    ## INITIALIZATION
     mics_pos = None
     srcs_pos = None
+    dataset_id = '000000'
+    K = 1
 
-    for k, dataset_id in enumerate(datasets):
-        mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-            = iterative_calibration(dataset_id, mics_pos, srcs_pos, k+1)
+    ## K = 0: direct path estimation
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
+        = iterative_calibration(dataset_id, mics_pos, srcs_pos, K)
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
-        ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
-        ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
-        ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
-        ax.set_xlim([0, Rx])
-        ax.set_ylim([0, Ry])
-        ax.set_zlim([0, Rz])
-        plt.legend()
-        plt.savefig('./reports/figures/cal_positioning3D.pdf')
-        plt.show()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
+    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
+    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
+    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
+    ax.set_xlim([0, Rx])
+    ax.set_ylim([0, Ry])
+    ax.set_zlim([0, Rz])
+    plt.legend()
+    plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    plt.show()
 
-        mics_pos = mics_pos_est
-        srcs_pos = srcs_pos_est
+    ## K = 1: echo 1 -- from the ceiling
+    mics_pos = mics_pos_est
+    srcs_pos = srcs_pos_est
 
     pass
 
