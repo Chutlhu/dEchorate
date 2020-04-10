@@ -86,6 +86,13 @@ def plot_rirs_and_note(rirs, note, i, j, selected_k, ax, visibility, dp_extreme)
     pass
 
 
+def plot_peak_annotation(peaks, rir, ax):
+    ax.scatter(peaks, rir[[int(p) for p in peaks]])
+    for p, peak in enumerate(peaks):
+        ax.annotate("%d - %1.2f" %(p, np.round(peak, 2)), [peak, rir[int(peak)]])
+
+
+
 def plot_staked_rirs(rir, note, i, j, selected_k, ax):
     idx0 = (i // 5)*5
     idx1 = idx0 + 5
@@ -129,8 +136,7 @@ def plot_rirs_and_note_merged(rirs, note, i, j, selected_k, ax, fun= lambda x : 
         else:
             ax.axvline(x=toa*Fs, c='C0', alpha=0.5)
 
-        ax.annotate(r'$\tau_{%s}^{%d}$' % (wall.decode(), order), [
-                    toa*Fs, 0.05], fontsize=12)
+        ax.annotate(r'$\tau_{%s}^{%d}$' % (wall.decode(), order), [toa*Fs, 0.3], fontsize=12)
 
     return mean_rirs_to_plot
 
@@ -332,9 +338,8 @@ class Callbacks():
         print('Peaks found:')
         for i, p in enumerate(peaks):
             print('-', i,  p, '', interpolated_peaks[i])
-            self.axes[2].annotate("%d - %1.4f" %(i, interpolated_peaks[i]), [self.interpolated_peaks[i], cb[p]])
 
-        self.fig.canvas.draw_idle()
+        self._update()
 
     def dp_deconv(self, event):
         L, I, J, D = self.all_rirs.shape
@@ -386,6 +391,9 @@ class Callbacks():
 
         plot_staked_rirs(self.all_rirs, self.toa_note, self.i, self.j, self.idx, self.axes[3])
 
+        if not self.interpolated_peaks is None:
+            plot_peak_annotation(self.interpolated_peaks, self.feature, self.axes[2])
+
         self.fig.canvas.draw_idle()
 
 
@@ -417,6 +425,6 @@ txt_boxes_tau[6].on_submit(lambda tau_str: cb.set_tau_val(float(tau_str), 6))
 
 txt_boxes_pck_dst.on_submit(lambda val_str: cb.set_peak_dict('distance', float(val_str)))
 txt_boxes_pck_thr.on_submit(lambda val_str: cb.set_peak_dict('threshold', float(val_str)))
-txt_boxes_pck_num.on_submit(lambda val_str: cb.set_peak_dict('num_peaks', float(val_str)))
+txt_boxes_pck_num.on_submit(lambda val_str: cb.set_peak_dict('num_peaks', int(val_str)))
 
 plt.show()
