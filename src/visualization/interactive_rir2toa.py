@@ -192,6 +192,7 @@ class Callbacks():
         self.j = 0
         self.Fs = 48000
         self.k = 0
+        self.interpolated_peaks = None
 
         self.peak = {
             'distance' : 10,
@@ -326,11 +327,13 @@ class Callbacks():
 
         peaks = peaks[:self.peak['num_peaks']]
         self.axes[2].scatter(peaks, cb[peaks])
+        self.interpolated_peaks = interpolated_peaks[:self.peak['num_peaks']]
 
         print('Peaks found:')
         for i, p in enumerate(peaks):
             print('-', i,  p, '', interpolated_peaks[i])
-            self.axes[2].annotate("%d - %1.4f" %(i, interpolated_peaks[i]), [interpolated_peaks[i], cb[p]])
+            self.axes[2].annotate("%d - %1.4f" %(i, interpolated_peaks[i]), [self.interpolated_peaks[i], cb[p]])
+
         self.fig.canvas.draw_idle()
 
     def dp_deconv(self, event):

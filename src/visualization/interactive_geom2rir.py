@@ -79,6 +79,7 @@ txt_box_src = TextBox(rax, 'src', '0')
 real_dset.set_entry(i, j)
 
 def update(val=None):
+
     ax1.clear()
     ax2.clear()
 
