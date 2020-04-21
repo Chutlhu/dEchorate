@@ -33,8 +33,8 @@ dataset_dir = './data/dECHORATE/'
 path_to_processed = './data/processed/'
 
 
-def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
-                                dataset_id, mics_pos=None, srcs_pos=None):
+def load_rirs(path_to_dataset_rir, dataset, K,
+              dataset_id, mics_pos=None, srcs_pos=None):
 
     f_rir = h5py.File(path_to_dataset_rir, 'r')
 
@@ -62,7 +62,6 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
     L = int(0.5*Fs) # max length of the filter
     rirs = np.zeros([L, I*J])
 
-    ij = 0
     for j in tqdm(range(J)):
         for i in range(I):
 
@@ -110,60 +109,60 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
             wal_sym[:, i, j] = wall
             ord_sym[:, i, j] = order
 
-            idx_walls = np.nonzero(amp_sym[:, i, j])[0]
-            for c, k in enumerate(idx_walls):
-                t = (recording_offset + tau[k]*Fs)
-                p = np.argmin(np.abs(xnew - t))
-                print(p)
-                if k == 0:
-                    idx = [p - 200, p + 200]
-                    # direct path peak from the interpolated
-                    tmp = ynew[idx[0]:idx[1]]
-                    peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
-                    # peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
+            # idx_walls = np.nonzero(amp_sym[:, i, j])[0]
+            # for c, k in enumerate(idx_walls):
+            #     t = (recording_offset + tau[k]*Fs)
+            #     p = np.argmin(np.abs(xnew - t))
+            #     print(p)
+            #     if k == 0:
+            #         idx = [p - 200, p + 200]
+            #         # direct path peak from the interpolated
+            #         tmp = ynew[idx[0]:idx[1]]
+            #         peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
+            #         # peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
 
-                    plt.plot(ynew)
-                    plt.scatter(peaks + idx[0], ynew[peaks + idx[0]])
-                    plt.show()
+            #         plt.plot(ynew)
+            #         plt.scatter(peaks + idx[0], ynew[peaks + idx[0]])
+            #         plt.show()
 
-                else:
-                    idx = [p - 300, p + 300]
-                    # direct path peak from the interpolated
-                    tmp = ynew[idx[0]:idx[1]]
-                    peaks, _ = sg.find_peaks(tmp)
+            #     else:
+            #         idx = [p - 300, p + 300]
+            #         # direct path peak from the interpolated
+            #         tmp = ynew[idx[0]:idx[1]]
+            #         peaks, _ = sg.find_peaks(tmp)
 
 
-                peak = idx[0] + np.min(peaks[np.argmax(tmp[peaks])])
-                toa_peak[c, i, j] = (xnew[peak] - recording_offset)/Fs
-                toa_sym[c, i, j] = tau[k]
+            #     peak = idx[0] + np.min(peaks[np.argmax(tmp[peaks])])
+            #     toa_peak[c, i, j] = (xnew[peak] - recording_offset)/Fs
+            #     toa_sym[c, i, j] = tau[k]
 
-                plt.figure(figsize=(16, 9))
-                print(wal_sym[:, i, j])
-                print(toa_sym[:, i, j])
-                print(amp_sym[:, i, j])
-                plt.title('mic %d (%d), src %d' % (i, i+33, j))
-                plt.plot(ynew, label='recorded rir')
-                p0 = (recording_offset + toa_sym[0, i, j]*Fs)*10
-                p1 = (recording_offset + toa_sym[1, i, j]*Fs)*10
-                plt.axvline(p0, color='red', ls='--', label='dp sym')
-                plt.axvline(p1, color='green', ls='--', label='e1 sym')
+            #     plt.figure(figsize=(16, 9))
+            #     print(wal_sym[:, i, j])
+            #     print(toa_sym[:, i, j])
+            #     print(amp_sym[:, i, j])
+            #     plt.title('mic %d (%d), src %d' % (i, i+33, j))
+            #     plt.plot(ynew, label='recorded rir')
+            #     p0 = (recording_offset + toa_sym[0, i, j]*Fs)*10
+            #     p1 = (recording_offset + toa_sym[1, i, j]*Fs)*10
+            #     plt.axvline(p0, color='red', ls='--', label='dp sym')
+            #     plt.axvline(p1, color='green', ls='--', label='e1 sym')
 
-                p0 = (recording_offset + toa_peak[0, i, j]*Fs)*10
-                p1 = (recording_offset + toa_peak[1, i, j]*Fs)*10
-                plt.axvline(p0, color='red', label='dp peak')
-                plt.axvline(p1, color='green', label='e1 peak')
-                plt.legend()
-                plt.show()
+            #     p0 = (recording_offset + toa_peak[0, i, j]*Fs)*10
+            #     p1 = (recording_offset + toa_peak[1, i, j]*Fs)*10
+            #     plt.axvline(p0, color='red', label='dp peak')
+            #     plt.axvline(p1, color='green', label='e1 peak')
+            #     plt.legend()
+            #     plt.show()
 
-                #     for k in range(7):
-                #         pk = (recording_offset + tau[k]*Fs)*10
-                #         plt.axvline(pk, color='black', ls='--', alpha=0.3)
-                #         plt.annotate(r'$\tau_{%d}^{%s}$' % (pk, wal_sym[k, i, j].decode()), [pk, 0.5])
+            #     #     for k in range(7):
+            #     #         pk = (recording_offset + tau[k]*Fs)*10
+            #     #         plt.axvline(pk, color='black', ls='--', alpha=0.3)
+            #     #         plt.annotate(r'$\tau_{%d}^{%s}$' % (pk, wal_sym[k, i, j].decode()), [pk, 0.5])
 
-                #     plt.xlim([p0-1000, p1+4000])
-                #     plt.show()
+            #     #     plt.xlim([p0-1000, p1+4000])
+            #     #     plt.show()
 
-                assert len(peaks) > 0
+            #     assert len(peaks) > 0
 
             # plt.axvline(toa_peak[:, i, j], color='C5', label='dp')
             # plt.plot(np.abs(normalize(rir)), label='original')
@@ -270,9 +269,7 @@ def compute_distances_from_rirs(path_to_dataset_rir, dataset, K,
 
             #     plt.show()
 
-            ij += 1
-
-    return rirs, toa_sym, toa_peak, mics_pos, srcs_pos
+    return rirs, toa_sym, mics_pos, srcs_pos
 
 
 def iterative_calibration(dataset_id, mics_pos, src_pos, K):
@@ -295,19 +292,11 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
         & (dataset['src_id'] < 5)
     ]
 
-    ## COMPUTE DIRECT PATH POSITIONS
-    rirs, toa_sym, toa_peak, mics_pos, srcs_pos \
-        = compute_distances_from_rirs(
-            path_to_dataset_rir, dataset, K, dataset_id, mics_pos, src_pos)
+    # LOAD MEASURED RIRs
+    # and COMPUTED PYROOM ANNOTATION
+    rirs, toa_sym, mics_pos, srcs_pos = load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, src_pos)
 
-    # some hard coded variables
-    toa_peak[0, 20, 0] = (4715 - 4444)/Fs
-    toa_peak[0, 21, 0] = (4714 - 4444)/Fs
-    toa_peak[0, 22, 0] = (4711 - 4444)/Fs
-
-    # toa_peak[0, 20, 0] = (4715 - 4444)/Fs
-    # toa_peak[0, 21, 0] = (4714 - 4444)/Fs
-    # toa_peak[0, 22, 0] = (4711 - 4444)/Fs
+    # LOAD MANUAL ANNOTATION
 
 
     assert toa_peak.shape == toa_sym.shape

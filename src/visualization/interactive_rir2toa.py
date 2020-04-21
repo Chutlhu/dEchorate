@@ -349,7 +349,6 @@ class Callbacks():
         b = self.dp_extreme[1]
         dp = self.all_rirs[a:b, self.i, self.j, 0]
         p = np.argmax(np.abs(dp))
-        print(p)
 
         print('Deconvolving with DP with dp in [%d, %d]' % (a, b))
         for d in range(D):
