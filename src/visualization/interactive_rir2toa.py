@@ -12,6 +12,7 @@ from datetime import datetime
 from matplotlib.widgets import Slider, RadioButtons, Button, TextBox, CheckButtons
 from mpl_toolkits.mplot3d import Axes3D
 
+from src import constants
 from src.dataset import SyntheticDataset, DechorateDataset
 from src.utils.file_utils import load_from_pickle, save_to_pickle
 from src.utils.dsp_utils import normalize
@@ -23,14 +24,9 @@ path_to_processed = './data/processed/'
 path_to_note_csv = dataset_dir + 'annotations/dECHORATE_database.csv'
 
 params = {
-    'Fs' : 48000,
+    'Fs' : constants['Fs'],
 }
-datasets = ['000000', '010000', '011000', '011100', '011110', '011111',
-            '001000', '000100', '000010', '000001']
-
-
-#TODO: Peak peaking
-#TODO: Save to csv
+datasets = constants['datasets']
 
 ## INITIALIZE FIGURE
 scaling = 0.8

@@ -17,8 +17,8 @@ from src import constants
 from src.dataset import DechorateDataset, SyntheticDataset
 from src.calibration_and_mds import nlls_mds, nlls_mds_array, nlls_mds_ceiling
 
-from src.utils.file_utils import save_to_matlab
-from src.utils.dsp_utils import envelope, normalize, peakdetect
+from src.utils.file_utils import save_to_matlab, load_from_pickle
+from src.utils.dsp_utils import envelope, normalize
 from src.utils.mds_utils import edm
 
 from risotto import deconvolution as deconv
@@ -26,8 +26,7 @@ from risotto import deconvolution as deconv
 Fs = constants['Fs'] # Sampling frequency
 recording_offset = constants['recording_offset']
 Rx, Ry, Rz = constants['room_size']
-T = 24     # temperature
-speed_of_sound = 331.3 + 0.606 * T # speed of sound
+speed_of_sound = constants['speed_of_sound']  # speed of sound
 
 dataset_dir = './data/dECHORATE/'
 path_to_processed = './data/processed/'
@@ -62,6 +61,7 @@ def load_rirs(path_to_dataset_rir, dataset, K,
     L = int(0.5*Fs) # max length of the filter
     rirs = np.zeros([L, I*J])
 
+    ij = 0
     for j in tqdm(range(J)):
         for i in range(I):
 
@@ -74,9 +74,8 @@ def load_rirs(path_to_dataset_rir, dataset, K,
 
             rir = f_rir['rir/%s/%d' % (wavefile, i)][()].squeeze()
 
-            rir_abs = np.abs(rir)
-            rir_abs = rir_abs/np.max(rir_abs)
-            rirs[:, ij] = rir_abs
+            rir = rir/np.max(np.abs(rir))
+            rirs[:, ij] = np.abs(rir)
 
             x = np.arange(0, len(rir))
             y = rir
@@ -108,6 +107,8 @@ def load_rirs(path_to_dataset_rir, dataset, K,
             amp_sym[:, i, j] = amp
             wal_sym[:, i, j] = wall
             ord_sym[:, i, j] = order
+
+            ij += 1
 
             # idx_walls = np.nonzero(amp_sym[:, i, j])[0]
             # for c, k in enumerate(idx_walls):
@@ -274,6 +275,10 @@ def load_rirs(path_to_dataset_rir, dataset, K,
 
 def iterative_calibration(dataset_id, mics_pos, src_pos, K):
 
+    refl_order = constants['refl_order_pyroom']
+    curr_reflectors = constants['refl_order_calibr'][:K+1]
+
+    d = constants['datasets'].index(dataset_id)
     path_to_dataset_rir = path_to_processed + '%s_rir_data.hdf5' % dataset_id
     path_to_database = dataset_dir + 'annotations/dECHORATE_database.csv'
     dataset = pd.read_csv(path_to_database)
@@ -295,9 +300,12 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
     # LOAD MEASURED RIRs
     # and COMPUTED PYROOM ANNOTATION
     rirs, toa_sym, mics_pos, srcs_pos = load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, src_pos)
+    print(toa_sym.shape)
 
     # LOAD MANUAL ANNOTATION
-
+    path_to_manual_annotation = './data/processed/rirs_manual_annotation/20200410_22h47_gui_rir_annotation.pkl'
+    manual_note = load_from_pickle(path_to_manual_annotation)
+    toa_peak = manual_note['toa'][:7, :, :, 0]
 
     assert toa_peak.shape == toa_sym.shape
     assert toa_peak.shape[1] == mics_pos.shape[1]
@@ -311,33 +319,61 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
     for j in range(J):
             plt.axvline(j*30, color='C7')
     plt.axhline(y=L-recording_offset, label='Time of Emission')
-    for k in range(K):
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[k,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[k,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
+    for k in range(K+1):
+        wall = curr_reflectors[k]
+        r = refl_order.index(wall)
+
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
     plt.tight_layout()
     plt.legend()
     plt.savefig('./reports/figures/rir_skyline.pdf')
     plt.show()
-    plt.close()
+    # plt.close()
 
     # ## MULTIDIMENSIONAL SCALING
     # select sub set of microphones and sources
 
     # # nonlinear least square problem with good initialization
-    X = mics_pos[:, :I]
-    A = srcs_pos[:, :J]
+    X = mics_pos
+    A = srcs_pos
 
-    # D = tofs_simulation * speed_of_sound
     Dgeo = edm(X, A)
-    Dobs = toa_peak[0, :I, :J] * speed_of_sound
-    Dsym = toa_sym[0, :I, :J] * speed_of_sound
+    if K == 0:
+        curr_refl_name = 'd'
+        r = refl_order.index(curr_refl_name)
+        Dobs = toa_peak[r, :I, :J] * speed_of_sound
+        Dsym = toa_sym[r, :I, :J] * speed_of_sound
+    if K == 1:
+        Dobs = toa_peak[0, :I, :J] * speed_of_sound
+        Dsym = toa_sym[0, :I, :J] * speed_of_sound
+        wall = curr_reflectors[k]
+        r = refl_order.index(wall)
+        De1 = toa_peak[r, :I, :J] * speed_of_sound
+
     assert np.allclose(Dgeo, Dsym)
 
+    plt.subplot(141)
+    plt.imshow(Dgeo, aspect='auto')
+    plt.title('Geometry init')
+    plt.subplot(142)
+    plt.imshow(Dsym, aspect='auto')
+    plt.title('Pyroom init')
+    plt.subplot(143)
+    plt.imshow(Dobs, aspect='auto')
+    plt.title('Peak picking')
+    plt.subplot(144)
+    plt.imshow(np.abs(Dobs - Dsym), aspect='auto')
+    plt.title('Diff')
+    plt.show()
+
+    rmse = lambda x, y : np.sqrt(np.mean(np.abs(x - y)**2))
+
     print('Initial margin', np.linalg.norm(Dsym - Dobs))
-    if K == 1:
+    print('Initial rmse',   rmse(Dsym, Dobs))
+    if K == 0:
         X_est, A_est = nlls_mds(Dobs, X, A)
-    elif K == 2:
-        De1 = toa_peak[1, :I, :J] * speed_of_sound
+    elif K == 1:
         X_est, A_est = nlls_mds_ceiling(Dobs, De1, X, A)
     else:
         pass
@@ -346,10 +382,15 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
     Dgeo_est = edm(X_est, A_est)
     print('After unfolding nlls', np.linalg.norm(Dobs - Dgeo_est))
 
-    print(Dgeo_est)
-    print(Dobs)
-    print(np.abs(Dobs - Dgeo_est))
-    print(np.sqrt(np.mean(np.abs(Dobs - Dgeo_est)**2)))
+    me = np.max(np.abs(Dobs - Dgeo_est))
+    mae =  np.mean(np.abs(Dobs - Dgeo_est))
+    rmse = rmse(Dobs, Dgeo_est)
+    std = np.std(np.abs(Dobs - Dgeo_est))
+
+    print('ME', me)
+    print('MAE', mae)
+    print('RMSE', rmse)
+    print('std', std)
 
     mics_pos_est = X_est
     srcs_pos_est = A_est
@@ -378,15 +419,35 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
 
 if __name__ == "__main__":
 
-    datasets = ['010000', '010000', '011000', '011100', '011110', '0111111']
+    datasets = constants['datasets']
 
     ## INITIALIZATION
     mics_pos = None
     srcs_pos = None
-    dataset_id = '000000'
-    K = 1
+    dataset_id = '011111'
 
-    ## K = 0: direct path estimation
+    # ## K = 1: direct path estimation
+    # K = 0
+    # mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
+    #     = iterative_calibration(dataset_id, mics_pos, srcs_pos, K)
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
+    # ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
+    # ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
+    # ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
+    # ax.set_xlim([0, Rx])
+    # ax.set_ylim([0, Ry])
+    # ax.set_zlim([0, Rz])
+    # plt.legend()
+    # plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    # plt.show()
+
+    ## K = 1: echo 1 -- from the ceiling
+    K = 1
+    # mics_pos = mics_pos_est
+    # srcs_pos = srcs_pos_est
     mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
         = iterative_calibration(dataset_id, mics_pos, srcs_pos, K)
 
@@ -402,10 +463,6 @@ if __name__ == "__main__":
     plt.legend()
     plt.savefig('./reports/figures/cal_positioning3D.pdf')
     plt.show()
-
-    ## K = 1: echo 1 -- from the ceiling
-    mics_pos = mics_pos_est
-    srcs_pos = srcs_pos_est
 
     pass
 

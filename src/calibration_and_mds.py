@@ -62,7 +62,7 @@ def nlls_mds(D, X, A, thr_mic=0.02, thr_src=0.50):
     return X, A
 
 
-def nlls_mds_ceiling(Ddp, De1, X, A, thr_mic=0.02, thr_src=0.50):
+def nlls_mds_ceiling(Ddp, De1, De2, X, A, thr_mic=0., thr_src=1.0):
     _, _, Rz = constants['room_size']
 
     dim, I = X.shape
@@ -73,10 +73,14 @@ def nlls_mds_ceiling(Ddp, De1, X, A, thr_mic=0.02, thr_src=0.50):
         X = xXA[:3*I].reshape(3, I)
         A = xXA[3*I:].reshape(3, J)
 
-        Ae1 = A.copy()
-        Ae1[2, :] = 2*Rz - Ae1[2, :]
+        Ae_c = A.copy()
+        Ae_f = A.copy()
+        Ae_c[2, :] = 2*Rz - Ae_c[2, :]
+        Ae_f[2, :] = -2*Ae_f[2, :]
 
-        cost = np.linalg.norm((edm(X, A) - Ddp))**2 + np.linalg.norm((edm(X, Ae1) - De1))**2
+        cost = np.linalg.norm((edm(X, A) - Ddp))**2
+                + np.linalg.norm((edm(X, Ae_c) - De_c))**2
+                + np.linalg.norm((edm(X, Ae_f) - De_f))**2
 
         return cost
 
