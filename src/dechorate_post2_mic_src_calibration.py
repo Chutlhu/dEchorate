@@ -249,21 +249,37 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K):
     mics_pos_est = X_est
     srcs_pos_est = A_est
 
-    np.save(path_to_processed + 'mics_pos_est_nlls.npy', mics_pos_est)
-    np.save(path_to_processed + 'srcs_pos_est_nlls.npy', srcs_pos_est)
-    mics_pos_est = np.load(path_to_processed + 'mics_pos_est_nlls.npy')
-    srcs_pos_est = np.load(path_to_processed + 'srcs_pos_est_nlls.npy')
+    # np.save(path_to_processed + 'mics_pos_est_nlls.npy', mics_pos_est)
+    # np.save(path_to_processed + 'srcs_pos_est_nlls.npy', srcs_pos_est)
+    # mics_pos_est = np.load(path_to_processed + 'mics_pos_est_nlls.npy')
+    # srcs_pos_est = np.load(path_to_processed + 'srcs_pos_est_nlls.npy')
 
-    new_tofs = Dgeo_est / speed_of_sound
 
     # plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
     for j in range(J):
         plt.axvline(j*30, color='C7')
     plt.axhline(y=L-recording_offset, label='Time of Emission')
     for k in range(K+1):
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[k,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[k,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
-    plt.scatter(np.arange(I*J)+0.5, L - recording_offset - new_tofs.T.flatten()*Fs, c='C3', marker='X', label='After EDM')
+        wall = curr_reflectors[k]
+        r = refl_order.index(wall)
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
+
+        if k == 0:
+            A = A_est.copy()
+        if k == 1:
+            A = A_est.copy()
+            A[2,:] = 2*Rz - A_est[2, :]
+
+        if k == 2:
+            A = A_est.copy()
+            A[2, :] = - A_est[2, :]
+
+        D = edm(X_est, A)
+        new_tofs = D / speed_of_sound
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - new_tofs.T.flatten()*Fs, c='C3', marker='X', label='EDM k%d' % k)
+
+
     plt.tight_layout()
     plt.legend()
     plt.savefig('./reports/figures/rir_skyline_after_calibration.pdf')
