@@ -112,7 +112,7 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
     return rirs, toa_sym, mics_pos, srcs_pos
 
 
-def iterative_calibration(dataset_id, mics_pos, srcs_pos, K):
+def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, path_to_manual_annotation):
 
     refl_order = constants['refl_order_pyroom']
     curr_reflectors = constants['refl_order_calibr'][:K+1]
@@ -142,7 +142,6 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K):
     rirs, toa_sym, mics_pos, srcs_pos = load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos)
 
     # LOAD MANUAL ANNOTATION
-    path_to_manual_annotation = './data/processed/rirs_manual_annotation/20200410_22h47_gui_rir_annotation.pkl'
     manual_note = load_from_pickle(path_to_manual_annotation)
     toa_peak = manual_note['toa'][:7, :, :, 0]
 
@@ -158,6 +157,7 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K):
     for j in range(J):
             plt.axvline(j*30, color='C7')
     plt.axhline(y=L-recording_offset, label='Time of Emission')
+
     for k in range(K+1):
         print(curr_reflectors)
         wall = curr_reflectors[k]
@@ -297,10 +297,12 @@ if __name__ == "__main__":
     srcs_pos = None
     dataset_id = '011000'
 
+    path_to_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
+
     ## K = 1: direct path estimation
     K = 0
     mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-        = iterative_calibration(dataset_id, mics_pos, srcs_pos, K)
+        = iterative_calibration(dataset_id, mics_pos, srcs_pos, K, path_to_annotation)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -318,7 +320,7 @@ if __name__ == "__main__":
     ## K = 1: echo 1 -- from the ceiling
     K = 1
     mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K)
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, path_to_annotation)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -336,7 +338,7 @@ if __name__ == "__main__":
     ## K = 2: echo 1,2 -- from the ceiling and the floor
     K = 2
     mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K)
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, path_to_annotation)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -358,7 +360,7 @@ if __name__ == "__main__":
     ## K = 2: echo 1,2 -- from the ceiling and the floor
     K = 3
     mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K)
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, path_to_annotation)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
