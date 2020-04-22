@@ -1,13 +1,17 @@
 import numpy as np
 import scipy as sp
 import pandas as pd
+import matplotlib.pyplot as plt
+
 from scipy.optimize import minimize
 
 from src import constants
 from src.utils.mds_utils import edm
+from src.utils.dsp_utils import envelope, normalize
 
 
-def nlls_mds(D, X, A, thr_mic=0.02, thr_src=0.50):
+
+def nlls_mds(D, X, A, thr_mic=0.05, thr_src=0.05):
     dim, I = X.shape
     dim, J = A.shape
     assert D.shape == (I, J)
@@ -45,7 +49,7 @@ def nlls_mds(D, X, A, thr_mic=0.02, thr_src=0.50):
 
     res = sp.optimize.minimize(
             fun, x0, args=(I, J, D), bounds=bounds, constraints=constraints,
-            options={'maxiter': 10e3, 'maxfun': 100e3})
+            options={'maxiter': 10e3, 'maxfev': 100e3})
 
     print('Optimization')
     print('message', res.message)
@@ -62,24 +66,24 @@ def nlls_mds(D, X, A, thr_mic=0.02, thr_src=0.50):
     return X, A
 
 
-def nlls_mds_ceiling(Ddp, De1, De2, X, A, thr_mic=0., thr_src=1.0):
+def nlls_mds_images(Ddp, De_c, De_f, X, A, thr_mic=0.10, thr_src=.2):
     _, _, Rz = constants['room_size']
 
     dim, I = X.shape
     dim, J = A.shape
-    assert Ddp.shape == (I,J) == De1.shape
+    assert Ddp.shape == (I,J) == De_c.shape == De_f.shape
 
-    def fun_e1(xXA, I, J, Ddp, De1):
+    def fun_e1(xXA, I, J, Ddp, De_c, De_f):
         X = xXA[:3*I].reshape(3, I)
         A = xXA[3*I:].reshape(3, J)
 
         Ae_c = A.copy()
         Ae_f = A.copy()
         Ae_c[2, :] = 2*Rz - Ae_c[2, :]
-        Ae_f[2, :] = -2*Ae_f[2, :]
+        Ae_f[2, :] = -Ae_f[2, :]
 
-        cost = np.linalg.norm((edm(X, A) - Ddp))**2
-                + np.linalg.norm((edm(X, Ae_c) - De_c))**2
+        cost = np.linalg.norm((edm(X, A) - Ddp))**2         \
+                + np.linalg.norm((edm(X, Ae_c) - De_c))**2  \
                 + np.linalg.norm((edm(X, Ae_f) - De_f))**2
 
         return cost
@@ -107,8 +111,8 @@ def nlls_mds_ceiling(Ddp, De1, De2, X, A, thr_mic=0., thr_src=1.0):
     # constraints = sp.optimize.LinearConstraint(A, lb, ub)
 
     res = sp.optimize.minimize(
-        fun_e1, x0, args=(I, J, Ddp, De1), bounds=bounds, constraints=constraints,
-        options={'maxiter': 10e3, 'maxfun': 100e3})
+        fun_e1, x0, args=(I, J, Ddp, De_c, De_f), bounds=bounds, constraints=constraints,
+        options={'maxiter': 10e3, 'maxfev': 100e3})
 
     print('Optimization')
     print('message', res.message)
@@ -124,6 +128,65 @@ def nlls_mds_ceiling(Ddp, De1, De2, X, A, thr_mic=0., thr_src=1.0):
     A = sol[3*I:].reshape(3, J)
     return X, A
 
+
+def nlls_mds_ceiling(Ddp, De_c, X, A, thr_mic=0.1, thr_src=.2):
+    _, _, Rz = constants['room_size']
+
+    dim, I = X.shape
+    dim, J = A.shape
+    assert Ddp.shape == (I, J) == De_c.shape
+
+    def fun_e1(xXA, I, J, Ddp, De_c):
+        X = xXA[:3*I].reshape(3, I)
+        A = xXA[3*I:].reshape(3, J)
+
+        Ae_c = A.copy()
+        Ae_c[2, :] = 2*Rz - A[2, :]
+
+        cost = np.linalg.norm((edm(X, A) - Ddp))**2   \
+            + np.linalg.norm((edm(X, Ae_c) - De_c))**2
+
+        return cost
+
+    x0 = np.concatenate([X.flatten(), A.flatten()])
+    ub = np.zeros_like(x0)
+    ub[:] = np.inf
+    lb = -ub
+    # sources in +-5 cm from the guess
+    dims_slacks = [thr_src, thr_src, thr_src]
+    for j in range(J):
+        for d in range(dim):
+            ub[x0 == A[d, j]] = A[d, j] + dims_slacks[d]
+            lb[x0 == A[d, j]] = A[d, j] - dims_slacks[d]
+    # micros in +-5 cm from the guess
+    dims_slacks = [thr_mic, thr_mic, thr_mic]
+    for i in range(I):
+        for d in range(dim):
+            ub[x0 == X[d, i]] = X[d, i] + dims_slacks[d]
+            lb[x0 == X[d, i]] = X[d, i] - dims_slacks[d]
+
+    # set the origin in speaker 1
+    bounds = sp.optimize.Bounds(lb, ub, keep_feasible=True)
+    constraints = None
+    # constraints = sp.optimize.LinearConstraint(A, lb, ub)
+
+    res = sp.optimize.minimize(
+        fun_e1, x0, args=(I, J, Ddp, De_c), bounds=bounds, constraints=constraints,
+        options={'maxiter': 10e3, 'maxfev': 100e3})
+
+    print('Optimization')
+    print('message', res.message)
+    print('nit', res.nit)
+    print('nfev', res.nfev)
+    print('success', res.success)
+    print('fun', res.fun)
+    sol = res.x
+    # solution = solution.reshape(3, I+J)
+    # X = solution[:, :I]
+    # A = solution[:, I:]
+    X = sol[:3*I].reshape(3, I)
+    A = sol[3*I:].reshape(3, J)
+    return X, A
 
 
 def nlls_mds_array(D, X, A):
@@ -193,7 +256,7 @@ def nlls_mds_array(D, X, A):
 
     res = sp.optimize.minimize(
         fun, x0, args=(I, J, D), bounds=bounds, constraints=constraints,
-        options={'maxiter': 10e3, 'maxfun': 100e3})
+        options={'maxiter': 10e3, 'maxfev': 100e3})
 
     print('Optimization')
     print('message', res.message)
@@ -211,6 +274,276 @@ def nlls_mds_array(D, X, A):
     X = np.zeros([3, I])
     for i in range(P):
         X[:, i*5:(i+1)*5] = rotate_and_translate(nULA,arr_pos[:, i], arr_ang[i])
+    return X, A
+
+
+def nlls_mds_array_ceiling(D, De_c, X, A):
+    dim, I = X.shape
+    dim, J = A.shape
+    assert D.shape == (I, J)
+
+    Rz = constants['room_size'][2]
+
+    nULA = np.zeros([3, 5])
+    nULA[0, :] = np.array([0-3.25-5-4, 0-3.25-5, 0-3.25, 3.25, 3.25+10])/100
+
+    def rotate_and_translate(LA, new_center, new_angle):
+        # rotate
+        th = np.deg2rad(new_angle)
+        R = np.array([[[np.cos(th), -np.sin(th), 0],
+                       [np.sin(th), np.cos(th),  0],
+                       [0,          0,          1]]])
+        nULA_rot = R@LA
+        # translate
+        nULA_tra = nULA_rot + new_center[:, None]
+        return nULA_tra
+
+    def fun(x, I, J, D, De_c):
+        P = 6
+        p = x[:4*P].reshape([4, P])
+        arr_ang = p[0, :]    # I thetas
+        arr_pos = p[1:4, :]  # I barycenters coordinates
+        A = x[4*P:].reshape([3, J])  # J sources coordinates
+
+        X = np.zeros([3, I])
+        for i in range(P):
+            X[:, i*5:(i+1)*5] = rotate_and_translate(nULA,
+                                                     arr_pos[:, i], arr_ang[i])
+
+        Ac = A.copy()
+        Ac[2, :] = Rz  + (Rz - A[2, :])
+
+        cost = np.linalg.norm((edm(X, A) - D))**2 \
+            + np.linalg.norm((edm(X, Ac) - De_c))**2
+
+        return cost
+
+    bounds = None
+    constraints = None
+
+    path_to_positions = './data/dECHORATE/positions.csv'
+    audio_scene_positions = pd.read_csv(path_to_positions)
+
+    mic_bar_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'array']
+    mic_theta = np.array(mic_bar_pos['theta'])
+    mic_bar_pos = np.vstack(
+        [mic_bar_pos['x'], mic_bar_pos['y'], mic_bar_pos['2.353']])
+    x0 = np.concatenate(
+        [mic_theta.flatten(), mic_bar_pos.flatten(), A.flatten()])
+
+    res = sp.optimize.minimize(
+        fun, x0, args=(I, J, D, De_c), bounds=bounds, constraints=constraints,
+        options={'maxiter': 10e3, 'maxfev': 100e3})
+
+    print('Optimization')
+    print('message', res.message)
+    print('nit', res.nit)
+    print('nfev', res.nfev)
+    print('success', res.success)
+    print('fun', res.fun)
+    x = res.x
+    P = 6
+    p = x[:4*P].reshape([4, P])
+    arr_ang = p[0, :]    # I thetas
+    arr_pos = p[1:4, :]  # I barycenters coordinates
+    A = x[4*P:].reshape([3, J])  # J sources coordinates
+
+    X = np.zeros([3, I])
+    for i in range(P):
+        X[:, i*5:(i+1)*5] = rotate_and_translate(nULA,
+                                                 arr_pos[:, i], arr_ang[i])
+    return X, A
+
+
+def nlls_mds_array_images(D, De_c, De_f, X, A):
+    dim, I = X.shape
+    dim, J = A.shape
+    assert D.shape == (I, J)
+
+    Rz = constants['room_size'][2]
+
+    nULA = np.zeros([3, 5])
+    nULA[0, :] = np.array([0-3.25-5-4, 0-3.25-5, 0-3.25, 3.25, 3.25+10])/100
+
+    def rotate_and_translate(LA, new_center, new_angle):
+        # rotate
+        th = np.deg2rad(new_angle)
+        R = np.array([[[np.cos(th), -np.sin(th), 0],
+                       [np.sin(th), np.cos(th),  0],
+                       [0,          0,          1]]])
+        nULA_rot = R@LA
+        # translate
+        nULA_tra = nULA_rot + new_center[:, None]
+        return nULA_tra
+
+    def fun(x, I, J, D, De_c, De_f):
+        P = 6
+        p = x[:4*P].reshape([4, P])
+        arr_ang = p[0, :]    # I thetas
+        arr_pos = p[1:4, :]  # I barycenters coordinates
+        A = x[4*P:].reshape([3, J])  # J sources coordinates
+
+        X = np.zeros([3, I])
+        for i in range(P):
+            X[:, i*5:(i+1)*5] = rotate_and_translate(nULA,
+                                                     arr_pos[:, i], arr_ang[i])
+
+        Ac = A.copy()
+        Af = A.copy()
+        Ac[2, :] = 2*Rz - A[2, :]
+        Af[2, :] = -A[2, :]
+
+
+        cost = np.linalg.norm((edm(X, A) - D))**2 \
+            + np.linalg.norm((edm(X, Ac) - De_c))**2  \
+            + np.linalg.norm((edm(X, Af) - De_f))**2
+
+
+        return cost
+
+    bounds = None
+    constraints = None
+
+    path_to_positions = './data/dECHORATE/positions.csv'
+    audio_scene_positions = pd.read_csv(path_to_positions)
+
+    mic_bar_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'array']
+    mic_theta = np.array(mic_bar_pos['theta'])
+    mic_bar_pos = np.vstack(
+        [mic_bar_pos['x'], mic_bar_pos['y'], mic_bar_pos['2.353']])
+    x0 = np.concatenate(
+        [mic_theta.flatten(), mic_bar_pos.flatten(), A.flatten()])
+
+    res = sp.optimize.minimize(
+        fun, x0, args=(I, J, D, De_c, De_f), bounds=bounds, constraints=constraints,
+        options={'maxiter': 10e3, 'maxfev': 100e3})
+
+    print('Optimization')
+    print('message', res.message)
+    print('nit', res.nit)
+    print('nfev', res.nfev)
+    print('success', res.success)
+    print('fun', res.fun)
+    x = res.x
+    P = 6
+    p = x[:4*P].reshape([4, P])
+    arr_ang = p[0, :]    # I thetas
+    arr_pos = p[1:4, :]  # I barycenters coordinates
+    A = x[4*P:].reshape([3, J])  # J sources coordinates
+
+    X = np.zeros([3, I])
+    for i in range(P):
+        X[:, i*5:(i+1)*5] = rotate_and_translate(nULA,
+                                                 arr_pos[:, i], arr_ang[i])
+    return X, A
+
+
+
+def nlls_mds_array_with_rir_manifold(D, X, A, rirs_manifold):
+    dim, I = X.shape
+    dim, J = A.shape
+    assert D.shape == (I, J)
+
+    c = constants['speed_of_sound']
+    Fs = constants['Fs']
+    offset = constants['recording_offset']
+
+    # smooth the manifold
+    mani = np.zeros_like(rirs_manifold)
+    for ij in range(mani.shape[1]):
+        mani[:, ij] = 1-normalize(envelope(rirs_manifold[:, ij]))
+
+    nULA = np.zeros([3, 5])
+    nULA[0, :] = np.array([0-3.25-5-4, 0-3.25-5, 0-3.25, 3.25, 3.25+10])/100
+
+    def rotate_and_translate(LA, new_center, new_angle):
+        # rotate
+        th = np.deg2rad(new_angle)
+        R = np.array([[[np.cos(th), -np.sin(th), 0],
+                       [np.sin(th), np.cos(th),  0],
+                       [0,          0,          1]]])
+        nULA_rot = R@LA
+        # translate
+        nULA_tra = nULA_rot + new_center[:, None]
+        return nULA_tra
+
+    def fun(x, I, J, D, mani, c):
+        P = 6
+        p = x[:4*P].reshape([4, P])
+        arr_ang = p[0, :]    # I thetas
+        arr_pos = p[1:4, :]  # I barycenters coordinates
+        A = x[4*P:].reshape([3, J])  # J sources coordinates
+
+        X = np.zeros([3, I])
+        for i in range(P):
+            X[:, i*5:(i+1)*5] = rotate_and_translate(nULA,
+                                                     arr_pos[:, i], arr_ang[i])
+
+        # cost = np.linalg.norm((edm(X, A) - D))**2
+        E = np.round((edm(X, A)/c) * Fs + offset).astype(int).T.flatten()
+
+        # for i, e in enumerate(E):
+        #     plt.scatter(e, mani[e, i])
+        #     plt.plot(mani[:, i])
+        #     plt.show()
+        #     input()
+        cost = np.sum(mani[E, :])
+        return cost
+
+    # x0 = np.concatenate([X.flatten(), A.flatten()])
+    # ub = np.zeros_like(x0)
+    # ub[:] = np.inf
+    # lb = -ub
+    # # sources in +-5 cm from the guess
+    # dims_slacks = [thr, thr, thr]
+    # for j in range(J):
+    #     for d in range(dim):
+    #         ub[x0 == A[d, j]] = A[d, j] + dims_slacks[d]
+    #         lb[x0 == A[d, j]] = A[d, j] - dims_slacks[d]
+    # # micros in +-5 cm from the guess
+    # dims_slacks = [thr, thr, thr]
+    # for i in range(I):
+    #     for d in range(dim):
+    #         ub[x0 == X[d, i]] = X[d, i] + dims_slacks[d]
+    #         lb[x0 == X[d, i]] = X[d, i] - dims_slacks[d]
+
+    # set the origin in speaker 1
+    # bounds = sp.optimize.Bounds(lb, ub, keep_feasible=True)
+    bounds = None
+    constraints = None
+    # constraints = sp.optimize.LinearConstraint(A, lb, ub)
+
+    path_to_positions = './data/dECHORATE/positions.csv'
+    audio_scene_positions = pd.read_csv(path_to_positions)
+
+    mic_bar_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'array']
+    mic_theta = np.array(mic_bar_pos['theta'])
+    mic_bar_pos = np.vstack(
+        [mic_bar_pos['x'], mic_bar_pos['y'], mic_bar_pos['2.353']])
+    x0 = np.concatenate(
+        [mic_theta.flatten(), mic_bar_pos.flatten(), A.flatten()])
+
+    res = sp.optimize.minimize(
+        fun, x0, args=(I, J, D, mani, c), bounds=bounds, constraints=constraints,
+        options={'maxiter': 10e3, 'maxfev': 100e3})
+
+    print('Optimization')
+    print('message', res.message)
+    print('nit', res.nit)
+    print('nfev', res.nfev)
+    print('success', res.success)
+    print('fun', res.fun)
+    x = res.x
+    P = 6
+    p = x[:4*P].reshape([4, P])
+    arr_ang = p[0, :]    # I thetas
+    arr_pos = p[1:4, :]  # I barycenters coordinates
+    A = x[4*P:].reshape([3, J])  # J sources coordinates
+
+    X = np.zeros([3, I])
+    for i in range(P):
+        X[:, i*5:(i+1)*5] = rotate_and_translate(nULA,
+                                                 arr_pos[:, i], arr_ang[i])
     return X, A
 
 
@@ -465,7 +798,7 @@ def crcc_mds1(D, Xinit, Ainit):
 # % microphone. This is realistic.
 # a1 = sqT(1, 1) * c
 
-# opt = optimset('MaxFunEvals', 1e8, 'MaxIter', 1e6)
+# opt = optimset('MaxfevEvals', 1e8, 'MaxIter', 1e6)
 
 # MAX_ITER = 0
 # [Cbest, costbest] = fminsearch(@(C) costC2(C, U, Sigma, V, D, a1), randn(3), opt)

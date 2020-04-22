@@ -15,7 +15,7 @@ from scipy.optimize import least_squares
 from src import constants
 
 from src.dataset import DechorateDataset, SyntheticDataset
-from src.calibration_and_mds import nlls_mds, nlls_mds_array, nlls_mds_ceiling
+from src.calibration_and_mds import *
 
 from src.utils.file_utils import save_to_matlab, load_from_pickle
 from src.utils.dsp_utils import envelope, normalize
@@ -32,8 +32,7 @@ dataset_dir = './data/dECHORATE/'
 path_to_processed = './data/processed/'
 
 
-def load_rirs(path_to_dataset_rir, dataset, K,
-              dataset_id, mics_pos=None, srcs_pos=None):
+def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
 
     f_rir = h5py.File(path_to_dataset_rir, 'r')
 
@@ -45,10 +44,10 @@ def load_rirs(path_to_dataset_rir, dataset, K,
     I = len(all_mic_ids)
     J = len(all_src_ids)
 
-    # if mics_pos is None:
-    # if srcs_pos is None:
-    mics_pos = np.zeros([3, I])
-    srcs_pos = np.zeros([3, J])
+    if mics_pos is None:
+        mics_pos = np.zeros([3, I])
+    if srcs_pos is None:
+        srcs_pos = np.zeros([3, J])
 
 
     toa_sym = np.zeros([7, I, J])
@@ -110,170 +109,10 @@ def load_rirs(path_to_dataset_rir, dataset, K,
 
             ij += 1
 
-            # idx_walls = np.nonzero(amp_sym[:, i, j])[0]
-            # for c, k in enumerate(idx_walls):
-            #     t = (recording_offset + tau[k]*Fs)
-            #     p = np.argmin(np.abs(xnew - t))
-            #     print(p)
-            #     if k == 0:
-            #         idx = [p - 200, p + 200]
-            #         # direct path peak from the interpolated
-            #         tmp = ynew[idx[0]:idx[1]]
-            #         peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
-            #         # peaks, _ = sg.find_peaks(tmp, height=0.2, distance=50, width=2, prominence=0.6)
-
-            #         plt.plot(ynew)
-            #         plt.scatter(peaks + idx[0], ynew[peaks + idx[0]])
-            #         plt.show()
-
-            #     else:
-            #         idx = [p - 300, p + 300]
-            #         # direct path peak from the interpolated
-            #         tmp = ynew[idx[0]:idx[1]]
-            #         peaks, _ = sg.find_peaks(tmp)
-
-
-            #     peak = idx[0] + np.min(peaks[np.argmax(tmp[peaks])])
-            #     toa_peak[c, i, j] = (xnew[peak] - recording_offset)/Fs
-            #     toa_sym[c, i, j] = tau[k]
-
-            #     plt.figure(figsize=(16, 9))
-            #     print(wal_sym[:, i, j])
-            #     print(toa_sym[:, i, j])
-            #     print(amp_sym[:, i, j])
-            #     plt.title('mic %d (%d), src %d' % (i, i+33, j))
-            #     plt.plot(ynew, label='recorded rir')
-            #     p0 = (recording_offset + toa_sym[0, i, j]*Fs)*10
-            #     p1 = (recording_offset + toa_sym[1, i, j]*Fs)*10
-            #     plt.axvline(p0, color='red', ls='--', label='dp sym')
-            #     plt.axvline(p1, color='green', ls='--', label='e1 sym')
-
-            #     p0 = (recording_offset + toa_peak[0, i, j]*Fs)*10
-            #     p1 = (recording_offset + toa_peak[1, i, j]*Fs)*10
-            #     plt.axvline(p0, color='red', label='dp peak')
-            #     plt.axvline(p1, color='green', label='e1 peak')
-            #     plt.legend()
-            #     plt.show()
-
-            #     #     for k in range(7):
-            #     #         pk = (recording_offset + tau[k]*Fs)*10
-            #     #         plt.axvline(pk, color='black', ls='--', alpha=0.3)
-            #     #         plt.annotate(r'$\tau_{%d}^{%s}$' % (pk, wal_sym[k, i, j].decode()), [pk, 0.5])
-
-            #     #     plt.xlim([p0-1000, p1+4000])
-            #     #     plt.show()
-
-            #     assert len(peaks) > 0
-
-            # plt.axvline(toa_peak[:, i, j], color='C5', label='dp')
-            # plt.plot(np.abs(normalize(rir)), label='original')
-            # plt.legend()
-            # plt.show()
-
-            # CEILING-tuned PEAK PICKING
-            # peak_ceiling = 4444+tof1_geom*Fs
-
-            # plt.scatter(peaks, rir_deconv[peaks], marker='x', label='peaks')
-            # plt.scatter(peak_ceiling, rir_deconv[peak_ceiling], marker='d', color='C5', label='ceiling')
-            # plt.show()
-
-            # plt.figure(figsize=[12,9])
-            # plt.title("mic %d/%d  src %d/%d" % (i+33, I, j, J))
-            # plt.axvline(4444+tof_geom*Fs, color='C4', ls='--', label='dp_geom')
-            # plt.axvline(4444+tof1_geom*Fs, color='C4', ls='--', label='e1_geom')
-            # plt.plot(np.abs(normalize(rir)), label='original')
-            # plt.plot(np.abs(normalize(rir_deconv)), label='original', alpha=0.8)
-            # plt.axvline(xnew[dp_peak], color='C5', label='dp')
-            # plt.axvline(xnew[e1_peak], color='C5', label='e1')
-            # plt.xlim([xnew[dp_peak]-50, xnew[e1_peak]+100])
-            # plt.legend()
-            # plt.show()
-
-
-
-            ## MANUAL ANNOTATION
-            # print("mic %d/%d\tsrc %d/%d" % (i, I, j, J))
-            # plt.plot(rir_abs)
-            # # plt.plot(rir_abs**2, alpha=0.5)
-            # plt.plot(xnew, ynew)
-            # plt.plot(xnew_deconv, ynew_deconv)
-            # plt.scatter(xnew[dp_peak], ynew[dp_peak])
-            # plt.scatter(xnew_deconv[peaks], ynew_deconv[peaks])
-            # plt.axvline(tof_geom*Fs + recording_offset)
-            # # plt.xlim(xnew[dp_peak] - 20, xnew[dp_peak] + 20)
-            # plt.show()
-
-            # txt = input()
-            # print(txt)
-            # if txt == '':
-            #     manual_toa[i, j] = xnew[dp_peak]/Fs - recording_offset/Fs
-            # else:
-            #     manual_toa[i, j] = float(txt)/Fs - recording_offset/Fs
-
-            # # direct path deconvolution
-            # x = np.zeros_like(rir)
-            # a = 30
-            # x[:2*a] = rir[dp_peak-a:dp_peak+a]
-            # y = rir.copy()
-            # h = np.zeros_like(rir)
-            # h_tmp = deconv.wiener_deconvolution(y, x)
-            # h[a:] = h_tmp[:-a]
-            # rir_abs = np.abs(h)
-
-
-            # # if j == 7:
-            # plt.title('Source %d, array %d, microphone %d' % (j+1, i//5 + 1, i % 5+1))
-            # plt.plot(rir_abs)
-            # plt.plot(peaks, rir_abs[peaks], "x")
-            # plt.plot(dp_peak, rir_abs[dp_peak], "o")
-            # plt.axvline(x=recording_offset, color='C0', label='offset')
-            # plt.axvline(x=tof_geom*Fs+recording_offset, color='C0', label='direct')
-            # # plt.axvline(x=tof_geom_ceiling*Fs+recording_offset, color='C1', label='ceiling')
-            # plt.axvline(x=tof_geom_floor*Fs+recording_offset, color='C2', label='floor')
-            # plt.legend()
-            # plt.xlim([recording_offset-100, recording_offset+800])
-            # plt.show()
-
-            # np.savetxt('./data/processed/rirs_manual_annotation/from_post2.csv', manual_toa)
-
-            # try:
-            #     assert tofs_rir[i, j] > 0
-            #     assert np.abs(tofs_simulation[i,j] - tofs_rir[i, j]) * speed_of_sound < 0.10
-            #     assert np.linalg.norm(rir[:recording_offset], ord=np.inf) < 0.1
-            # except:
-            #     # plot RIR, theoretical distance and peak-picking
-            #     fig, ax = plt.subplots()
-            #     newax1 = ax.twiny()
-            #     newax2 = ax.twiny()
-            #     fig.subplots_adjust(bottom=0.40)
-
-            #     newax1.set_frame_on(True)
-            #     newax2.set_frame_on(True)
-            #     newax1.patch.set_visible(False)
-            #     newax2.patch.set_visible(False)
-            #     newax1.xaxis.set_ticks_position('bottom')
-            #     newax2.xaxis.set_ticks_position('bottom')
-            #     newax1.xaxis.set_label_position('bottom')
-            #     newax2.xaxis.set_label_position('bottom')
-            #     newax1.spines['bottom'].set_position(('outward', 40))
-            #     newax2.spines['bottom'].set_position(('outward', 80))
-
-            #     ax.plot(np.arange(len(rir)), rir)
-            #     ax.axvline(recording_offset)
-            #     ax.axvline(tof_geom*Fs + recording_offset)
-            #     newax1.plot(np.arange(len(rir))/Fs, rir)
-            #     newax2.plot(np.arange(len(rir))/Fs*speed_of_sound, rir)
-
-            #     ax.set_xlabel('Time [samples]')
-            #     newax1.set_xlabel('Time [seconds]')
-            #     newax2.set_xlabel('Distance [meter]')
-
-            #     plt.show()
-
     return rirs, toa_sym, mics_pos, srcs_pos
 
 
-def iterative_calibration(dataset_id, mics_pos, src_pos, K):
+def iterative_calibration(dataset_id, mics_pos, srcs_pos, K):
 
     refl_order = constants['refl_order_pyroom']
     curr_reflectors = constants['refl_order_calibr'][:K+1]
@@ -297,10 +136,10 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
         & (dataset['src_id'] < 5)
     ]
 
+
     # LOAD MEASURED RIRs
     # and COMPUTED PYROOM ANNOTATION
-    rirs, toa_sym, mics_pos, srcs_pos = load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, src_pos)
-    print(toa_sym.shape)
+    rirs, toa_sym, mics_pos, srcs_pos = load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos)
 
     # LOAD MANUAL ANNOTATION
     path_to_manual_annotation = './data/processed/rirs_manual_annotation/20200410_22h47_gui_rir_annotation.pkl'
@@ -320,13 +159,15 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
             plt.axvline(j*30, color='C7')
     plt.axhline(y=L-recording_offset, label='Time of Emission')
     for k in range(K+1):
+        print(curr_reflectors)
         wall = curr_reflectors[k]
         r = refl_order.index(wall)
 
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs, c='C%d'%k, marker='x', label='Peak Picking')
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r, :, :].T.flatten()*Fs, c='C%d' % k, marker='o', label='Pyroom')
     plt.tight_layout()
     plt.legend()
+    plt.title('RIR SKYLINE K = %d' % K)
     plt.savefig('./reports/figures/rir_skyline.pdf')
     plt.show()
     # plt.close()
@@ -347,9 +188,20 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
     if K == 1:
         Dobs = toa_peak[0, :I, :J] * speed_of_sound
         Dsym = toa_sym[0, :I, :J] * speed_of_sound
-        wall = curr_reflectors[k]
+        wall = curr_reflectors[1]
         r = refl_order.index(wall)
-        De1 = toa_peak[r, :I, :J] * speed_of_sound
+        De_c = toa_peak[r, :I, :J] * speed_of_sound
+    if K == 2:
+        Dobs = toa_peak[0, :I, :J] * speed_of_sound
+        Dsym = toa_sym[0, :I, :J] * speed_of_sound
+        wall = curr_reflectors[1]
+        r = refl_order.index(wall)
+        print(wall, r)
+        De_c = toa_peak[r, :I, :J] * speed_of_sound
+        wall = curr_reflectors[2]
+        r = refl_order.index(wall)
+        print(wall, r)
+        De_f = toa_peak[r, :I, :J] * speed_of_sound
 
     assert np.allclose(Dgeo, Dsym)
 
@@ -372,9 +224,11 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
     print('Initial margin', np.linalg.norm(Dsym - Dobs))
     print('Initial rmse',   rmse(Dsym, Dobs))
     if K == 0:
-        X_est, A_est = nlls_mds(Dobs, X, A)
+        X_est, A_est = nlls_mds_array(Dobs, X, A)
     elif K == 1:
-        X_est, A_est = nlls_mds_ceiling(Dobs, De1, X, A)
+        X_est, A_est = nlls_mds_array_ceiling(Dobs, De_c, X, A)
+    elif K == 2:
+        X_est, A_est = nlls_mds_array_images(Dobs, De_c, De_f, X, A)
     else:
         pass
     # mics_pos_est, srcs_pos_est = nlls_mds_array(Dtof, X, A)
@@ -402,10 +256,11 @@ def iterative_calibration(dataset_id, mics_pos, src_pos, K):
 
     new_tofs = Dgeo_est / speed_of_sound
 
+    # plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
     for j in range(J):
         plt.axvline(j*30, color='C7')
     plt.axhline(y=L-recording_offset, label='Time of Emission')
-    for k in range(K):
+    for k in range(K+1):
         plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[k,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
         plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[k,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
     plt.scatter(np.arange(I*J)+0.5, L - recording_offset - new_tofs.T.flatten()*Fs, c='C3', marker='X', label='After EDM')
@@ -424,30 +279,10 @@ if __name__ == "__main__":
     ## INITIALIZATION
     mics_pos = None
     srcs_pos = None
-    dataset_id = '011111'
+    dataset_id = '011000'
 
-    # ## K = 1: direct path estimation
-    # K = 0
-    # mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-    #     = iterative_calibration(dataset_id, mics_pos, srcs_pos, K)
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
-    # ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
-    # ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
-    # ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
-    # ax.set_xlim([0, Rx])
-    # ax.set_ylim([0, Ry])
-    # ax.set_zlim([0, Rz])
-    # plt.legend()
-    # plt.savefig('./reports/figures/cal_positioning3D.pdf')
-    # plt.show()
-
-    ## K = 1: echo 1 -- from the ceiling
-    K = 1
-    # mics_pos = mics_pos_est
-    # srcs_pos = srcs_pos_est
+    ## K = 1: direct path estimation
+    K = 0
     mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
         = iterative_calibration(dataset_id, mics_pos, srcs_pos, K)
 
@@ -457,6 +292,68 @@ if __name__ == "__main__":
     ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
     ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
     ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
+    ax.set_xlim([0, Rx])
+    ax.set_ylim([0, Ry])
+    ax.set_zlim([0, Rz])
+    plt.legend()
+    plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    plt.show()
+
+    ## K = 1: echo 1 -- from the ceiling
+    K = 1
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
+    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
+    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
+    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
+    ax.set_xlim([0, Rx])
+    ax.set_ylim([0, Ry])
+    ax.set_zlim([0, Rz])
+    plt.legend()
+    plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    plt.show()
+
+    ## K = 2: echo 1,2 -- from the ceiling and the floor
+    K = 2
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(mics_pos[0, :], mics_pos[1, :],
+               mics_pos[2, :], marker='o', label='mics init')
+    ax.scatter(srcs_pos[0, :], srcs_pos[1, :],
+               srcs_pos[2, :], marker='o', label='srcs init')
+    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :],
+               mics_pos_est[2, :], marker='x', label='mics est')
+    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :],
+               srcs_pos_est[2, :], marker='x', label='srcs est')
+    ax.set_xlim([0, Rx])
+    ax.set_ylim([0, Ry])
+    ax.set_zlim([0, Rz])
+    plt.legend()
+    plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    plt.show()
+
+    ## K = 2: echo 1,2 -- from the ceiling and the floor
+    K = 3
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(mics_pos[0, :], mics_pos[1, :],
+               mics_pos[2, :], marker='o', label='mics init')
+    ax.scatter(srcs_pos[0, :], srcs_pos[1, :],
+               srcs_pos[2, :], marker='o', label='srcs init')
+    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :],
+               mics_pos_est[2, :], marker='x', label='mics est')
+    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :],
+               srcs_pos_est[2, :], marker='x', label='srcs est')
     ax.set_xlim([0, Rx])
     ax.set_ylim([0, Ry])
     ax.set_zlim([0, Rz])
