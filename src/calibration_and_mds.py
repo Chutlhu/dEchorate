@@ -112,7 +112,7 @@ def nlls_mds_images(Ddp, De_c, De_f, X, A, thr_mic=0.10, thr_src=.2):
 
     res = sp.optimize.minimize(
         fun_e1, x0, args=(I, J, Ddp, De_c, De_f), bounds=bounds, constraints=constraints,
-        options={'maxiter': 10e3, 'maxfev': 100e3})
+        options={'maxiter': 10e3, 'maxfev': 100e3, 'disp': True})
 
     print('Optimization')
     print('message', res.message)

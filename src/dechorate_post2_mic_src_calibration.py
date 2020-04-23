@@ -17,11 +17,13 @@ from src import constants
 from src.dataset import DechorateDataset, SyntheticDataset
 from src.calibration_and_mds import *
 
-from src.utils.file_utils import save_to_matlab, load_from_pickle
+from src.utils.file_utils import save_to_matlab, load_from_pickle, save_to_pickle
 from src.utils.dsp_utils import envelope, normalize
 from src.utils.mds_utils import edm
 
 from risotto import deconvolution as deconv
+
+ox, oy, oz = constants['offset_beacon']
 
 Fs = constants['Fs'] # Sampling frequency
 recording_offset = constants['recording_offset']
@@ -76,20 +78,22 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
             rir = rir/np.max(np.abs(rir))
             rirs[:, ij] = np.abs(rir)
 
-            x = np.arange(0, len(rir))
-            y = rir
-            f = intp.interp1d(x, y, kind='cubic')
-            xnew = np.arange(0, len(rir)-1, 0.1)
-            ynew = f(xnew)
-            ynew = np.abs(ynew / np.max(np.abs(ynew)))
-
             # compute the theoretical distance
             if np.allclose(mics_pos[:, i], 0):
                 mic_pos = [entry['mic_pos_x'].values, entry['mic_pos_y'].values, entry['mic_pos_z'].values]
+                # apply offset
+                mic_pos[0] = mic_pos[0] + constants['offest_beacon'][0]
+                mic_pos[1] = mic_pos[1] + constants['offest_beacon'][1]
+                mic_pos[2] = mic_pos[2] + constants['offest_beacon'][2]
+
                 mics_pos[:, i] = np.array(mic_pos).squeeze()
 
             if np.allclose(srcs_pos[:, j], 0):
                 src_pos = [entry['src_pos_x'].values, entry['src_pos_y'].values, entry['src_pos_z'].values]
+                # apply offset
+                src_pos[0] = src_pos[0] + constants['offest_beacon'][0]
+                src_pos[1] = src_pos[1] + constants['offest_beacon'][1]
+                src_pos[2] = src_pos[2] + constants['offest_beacon'][2]
                 srcs_pos[:, j] = np.array(src_pos).squeeze()
 
             synth_dset = SyntheticDataset()
@@ -112,7 +116,7 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
     return rirs, toa_sym, mics_pos, srcs_pos
 
 
-def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, path_to_manual_annotation):
+def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
 
     refl_order = constants['refl_order_pyroom']
     curr_reflectors = constants['refl_order_calibr'][:K+1]
@@ -140,10 +144,6 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, path_to_manual_anno
     # LOAD MEASURED RIRs
     # and COMPUTED PYROOM ANNOTATION
     rirs, toa_sym, mics_pos, srcs_pos = load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos)
-
-    # LOAD MANUAL ANNOTATION
-    manual_note = load_from_pickle(path_to_manual_annotation)
-    toa_peak = manual_note['toa'][:7, :, :, 0]
 
     assert toa_peak.shape == toa_sym.shape
     assert toa_peak.shape[1] == mics_pos.shape[1]
@@ -225,10 +225,13 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, path_to_manual_anno
     print('Initial rmse',   rmse(Dsym, Dobs))
     if K == 0:
         X_est, A_est = nlls_mds_array(Dobs, X, A)
+        # X_est, A_est = nlls_mds(Dobs, X, A)
     elif K == 1:
         X_est, A_est = nlls_mds_array_ceiling(Dobs, De_c, X, A)
+        # X_est, A_est = nlls_mds_ceiling(Dobs, De_c, X, A)
     elif K == 2:
         X_est, A_est = nlls_mds_array_images(Dobs, De_c, De_f, X, A)
+        # X_est, A_est = nlls_mds_images(Dobs, De_c, De_f, X, A)
     else:
         pass
     # mics_pos_est, srcs_pos_est = nlls_mds_array(Dtof, X, A)
@@ -285,7 +288,7 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, path_to_manual_anno
     plt.savefig('./reports/figures/rir_skyline_after_calibration.pdf')
     plt.show()
 
-    return mics_pos_est, srcs_pos_est, mics_pos, srcs_pos
+    return mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym
 
 
 if __name__ == "__main__":
@@ -297,12 +300,15 @@ if __name__ == "__main__":
     srcs_pos = None
     dataset_id = '011000'
 
-    path_to_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
+    # LOAD MANUAL ANNOTATION
+    path_to_manual_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
+    manual_note = load_from_pickle(path_to_manual_annotation)
+    toa_peak = manual_note['toa'][:7, :, :, 0]
 
     ## K = 1: direct path estimation
     K = 0
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-        = iterative_calibration(dataset_id, mics_pos, srcs_pos, K, path_to_annotation)
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+        = iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -319,8 +325,8 @@ if __name__ == "__main__":
 
     ## K = 1: echo 1 -- from the ceiling
     K = 1
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, path_to_annotation)
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -337,8 +343,8 @@ if __name__ == "__main__":
 
     ## K = 2: echo 1,2 -- from the ceiling and the floor
     K = 2
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, path_to_annotation)
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -357,10 +363,18 @@ if __name__ == "__main__":
     plt.savefig('./reports/figures/cal_positioning3D.pdf')
     plt.show()
 
-    ## K = 2: echo 1,2 -- from the ceiling and the floor
+
+    # save current refine TOAs
+    print(toa_sym)
+    manual_note['toa'][:7, :, :, 0] = toa_sym
+    path_to_output_toa = './data/interim/toa_after_calibration.pkl'
+    save_to_pickle(path_to_output_toa, manual_note)
+    1/0
+
+    ## K = 3: echo 1,2,3 -- from the ceiling and the floor, west
     K = 3
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, path_to_annotation)
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
