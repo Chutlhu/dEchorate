@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import pyroomacoustics as pra
 
+from src import constants
+
 
 class DechorateDataset():
 
@@ -47,17 +49,17 @@ class DechorateDataset():
     def get_rir(self):
         wavefile = self.entry['filename'].values[0]
         self.rir = self.dataset_data['rir/%s/%d' % (wavefile, self.mic_i)][()].squeeze()
-        self.rir = self.rir[4444:]
-        # rir_abs = np.abs(rir[6444:])
-        # self.rir = rir_abs/np.max(rir_abs)
+        self.rir = self.rir[constants['recording_offset']:]
         return np.arange(len(self.rir))/self.Fs, self.rir
 
     def get_mic_and_src_pos(self):
-        self.mic_pos = np.array([self.entry['mic_pos_x'].values,
-                                 self.entry['mic_pos_y'].values, self.entry['mic_pos_z'].values]).squeeze()
+        self.mic_pos = np.array([self.entry['mic_pos_x'].values + constants['offset_beacon'][0],
+                                 self.entry['mic_pos_y'].values + constants['offset_beacon'][1],
+                                 self.entry['mic_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
 
-        self.src_pos = np.array([self.entry['src_pos_x'].values,
-                                 self.entry['src_pos_y'].values, self.entry['src_pos_z'].values]).squeeze()
+        self.src_pos = np.array([self.entry['src_pos_x'].values + constants['offset_beacon'][0],
+                                 self.entry['src_pos_y'].values + constants['offset_beacon'][1],
+                                 self.entry['src_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
         return self.mic_pos, self.src_pos
 
 

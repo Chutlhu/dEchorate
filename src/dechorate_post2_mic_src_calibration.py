@@ -60,9 +60,8 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
     wal_sym = np.chararray([7, I, J])
 
     L = int(0.5*Fs) # max length of the filter
-    rirs = np.zeros([L, I*J])
+    rirs = np.zeros([L, I, J])
 
-    ij = 0
     for j in tqdm(range(J)):
         for i in range(I):
 
@@ -76,24 +75,24 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
             rir = f_rir['rir/%s/%d' % (wavefile, i)][()].squeeze()
 
             rir = rir/np.max(np.abs(rir))
-            rirs[:, ij] = np.abs(rir)
+            rirs[:, i, j] = np.abs(rir)
 
             # compute the theoretical distance
             if np.allclose(mics_pos[:, i], 0):
                 mic_pos = [entry['mic_pos_x'].values, entry['mic_pos_y'].values, entry['mic_pos_z'].values]
                 # apply offset
-                mic_pos[0] = mic_pos[0] + constants['offest_beacon'][0]
-                mic_pos[1] = mic_pos[1] + constants['offest_beacon'][1]
-                mic_pos[2] = mic_pos[2] + constants['offest_beacon'][2]
+                mic_pos[0] = mic_pos[0] + constants['offset_beacon'][0]
+                mic_pos[1] = mic_pos[1] + constants['offset_beacon'][1]
+                mic_pos[2] = mic_pos[2] + constants['offset_beacon'][2]
 
                 mics_pos[:, i] = np.array(mic_pos).squeeze()
 
             if np.allclose(srcs_pos[:, j], 0):
                 src_pos = [entry['src_pos_x'].values, entry['src_pos_y'].values, entry['src_pos_z'].values]
                 # apply offset
-                src_pos[0] = src_pos[0] + constants['offest_beacon'][0]
-                src_pos[1] = src_pos[1] + constants['offest_beacon'][1]
-                src_pos[2] = src_pos[2] + constants['offest_beacon'][2]
+                src_pos[0] = src_pos[0] + constants['offset_beacon'][0]
+                src_pos[1] = src_pos[1] + constants['offset_beacon'][1]
+                src_pos[2] = src_pos[2] + constants['offset_beacon'][2]
                 srcs_pos[:, j] = np.array(src_pos).squeeze()
 
             synth_dset = SyntheticDataset()
@@ -110,8 +109,6 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
             amp_sym[:, i, j] = amp
             wal_sym[:, i, j] = wall
             ord_sym[:, i, j] = order
-
-            ij += 1
 
     return rirs, toa_sym, mics_pos, srcs_pos
 
@@ -149,9 +146,10 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     assert toa_peak.shape[1] == mics_pos.shape[1]
     assert toa_peak.shape[2] == srcs_pos.shape[1]
 
-    L, IJ = rirs.shape
+    L, I, J = rirs.shape
     D, I = mics_pos.shape
     D, J = srcs_pos.shape
+
 
     plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
     for j in range(J):
@@ -298,10 +296,11 @@ if __name__ == "__main__":
     ## INITIALIZATION
     mics_pos = None
     srcs_pos = None
-    dataset_id = '011000'
+    dataset_id = '011111'
 
     # LOAD MANUAL ANNOTATION
-    path_to_manual_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
+    # path_to_manual_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
+    path_to_manual_annotation = 'data/interim/manual_annotation/20200424_20h19_gui_annotation.pkl'
     manual_note = load_from_pickle(path_to_manual_annotation)
     toa_peak = manual_note['toa'][:7, :, :, 0]
 
@@ -369,7 +368,6 @@ if __name__ == "__main__":
     manual_note['toa'][:7, :, :, 0] = toa_sym
     path_to_output_toa = './data/interim/toa_after_calibration.pkl'
     save_to_pickle(path_to_output_toa, manual_note)
-    1/0
 
     ## K = 3: echo 1,2,3 -- from the ceiling and the floor, west
     K = 3
