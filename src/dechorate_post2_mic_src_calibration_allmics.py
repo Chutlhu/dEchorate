@@ -53,7 +53,6 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
 
 
     toa_sym = np.zeros([7, I, J])
-    toa_peak = np.zeros([7, I, J])
 
     amp_sym = np.zeros([7, I, J])
     ord_sym = np.zeros([7, I, J])
@@ -103,7 +102,7 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
             synth_dset.set_k_reflc(7)
             synth_dset.set_mic(mics_pos[0, i], mics_pos[1, i], mics_pos[2, i])
             synth_dset.set_src(srcs_pos[0, j], srcs_pos[1, j], srcs_pos[2, j])
-            amp, tau, wall, order = synth_dset.get_note()
+            amp, tau, wall, order, gen = synth_dset.get_note()
 
             toa_sym[:, i, j] = tau
             amp_sym[:, i, j] = amp
@@ -134,7 +133,7 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
         & (dataset['room_rfl_south'] == s)
         & (dataset['room_fornitures'] == False)
         & (dataset['src_signal'] == 'chirp')
-        & (dataset['src_id'] < 5)
+        & (dataset['src_id'] < 10)
     ]
 
 
@@ -142,6 +141,7 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     # and COMPUTED PYROOM ANNOTATION
     rirs, toa_sym, mics_pos, srcs_pos = load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos)
 
+    print(toa_peak.shape, toa_sym.shape)
     assert toa_peak.shape == toa_sym.shape
     assert toa_peak.shape[1] == mics_pos.shape[1]
     assert toa_peak.shape[2] == srcs_pos.shape[1]
@@ -150,6 +150,7 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     D, I = mics_pos.shape
     D, J = srcs_pos.shape
 
+    rirs = rirs.transpose([0, 2, 1]).reshape([L, I*J])
 
     plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
     for j in range(J):
@@ -294,20 +295,21 @@ if __name__ == "__main__":
     datasets = constants['datasets']
 
     ## INITIALIZATION
-    mics_pos = None
-    srcs_pos = None
+    mics_pos_est = None
+    srcs_pos_est = None
     dataset_id = '011111'
 
     # LOAD MANUAL ANNOTATION
     # path_to_manual_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
-    path_to_manual_annotation = 'data/interim/manual_annotation/20200424_20h19_gui_annotation.pkl'
+    # path_to_manual_annotation = 'data/interim/manual_annotation/20200424_20h19_gui_annotation.pkl'
+    path_to_manual_annotation = 'data/interim/manual_annotation/20200428_12h27_gui_annotation.pkl'
     manual_note = load_from_pickle(path_to_manual_annotation)
     toa_peak = manual_note['toa'][:7, :, :, 0]
 
     ## K = 1: direct path estimation
     K = 0
     mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
-        = iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak)
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -363,33 +365,33 @@ if __name__ == "__main__":
     plt.show()
 
 
-    # save current refine TOAs
-    print(toa_sym)
-    manual_note['toa'][:7, :, :, 0] = toa_sym
-    path_to_output_toa = './data/interim/toa_after_calibration.pkl'
-    save_to_pickle(path_to_output_toa, manual_note)
+    # # save current refine TOAs
+    # print(toa_sym)
+    # manual_note['toa'][:7, :, :, 0] = toa_sym
+    # path_to_output_toa = './data/interim/toa_after_calibration.pkl'
+    # save_to_pickle(path_to_output_toa, manual_note)
 
-    ## K = 3: echo 1,2,3 -- from the ceiling and the floor, west
-    K = 3
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
+    # ## K = 3: echo 1,2,3 -- from the ceiling and the floor, west
+    # K = 3
+    # mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+    #     = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(mics_pos[0, :], mics_pos[1, :],
-               mics_pos[2, :], marker='o', label='mics init')
-    ax.scatter(srcs_pos[0, :], srcs_pos[1, :],
-               srcs_pos[2, :], marker='o', label='srcs init')
-    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :],
-               mics_pos_est[2, :], marker='x', label='mics est')
-    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :],
-               srcs_pos_est[2, :], marker='x', label='srcs est')
-    ax.set_xlim([0, Rx])
-    ax.set_ylim([0, Ry])
-    ax.set_zlim([0, Rz])
-    plt.legend()
-    plt.savefig('./reports/figures/cal_positioning3D.pdf')
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(mics_pos[0, :], mics_pos[1, :],
+    #            mics_pos[2, :], marker='o', label='mics init')
+    # ax.scatter(srcs_pos[0, :], srcs_pos[1, :],
+    #            srcs_pos[2, :], marker='o', label='srcs init')
+    # ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :],
+    #            mics_pos_est[2, :], marker='x', label='mics est')
+    # ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :],
+    #            srcs_pos_est[2, :], marker='x', label='srcs est')
+    # ax.set_xlim([0, Rx])
+    # ax.set_ylim([0, Ry])
+    # ax.set_zlim([0, Rz])
+    # plt.legend()
+    # plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    # plt.show()
 
     pass
 

@@ -46,6 +46,15 @@ class DechorateDataset():
         self.entry = self.dataset_note.loc[(
             self.dataset_note['src_id'] == j+1) & (self.dataset_note['mic_id'] == i+1)]
 
+    def get_rirs_mics_and_srcs_iterator(self, ii, jj):
+        for i in ii:
+            for j in jj:
+                self.set_entry(i, j)
+                t, h = self.get_rir()
+                m, s = self.get_mic_and_src_pos()
+                yield t, h, m, s
+
+
     def get_rir(self):
         wavefile = self.entry['filename'].values[0]
         self.rir = self.dataset_data['rir/%s/%d' % (wavefile, self.mic_i)][()].squeeze()
@@ -72,7 +81,7 @@ class SyntheticDataset:
         self.k_order = None
         self.k_reflc = None
 
-        self.room_size = None
+        self.room_size = [5, 4, 6]
         self.amp = None
         self.toa = None
         self.order = None
@@ -85,6 +94,9 @@ class SyntheticDataset:
             'floor': 0.8,
             'ceiling': 0.8,
         }
+
+    def set_abs(self, wall, abs_coeff):
+        self.absorption[wall] = abs_coeff
 
     def set_room_size(self, room_size):
         self.room_size = room_size
@@ -163,40 +175,74 @@ class SyntheticDataset:
         rir = rir[40:]
         return np.arange(len(rir))/self.Fs, rir/np.max(np.abs(rir))
 
-    def get_walls_name_from_id(self, wallsId, wall_id):
-        for wall_name in wallsId:
-            curr_wall_id = wallsId[wall_name]
-            if int(curr_wall_id) == int(wall_id):
-                return wall_name
+    def get_walls_name_from_id(self, wall_id):
+        if wall_id == -1:
+            return 'direct'
+        return self.wallsId[wall_id]
+        # print(wall_id)
+        # for wall_name in self.wallsId:
+        #     curr_wall_id = self.wallsId[wall_name]
+        #     if int(curr_wall_id) == int(wall_id):
+        #         return wall_name
 
 
     def get_note(self):
+
         room = self.make_room()
         room.image_source_model(use_libroom=False)
+        self.wallsId = room.wall_names
+
+        assert room.mic_array.R.shape[1] == 1
+        assert len(room.sources) == 1
 
         j = 0
-        K = self.k_reflc
+        images = room.sources[j].images
+        distances = np.linalg.norm(
+            images - room.mic_array.R, axis=0)
+
+        K = min(self.k_reflc, len(distances))
         toa = np.zeros(K)
         amp = np.zeros(K)
         walls = []
         order = np.zeros(K)
-        images = room.sources[j].images
-        center = room.mic_array.center
-        distances = np.linalg.norm(
-            images - room.mic_array.R, axis=0)
+        generators = []
+
         # order for location
         ordering = np.argsort(distances)[:K]
         # order for orders
         ordering = np.argsort(room.sources[j].orders)[:K]
+
         for o, k in enumerate(ordering):
             amp[o] = room.sources[j].damping[k] / (4 * np.pi * distances[k])
             toa[o] = distances[k]/self.c
-            wall_id = self.get_walls_name_from_id(room.wallsId, room.sources[j].walls[k])
-            if wall_id is None:
-                wall_id = 'direct'
-            walls.append(wall_id)
             order[o] = room.sources[j].orders[k]
+
+            wall_id = self.get_walls_name_from_id(room.sources[j].walls[k])
+            wall_sequence = room.sources[j].wall_sequence(k)
+            wall_sequence = [self.get_walls_name_from_id(wall) for wall in wall_sequence]
+            wall_sequence = wall_sequence
+            if len(wall_sequence) > 1:
+                wall_sequence = wall_sequence[:-1]
+            wall_sequence = '_'.join(wall_sequence)
+            generators.append(wall_sequence)
+            walls.append(wall_id)
+
+            # assert wall_id == generators[o][0]
+            # assert 'direct' == generators[o][-1]
+
 
         amp = amp/amp[0]
 
-        return amp, toa, walls, order
+        assert len(generators) == K
+
+        return amp, toa, walls, order, generators
+
+
+if __name__ == "__main__":
+    dset = SyntheticDataset()
+    dset.set_k_order(2)
+    dset.set_k_reflc(100)
+
+    amp, toa, wall, order, generators = dset.get_note()
+
+    pass

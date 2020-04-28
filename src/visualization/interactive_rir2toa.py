@@ -40,14 +40,16 @@ plt.subplots_adjust(top=0.90)
 plt.subplots_adjust(left=0.15)
 plt.subplots_adjust(right=0.85)
 
-all_rirs = np.load('./data/tmp/all_rirs.npy')
-toa_note = load_from_pickle('./data/tmp/toa_note.pkl')
+all_rirs = np.load('./data/interim/all_rirs_9srcs.npy')
+toa_note = load_from_pickle('./data/interim/toa_note_9srcs.pkl')
 
 L, I, J, D = all_rirs.shape
 K, I, J, D = toa_note['toa'].shape
 Fs = params['Fs']
 
-taus_list = [r'%d $\tau_{%s}^{%d}$' % (k, toa_note['wall'][k, 0, 0, 0].decode(), toa_note['order'][k, 0, 0, 0]) for k in range(K)]
+
+taus_list = [r'%d $\tau_{%s}^{%d}$' % (k, toa_note['wall'][k, 0, 0, 0], toa_note['order'][k, 0, 0, 0]) for k in range(K)]
+
 
 # # Print the dataset name
 # wall_code_name = 'fcwsen'
@@ -71,12 +73,22 @@ def plot_rirs_and_note(rirs, note, i, j, selected_k, ax, visibility, dp_extreme)
         amp = note['amp'][k, i, j, 0]
         wall = note['wall'][k, i, j, 0]
         order = note['order'][k, i, j, 0]
+
+        if 'generators' in note:
+            walls = note['generators'][k, i, j, 0].split('_')
+            echo_txt = ''.join([w[0] for w in walls])
+            print(k, echo_txt)
+        else:
+            echo_txt = wall.decode()
+
         if k == selected_k:
             ax.axvline(x=toa*Fs, c='C5', alpha=1)
         else:
             ax.axvline(x=toa*Fs, c='C0', alpha=0.5)
 
-        ax.annotate( r'$\tau_{%s}^{%d}$' % (wall.decode(), order), [toa*Fs, 0.05], fontsize=12)
+        ax.annotate(r'$\tau_{%s}^{%d}$' %
+                    (echo_txt, order), [toa*Fs, 0.05], fontsize=12)
+
 
     ax.set_title('RIRs dataset %s\nmic %d, src %d' % (datasets[0], i, j))
     pass
@@ -127,12 +139,22 @@ def plot_rirs_and_note_merged(rirs, note, i, j, selected_k, ax, fun= lambda x : 
         toa = note['toa'][k, i, j, 0]
         wall = note['wall'][k, i, j, 0]
         order = note['order'][k, i, j, 0]
+
+        if 'generators' in note:
+            walls = note['generators'][k, i, j, 0].split('_')
+            echo_txt = ''.join([w[0] for w in walls])
+            print(k, echo_txt)
+        else:
+            echo_txt = wall.decode()
+
+
         if k == selected_k:
             ax.axvline(x=toa*Fs, c='C5', alpha=1)
         else:
             ax.axvline(x=toa*Fs, c='C0', alpha=0.5)
 
-        ax.annotate(r'$\tau_{%s}^{%d}$' % (wall.decode(), order), [toa*Fs, 0.3], fontsize=12)
+        ax.annotate(r'$\tau_{%s}^{%d}$' %
+                    (echo_txt, order), [toa*Fs, 0.3], fontsize=12)
 
     return mean_rirs_to_plot
 
@@ -146,7 +168,7 @@ check = CheckButtons(rax, datasets, initial_validity)
 txt_boxes_tau = []
 for k in range(7):
     rax = plt.axes([0.93, 0.8 - k*0.035, 0.05, 0.03])
-    tbox = TextBox(rax, r'Set $\tau_{%s}^{%d}$  ' % (toa_note['wall'][k, 0, 0, 0].decode(), toa_note['order'][k, 0, 0, 0]),
+    tbox = TextBox(rax, r'Set $\tau_{%s}^{%d}$  ' % (toa_note['wall'][k, 0, 0, 0], toa_note['order'][k, 0, 0, 0]),
                    initial=str(np.round(Fs*toa_note['toa'][k, 0, 0, 0], 2)))
     txt_boxes_tau.append(tbox)
 

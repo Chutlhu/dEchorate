@@ -1,12 +1,13 @@
-import soundfile as sf
 import os
-import os.path as pat
+# import os.path as pat
 import h5py
 import numpy as np
 import scipy as sp
 import pandas as pd
+import soundfile as sf
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 from scipy.optimize import minimize, minimize_scalar
 
 from src.dataset import DechorateDataset, SyntheticDataset
@@ -19,8 +20,7 @@ dataset_dir = './data/dECHORATE/'
 path_to_processed = './data/processed/'
 path_to_note_csv = dataset_dir + 'annotations/dECHORATE_database.csv'
 
-datasets=['000000', '010000', '011000', '011100', '011110', '011111',
-          '001000', '000100', '000010', '000001']
+datasets = constants['datasets']
 
 
 def build_all_rirs_matrix_and_annotation(params):
@@ -38,10 +38,11 @@ def build_all_rirs_matrix_and_annotation(params):
     toa_sym = np.zeros([K, I, J, D])
     amp_sym = np.zeros_like(toa_sym)
     ord_sym = np.zeros_like(toa_sym)
-    wal_sym = np.chararray([K, I, J, D])
+    wal_sym = np.ndarray([K, I, J, D], dtype=object)
+    gen_sym = np.ndarray([K, I, J, D], dtype=object)
 
-    for i in range(0, I):
-        for j in range(0, J):
+    for j in range(0, J):
+        for i in tqdm(range(0, I)):
             for d, dataset in enumerate(datasets):
 
                 # get real data
@@ -62,12 +63,13 @@ def build_all_rirs_matrix_and_annotation(params):
                 synth_dset.set_mic(mic_pos[0], mic_pos[1], mic_pos[2])
                 synth_dset.set_src(src_pos[0], src_pos[1], src_pos[2])
                 # times, hs = synth_dset.get_rir()
-                amp, tau, wall, order = synth_dset.get_note()
+                amp, tau, wall, order, generators = synth_dset.get_note()
 
                 toa_sym[:, i, j, d] = tau
                 amp_sym[:, i, j, d] = amp
                 wal_sym[:, i, j, d] = wall
                 ord_sym[:, i, j, d] = order
+                gen_sym[:, i, j, d] = generators
 
                 # plt.plot(np.abs(h[:L])**p + .5*d, label=dataset)
                 # if d == 0:
@@ -101,9 +103,11 @@ def build_all_rirs_matrix_and_annotation(params):
         'amp': amp_sym,
         'wall': wal_sym,
         'order': ord_sym,
+        'generators' : gen_sym,
     }
-    np.save('./data/tmp/all_rirs.npy', all_rirs)
-    save_to_pickle('./data/tmp/toa_note.pkl', toa_note)
+    np.save('./data/interim/all_rirs_9srcs.npy', all_rirs)
+    save_to_pickle('./data/interim/toa_note_9srcs.pkl', toa_note)
+    1/0
     return all_rirs
 
 def direct_path_deconvolution(all_rirs, params):
@@ -348,18 +352,17 @@ if __name__ == "__main__":
     params = {
         'Fs' : 48000,
         'I' : 30,
-        'J' : 4,
+        'J' : 9,
         'D' : len(datasets),
         'R' : 0,
-        'K' : 15,
+        'K' : 25,
         'Lt' : 0.4,
         'data' : ['real', 'synth'][0]
     }
 
     ## BUILD ALL-RIRs MATRIX
-    # ATTENTION: this data are the results of the direct path deconvolution
-    # all_rirs = build_all_rirs_matrix_and_annotation(params)
-
+    all_rirs = build_all_rirs_matrix_and_annotation(params)
+    1/0
     ## LOAD BACK THE DATA
     all_rirs = np.load('./data/tmp/all_rirs.npy')
     toa_note = load_from_pickle('./data/tmp/toa_note.pkl')
