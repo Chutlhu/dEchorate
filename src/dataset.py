@@ -21,6 +21,15 @@ class DechorateDataset():
         self.src_j = 0
         self.rir = None
 
+
+        self.room_size = constants['room_size']
+        self.c = constants['speed_of_sound']
+        self.Fs = constants['Fs']
+
+        self.sdset = SyntheticDataset()
+        self.sdset.set_room_size(self.room_size)
+        self.sdset.set_c(self.c)
+
     def set_dataset(self, dset_code):
         path_to_data_hdf5 = self.path_to_processed + '%s_rir_data.hdf5' % dset_code
         dset_rir = h5py.File(path_to_data_hdf5, 'r')
@@ -39,21 +48,13 @@ class DechorateDataset():
         assert len(dset_note) > 0
         self.dataset_data = dset_rir
         self.dataset_note = dset_note
+        self.sdset.set_dataset(dset_code)
 
     def set_entry(self, i, j):
         self.mic_i = i
         self.src_j = j
         self.entry = self.dataset_note.loc[(
             self.dataset_note['src_id'] == j+1) & (self.dataset_note['mic_id'] == i+1)]
-
-    def get_rirs_mics_and_srcs_iterator(self, ii, jj):
-        for i in ii:
-            for j in jj:
-                self.set_entry(i, j)
-                t, h = self.get_rir()
-                m, s = self.get_mic_and_src_pos()
-                yield t, h, m, s
-
 
     def get_rir(self):
         wavefile = self.entry['filename'].values[0]
@@ -69,8 +70,15 @@ class DechorateDataset():
         self.src_pos = np.array([self.entry['src_pos_x'].values + constants['offset_beacon'][0],
                                  self.entry['src_pos_y'].values + constants['offset_beacon'][1],
                                  self.entry['src_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
+        self.sdset.set_mic(self.mic_pos[0], self.mic_pos[1], self.mic_pos[2])
+        self.sdset.set_src(self.src_pos[0], self.src_pos[1], self.src_pos[2])
         return self.mic_pos, self.src_pos
 
+    def get_ism_annotation(self, k_order=1, k_reflc=7):
+        self.sdset.set_k_order(k_order)
+        self.sdset.set_k_reflc(k_reflc)
+        amp, toa, walls, order, generators = self.sdset.get_note()
+        return amp, toa, walls, order,generators
 
 class SyntheticDataset:
     def __init__(self):

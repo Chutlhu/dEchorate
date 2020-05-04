@@ -15,4 +15,6 @@ def load_from_matlab(filename):
     return loadmat(filename)
 
 def save_to_matlab(filename, obj):
+    if not isinstance(obj, dict):
+        raise ValueError('Object must be a dict of np arrays')
     return savemat(filename, obj)

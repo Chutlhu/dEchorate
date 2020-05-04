@@ -77,7 +77,6 @@ def plot_rirs_and_note(rirs, note, i, j, selected_k, ax, visibility, dp_extreme)
         if 'generators' in note:
             walls = note['generators'][k, i, j, 0].split('_')
             echo_txt = ''.join([w[0] for w in walls])
-            print(k, echo_txt)
         else:
             echo_txt = wall.decode()
 
@@ -143,7 +142,6 @@ def plot_rirs_and_note_merged(rirs, note, i, j, selected_k, ax, fun= lambda x : 
         if 'generators' in note:
             walls = note['generators'][k, i, j, 0].split('_')
             echo_txt = ''.join([w[0] for w in walls])
-            print(k, echo_txt)
         else:
             echo_txt = wall.decode()
 
