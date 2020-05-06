@@ -133,7 +133,7 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
         & (dataset['room_rfl_south'] == s)
         & (dataset['room_fornitures'] == False)
         & (dataset['src_signal'] == 'chirp')
-        & (dataset['src_id'] < 10)
+        & (dataset['src_id'] < 5)
     ]
 
 
@@ -161,15 +161,18 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
         print(curr_reflectors)
         wall = curr_reflectors[k]
         r = refl_order.index(wall)
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs,
+                    c='C%d'%(k+2), marker='x', label='Peak Picking')
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r, :, :].T.flatten()*Fs,
+                    marker='o', facecolors='none', edgecolors='C%d'%(k+2), label='Pyroom')
 
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs, c='C%d'%k, marker='x', label='Peak Picking')
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r, :, :].T.flatten()*Fs, c='C%d' % k, marker='o', label='Pyroom')
     plt.tight_layout()
     plt.legend()
     plt.title('RIR SKYLINE K = %d' % K)
     plt.savefig('./reports/figures/rir_skyline.pdf')
     plt.show()
     # plt.close()
+    1/0
 
     # ## MULTIDIMENSIONAL SCALING
     # select sub set of microphones and sources
@@ -190,17 +193,17 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
         wall = curr_reflectors[1]
         r = refl_order.index(wall)
         De_c = toa_peak[r, :I, :J] * speed_of_sound
-    if K == 2:
-        Dobs = toa_peak[0, :I, :J] * speed_of_sound
-        Dsym = toa_sym[0, :I, :J] * speed_of_sound
-        wall = curr_reflectors[1]
-        r = refl_order.index(wall)
-        print(wall, r)
-        De_c = toa_peak[r, :I, :J] * speed_of_sound
-        wall = curr_reflectors[2]
-        r = refl_order.index(wall)
-        print(wall, r)
-        De_f = toa_peak[r, :I, :J] * speed_of_sound
+    # if K == 2:
+    #     Dobs = toa_peak[0, :I, :J] * speed_of_sound
+    #     Dsym = toa_sym[0, :I, :J] * speed_of_sound
+    #     wall = curr_reflectors[1]
+    #     r = refl_order.index(wall)
+    #     print(wall, r)
+    #     De_c = toa_peak[r, :I, :J] * speed_of_sound
+    #     wall = curr_reflectors[2]
+    #     r = refl_order.index(wall)
+    #     print(wall, r)
+    #     De_f = toa_peak[r, :I, :J] * speed_of_sound
 
     assert np.allclose(Dgeo, Dsym)
 
@@ -302,9 +305,12 @@ if __name__ == "__main__":
     # LOAD MANUAL ANNOTATION
     # path_to_manual_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
     # path_to_manual_annotation = 'data/interim/manual_annotation/20200424_20h19_gui_annotation.pkl'
-    path_to_manual_annotation = 'data/interim/manual_annotation/20200428_12h27_gui_annotation.pkl'
+    # path_to_manual_annotation = 'data/interim/manual_annotation/20200428_12h27_gui_annotation.pkl'
+    path_to_manual_annotation = './data/processed/rirs_manual_annotation/20200505_12h38_gui_annotation.pkl'
     manual_note = load_from_pickle(path_to_manual_annotation)
-    toa_peak = manual_note['toa'][:7, :, :, 0]
+    # we select only the reflection of order 0
+    # namely one reflection coming from each wall
+    toa_peak = manual_note['toa'][:7, :, :4, 0]
 
     ## K = 1: direct path estimation
     K = 0
@@ -313,10 +319,10 @@ if __name__ == "__main__":
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
-    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
-    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
-    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
+    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', facecolors='none', edgecolors='C0', label='mics init')
+    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', facecolors='none', edgecolors='C1', label='srcs init')
+    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', edgecolors='C0', label='mics est')
+    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', edgecolors='C1', label='srcs est')
     ax.set_xlim([0, Rx])
     ax.set_ylim([0, Ry])
     ax.set_zlim([0, Rz])
@@ -342,27 +348,27 @@ if __name__ == "__main__":
     plt.savefig('./reports/figures/cal_positioning3D.pdf')
     plt.show()
 
-    ## K = 2: echo 1,2 -- from the ceiling and the floor
-    K = 2
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
+    # ## K = 2: echo 1,2 -- from the ceiling and the floor
+    # K = 2
+    # mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+    #     = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(mics_pos[0, :], mics_pos[1, :],
-               mics_pos[2, :], marker='o', label='mics init')
-    ax.scatter(srcs_pos[0, :], srcs_pos[1, :],
-               srcs_pos[2, :], marker='o', label='srcs init')
-    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :],
-               mics_pos_est[2, :], marker='x', label='mics est')
-    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :],
-               srcs_pos_est[2, :], marker='x', label='srcs est')
-    ax.set_xlim([0, Rx])
-    ax.set_ylim([0, Ry])
-    ax.set_zlim([0, Rz])
-    plt.legend()
-    plt.savefig('./reports/figures/cal_positioning3D.pdf')
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(mics_pos[0, :], mics_pos[1, :],
+    #            mics_pos[2, :], marker='o', label='mics init')
+    # ax.scatter(srcs_pos[0, :], srcs_pos[1, :],
+    #            srcs_pos[2, :], marker='o', label='srcs init')
+    # ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :],
+    #            mics_pos_est[2, :], marker='x', label='mics est')
+    # ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :],
+    #            srcs_pos_est[2, :], marker='x', label='srcs est')
+    # ax.set_xlim([0, Rx])
+    # ax.set_ylim([0, Ry])
+    # ax.set_zlim([0, Rz])
+    # plt.legend()
+    # plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    # plt.show()
 
 
     # # save current refine TOAs
