@@ -1,5 +1,7 @@
 import numpy as np
+import scipy as sp
 
+from src.externals.trilaterate import trilaterate
 
 def edm(X, Y):
     '''
@@ -19,7 +21,11 @@ def edm(X, Y):
     return D**0.5
 
 
-def trilateration(anchor_pos, distances):
+def trilateration2(anchors, distances):
+    return trilaterate(['a',['a']])
+
+
+def trilateration(anchors, distances):
     # function [estimatedLocation, totalError] = trilaterate_beck(anchors, distances)
     # %------------------------------------------------------------------------------
     # % Trilaterates the location of a point from distances to a fixed set of
@@ -34,41 +40,50 @@ def trilateration(anchor_pos, distances):
     # %         totalError        ... sum of absolute distance errors from the
     # %                               estimated point to the anchors
     # %------------------------------------------------------------------------------
-    print(anchor_pos.shape)
-    print(distances.shape)
+    print(anchors.shape) # M x D
+    print(distances.shape)  # M x 1
 
-    assert distances.shape[1] == 1
-    assert anchor_pos.shape[0] in [1, 2, 3]
-    assert anchor_pos.shape[1] == distances.shape[0]
-
-    # matlab notation
-    # distances  # D x 1
-    anchors = anchor_pos.T  # M x D
+    assert len(distances.shape) == 1
+    assert anchors.shape[1] in [1, 2, 3]
+    assert anchors.shape[0] == distances.shape[0]
 
     # d = size(anchors, 2);
-    d = anchor_pos.shape[1]
+    d = anchors.shape[1]
     # m = length(distances);
-    m = len(distance)
+    m = len(distances)
 
     # A = [-2 * anchors, ones(m, 1)];
-    A = np.concatenate([-2 * anchor_pos, np.ones(m, 1)])
+    A = np.concatenate([-2 * anchors, np.ones([m, 1])], axis = 1)
+    assert A.shape == (m, d+1)
     # b = distances.^2 - sum(anchors.^2, 2);
-    b = distance**2 - np.sum(anchors**2, 1)
+    b = distances**2 - np.sum(anchors**2, 1)
+    assert len(b) == m
+    b = b.reshape([m, 1])
 
     # D = [eye(d), zeros(d, 1); zeros(1, d), 0];
-    D = np.concatenate([np.eye(d), np.zeros(d, 1)], axis=1)
-    D = np.concatenate([D, np.zeros(1, d), 0], axis=0)
+    D = np.concatenate([np.eye(d), np.zeros([d, 1])], axis=1)
+    D = np.concatenate([D, np.zeros([1, d+1])], axis=0)
+    assert D.shape == (d+1, d+1)
 
     # f = [zeros(d, 1); -0.5];
-    f = np.concatenate([np.zeros(d, 1), -0.5], axis=0)
+    f = np.zeros([d+1, 1])
+    f[-1] = -0.5
 
     # y   = @(lambda) (A'*A + lambda * D) \ (A'*b - lambda * f);
-    def y(lam): return np.linalg.inv(A.T@A + lam * D) @ (A.T @ b - lam * f)
-    # phi = @(lambda) y(lambda)' * D * y(lambda) + 2 * f' * y(lambda);
-    def phi(lam): return y[lam].T @ D @ y[lam] + 2 * f.T @ y[lam]
+    def y(x):
+        # phi = @(lambda) y(lambda)' * D * y(lambda) + 2 * f' * y(lambda);
+        num = (A.T @ b - x * f)
+        rden = np.linalg.pinv(A.T@A + x * D)
+        a = rden @ num
+        assert a.shape == (d + 1, 1)
+        return a
+
+    def phi(x):
+        p = (y(x).T @ D @ y(x) + 2 * f.T @ y(x)).squeeze()
+        return p
 
     # eigDAA  = eig(D, A'*A);
-    eigDAA = sp.linalg.eig(D, A.T @ A)
+    eigDAA = sp.linalg.eigvals(D, A.T @ A)
     # lambda1 = eigDAA(end);
     lambda1 = eigDAA[-1]
 
@@ -84,30 +99,29 @@ def trilateration(anchor_pos, distances):
 
     # warning off;
     # while (a2 - a1 >= epsStep || ( abs( phi(a1) ) >= epsAbs && abs( phi(a2) )  >= epsAbs ) )
-    while (a2 - a1) >= epsStep or (np.abs(phi[a1]) >= epsStep and np.abs(phi[a2] >= epsAbs)):
+    while (a2 - a1) >= epsStep \
+            or (np.abs(phi(a1)) >= epsStep and np.abs(phi(a2) >= epsAbs)):
         #     c = (a1 + a2)/2;
         c = (a1 + a2) / 2
-    #     if ( phi(c) == 0 )
-        if (phi[c] == 0):
+        #     if ( phi(c) == 0 )
+        if (phi(c) == 0):
             break
-    #        break;
-        elif (phi[a1]@phi[c] < 0):
+        #        break;
+        elif (phi(a1) * phi(c) < 0):
             a2 = c
-    #     elseif ( phi(a1)*phi(c) < 0 )
-    #        a2 = c;
+        #     elseif ( phi(a1)*phi(c) < 0 )
+        #        a2 = c;
         else:
             a1 = c
-    #     else
-    #        a1 = c;
-    #     end
-    # end
-    # warning on;
+        #     else
+        #        a1 = c;
+        #     end
+        # end
+        # warning on;
 
-    # estimatedLocation      = y(c);
-    estimatedLocation = y[c]
-    # estimatedLocation(end) = [];
-    estimatedLocation[-1] = 0
+    estimatedLocation = np.real(y(c)[:d, :])
 
     # totalError = sum(abs(sqrt(sum(bsxfun(@minus, anchors', estimatedLocation).^2)) - distances(:)'))
-    totalError = 0
+    estimatedDistances = np.sqrt(np.sum((anchors.T - estimatedLocation)**2, 0))
+    totalError = np.sum(np.abs(estimatedDistances - distances))
     return estimatedLocation, totalError

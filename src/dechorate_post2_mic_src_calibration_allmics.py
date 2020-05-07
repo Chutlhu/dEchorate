@@ -78,6 +78,7 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
 
             # compute the theoretical distance
             if np.allclose(mics_pos[:, i], 0):
+                print('mic', i, 'from manual annotation')
                 mic_pos = [entry['mic_pos_x'].values, entry['mic_pos_y'].values, entry['mic_pos_z'].values]
                 # apply offset
                 mic_pos[0] = mic_pos[0] + constants['offset_beacon'][0]
@@ -87,6 +88,7 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
                 mics_pos[:, i] = np.array(mic_pos).squeeze()
 
             if np.allclose(srcs_pos[:, j], 0):
+                print('src', j, 'from manual annotation')
                 src_pos = [entry['src_pos_x'].values, entry['src_pos_y'].values, entry['src_pos_z'].values]
                 # apply offset
                 src_pos[0] = src_pos[0] + constants['offset_beacon'][0]
@@ -150,9 +152,9 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     D, I = mics_pos.shape
     D, J = srcs_pos.shape
 
-    rirs = rirs.transpose([0, 2, 1]).reshape([L, I*J])
+    rirs_skyline = rirs.transpose([0, 2, 1]).reshape([L, I*J])
 
-    plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
+    plt.imshow(rirs_skyline, extent=[0, I*J, 0, L], aspect='auto')
     for j in range(J):
             plt.axvline(j*30, color='C7')
     plt.axhline(y=L-recording_offset, label='Time of Emission')
@@ -172,7 +174,6 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     plt.savefig('./reports/figures/rir_skyline.pdf')
     plt.show()
     # plt.close()
-    1/0
 
     # ## MULTIDIMENSIONAL SCALING
     # select sub set of microphones and sources
@@ -290,7 +291,7 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     plt.savefig('./reports/figures/rir_skyline_after_calibration.pdf')
     plt.show()
 
-    return mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym
+    return mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs
 
 
 if __name__ == "__main__":
@@ -314,25 +315,28 @@ if __name__ == "__main__":
 
     ## K = 1: direct path estimation
     K = 0
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs \
         = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
+
+    print(mics_pos.shape)
+    print(mics_pos_est.shape)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', facecolors='none', edgecolors='C0', label='mics init')
-    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', facecolors='none', edgecolors='C1', label='srcs init')
-    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', edgecolors='C0', label='mics est')
-    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', edgecolors='C1', label='srcs est')
+    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
+    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
+    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
+    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
     ax.set_xlim([0, Rx])
     ax.set_ylim([0, Ry])
     ax.set_zlim([0, Rz])
     plt.legend()
-    plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    plt.savefig('./reports/figures/cal_positioning3D_k0.pdf')
     plt.show()
 
     ## K = 1: echo 1 -- from the ceiling
     K = 1
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs \
         = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
     fig = plt.figure()
@@ -345,8 +349,61 @@ if __name__ == "__main__":
     ax.set_ylim([0, Ry])
     ax.set_zlim([0, Rz])
     plt.legend()
-    plt.savefig('./reports/figures/cal_positioning3D.pdf')
+    plt.savefig('./reports/figures/cal_positioning3D_k1.pdf')
     plt.show()
+
+
+    calib_res = {
+        'mics': mics_pos_est,
+        'srcs': srcs_pos_est,
+        'toa_pck' : toa_peak,
+        'toa_sym' : toa_sym,
+        'rirs' : rirs,
+    }
+
+    save_to_pickle('./data/processed/post2_calibration/calib_output_mics_srcs_pos.pkl', calib_res)
+
+    # FINALLY, RIR SKYLINE WITH ALL THE ECHOES
+    curr_reflectors = constants['refl_order_calibr'][:7]
+    refl_order = constants['refl_order_pyroom']
+
+    L, I, J = rirs.shape
+    rirs_skyline = rirs.transpose([0, 2, 1]).reshape([L, I*J])
+    plt.imshow(rirs_skyline, extent=[0, I*J, 0, L], aspect='auto')
+
+    # plot srcs boundaries
+    for j in range(J):
+            plt.axvline(j*30, color='C7')
+
+    # plot time of emission
+    plt.axhline(y=L-recording_offset, label='Time of Emission')
+
+    for k in range(7):
+        print(curr_reflectors)
+        wall = curr_reflectors[k]
+        r = refl_order.index(wall)
+        # plot peak annotation
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r, :, :].T.flatten()*Fs,
+                    c='C%d' % (k+2), marker='x', label='%s Picking' % wall)
+        # plot simulated peak
+        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r, :, :].T.flatten()*Fs,
+                    marker='o', facecolors='none', edgecolors='C%d' % (k+2), label='%s Pyroom' % wall)
+
+    plt.tight_layout()
+    plt.legend()
+    plt.title('RIR SKYLINE K = %d' % K)
+    plt.savefig('./reports/figures/rir_skyline_final.pdf')
+    plt.show()
+
+    print(np.abs(toa_peak[:,0,0] - toa_sym[:,0,0]))
+
+    ## save here for the GUI later
+    new_manual_note = manual_note.copy()
+    new_manual_note['toa'][:7, :, :4, 0] = toa_sym[:7, :, :4]
+    save_to_pickle('./data/processed/post2_calibration/calib_output_toa_pck.pkl', new_manual_note)
+    new_manual_note['toa'][:7, :, :4, 0] = toa_peak[:7, :, :4]
+    save_to_pickle('./data/processed/post2_calibration/calib_output_toa_sym.pkl', new_manual_note)
+
 
     # ## K = 2: echo 1,2 -- from the ceiling and the floor
     # K = 2
