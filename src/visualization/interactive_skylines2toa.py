@@ -31,6 +31,10 @@ curr_reflectors = constants['refl_order_calibr'][:7]
 refl_order = constants['refl_order_pyroom']
 Fs = constants['Fs']
 recording_offset = constants['recording_offset']
+speed_of_sound = constants['speed_of_sound']
+
+# data to visualize
+dataset_id = '011111'
 
 ## INITIALIZE FIGURE
 scaling = 0.8
@@ -47,6 +51,7 @@ mics = note_dict['mics']
 srcs = note_dict['srcs']
 toas = note_dict['toa_pck']
 
+
 L, Ir, Jr = rirs.shape
 K, It, Jt = toas.shape
 Dm, Im = mics.shape
@@ -55,6 +60,8 @@ Ds, Js = srcs.shape
 assert Ir == Im == It
 assert Jr == Jt == Js
 assert Dm == Ds
+
+D, I, J = Dm, Ir, Jr
 
 def plot_rir_skyline(ax, rirs, toa_pck=None, toa_sym=None):
 
@@ -74,17 +81,34 @@ def plot_rir_skyline(ax, rirs, toa_pck=None, toa_sym=None):
         r = refl_order.index(wall)
         # plot peak annotation
         if toa_pck is not None:
-            ax.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r, :, :].T.flatten()*Fs, c='C%d' % (k+2), marker='x', label='%s Picking' % wall)
-        # plot simulated peak
+            ax.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_pck[r, :, :].T.flatten()*Fs, c='C%d' % (k+2), marker='x', label='%s Picking' % wall)
         if toa_sym is not None:
             ax.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r, :, :].T.flatten()*Fs, marker='o', facecolors='none', edgecolors='C%d' % (k+2), label='%s Pyroom' % wall)
 
-    ax.set_ylim([18500, L - recording_offset])
+
+    ax.set_ylim([18200, L - recording_offset])
     ax.set_xlim([0, I*J])
     ax.legend()
     return
 
-plot_rir_skyline(ax1, rirs)
+
+toa_sym = np.zeros_like(toas)
+for i in range(I):
+    for j in range(J):
+
+        synth_dset = SyntheticDataset()
+        synth_dset.set_room_size(constants['room_size'])
+        synth_dset.set_dataset(dataset_id, absb=1, refl=0)
+        synth_dset.set_c(speed_of_sound)
+        synth_dset.set_k_order(1)
+        synth_dset.set_k_reflc(7)
+        synth_dset.set_mic(mics[0, i], mics[1, i], mics[2, i])
+        synth_dset.set_src(srcs[0, j], srcs[1, j], srcs[2, j])
+        amp, tau, wall, order, gen = synth_dset.get_note()
+
+        toa_sym[:, i, j] = tau
+
+plot_rir_skyline(ax1, rirs, toa_pck=toas, toa_sym=toa_sym)
 
 
 class Callbacks():

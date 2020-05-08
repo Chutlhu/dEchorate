@@ -307,7 +307,13 @@ if __name__ == "__main__":
     # path_to_manual_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
     # path_to_manual_annotation = 'data/interim/manual_annotation/20200424_20h19_gui_annotation.pkl'
     # path_to_manual_annotation = 'data/interim/manual_annotation/20200428_12h27_gui_annotation.pkl'
-    path_to_manual_annotation = './data/processed/rirs_manual_annotation/20200505_12h38_gui_annotation.pkl'
+    # path_to_manual_annotation = './data/processed/rirs_manual_annotation/20200505_12h38_gui_annotation.pkl'
+
+    # annotation_file = '20200508_12h27_gui_annotation.pkl'
+    # annotation_file = '20200508_13h33_gui_annotation.pkl'
+    annotation_file = '20200508_16h29_gui_annotation.pkl'
+    annotation_file = '20200508_17h32_gui_annotation.pkl'
+    path_to_manual_annotation = './data/processed/rirs_manual_annotation/' + annotation_file
     manual_note = load_from_pickle(path_to_manual_annotation)
     # we select only the reflection of order 0
     # namely one reflection coming from each wall
