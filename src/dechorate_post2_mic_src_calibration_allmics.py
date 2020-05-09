@@ -312,7 +312,7 @@ if __name__ == "__main__":
     # annotation_file = '20200508_12h27_gui_annotation.pkl'
     # annotation_file = '20200508_13h33_gui_annotation.pkl'
     annotation_file = '20200508_16h29_gui_annotation.pkl'
-    annotation_file = '20200508_17h32_gui_annotation.pkl'
+    annotation_file = '20200508_18h34_gui_annotation.pkl'
     path_to_manual_annotation = './data/processed/rirs_manual_annotation/' + annotation_file
     manual_note = load_from_pickle(path_to_manual_annotation)
     # we select only the reflection of order 0

@@ -63,13 +63,21 @@ class DechorateDataset():
         return np.arange(len(self.rir))/self.Fs, self.rir
 
     def get_mic_and_src_pos(self):
-        self.mic_pos = np.array([self.entry['mic_pos_x'].values + constants['offset_beacon'][0],
-                                 self.entry['mic_pos_y'].values + constants['offset_beacon'][1],
-                                 self.entry['mic_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
+        # self.mic_pos = np.array([self.entry['mic_pos_x'].values + constants['offset_beacon'][0],
+        #                          self.entry['mic_pos_y'].values + constants['offset_beacon'][1],
+        #                          self.entry['mic_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
+        # self.src_pos = np.array([self.entry['src_pos_x'].values + constants['offset_beacon'][0],
+        #                          self.entry['src_pos_y'].values + constants['offset_beacon'][1],
+        #                          self.entry['src_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
 
-        self.src_pos = np.array([self.entry['src_pos_x'].values + constants['offset_beacon'][0],
-                                 self.entry['src_pos_y'].values + constants['offset_beacon'][1],
-                                 self.entry['src_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
+
+        self.mic_pos = np.array([self.entry['mic_pos_x'].values,
+                                 self.entry['mic_pos_y'].values,
+                                 self.entry['mic_pos_z'].values]).squeeze()
+        self.src_pos = np.array([self.entry['src_pos_x'].values,
+                                 self.entry['src_pos_y'].values,
+                                 self.entry['src_pos_z'].values]).squeeze()
+
         self.sdset.set_mic(self.mic_pos[0], self.mic_pos[1], self.mic_pos[2])
         self.sdset.set_src(self.src_pos[0], self.src_pos[1], self.src_pos[2])
         return self.mic_pos, self.src_pos
