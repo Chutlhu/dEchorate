@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pyroomacoustics as pra
 
-from src import constants
+from dechorate import constants
 
 
 class DechorateDataset():

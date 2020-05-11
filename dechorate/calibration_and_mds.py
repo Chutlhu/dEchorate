@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 from scipy.optimize import minimize
 
-from src import constants
-from src.utils.mds_utils import edm
-from src.utils.dsp_utils import envelope, normalize
+from dechorate import constants
+from dechorate.utils.mds_utils import edm
+from dechorate.utils.dsp_utils import envelope, normalize
 
 
 

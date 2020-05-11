@@ -4,7 +4,7 @@ import pyroomacoustics as pra
 import matplotlib.pyplot as plt
 import soundfile as sf
 
-from src.utils.file_utils import load_from_mat
+from dechorate.utils.file_utils import load_from_mat
 
 Fs = 48000
 room_size = [5.741, 5.763, 2.353]

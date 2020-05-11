@@ -12,14 +12,14 @@ from tqdm import tqdm
 from sklearn import manifold
 from scipy.optimize import least_squares
 
-from src import constants
+from dechorate import constants
 
-from src.dataset import DechorateDataset, SyntheticDataset
-from src.calibration_and_mds import *
+from dechorate.dataset import DechorateDataset, SyntheticDataset
+from dechorate.calibration_and_mds import *
 
-from src.utils.file_utils import save_to_matlab, load_from_pickle, save_to_pickle
-from src.utils.dsp_utils import envelope, normalize
-from src.utils.mds_utils import edm
+from dechorate.utils.file_utils import save_to_matlab, load_from_pickle, save_to_pickle
+from dechorate.utils.dsp_utils import envelope, normalize
+from dechorate.utils.mds_utils import edm
 
 from risotto import deconvolution as deconv
 
@@ -340,23 +340,23 @@ if __name__ == "__main__":
     plt.savefig('./reports/figures/cal_positioning3D_k0.pdf')
     plt.show()
 
-    ## K = 1: echo 1 -- from the ceiling
-    K = 1
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs \
-        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
+    # ## K = 1: echo 1 -- from the ceiling
+    # K = 1
+    # mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs \
+    #     = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
-    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
-    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
-    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
-    ax.set_xlim([0, Rx])
-    ax.set_ylim([0, Ry])
-    ax.set_zlim([0, Rz])
-    plt.legend()
-    plt.savefig('./reports/figures/cal_positioning3D_k1.pdf')
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
+    # ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
+    # ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
+    # ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
+    # ax.set_xlim([0, Rx])
+    # ax.set_ylim([0, Ry])
+    # ax.set_zlim([0, Rz])
+    # plt.legend()
+    # plt.savefig('./reports/figures/cal_positioning3D_k1.pdf')
+    # plt.show()
 
 
     calib_res = {

@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.utils.dsp_utils import make_toepliz_as_in_mulan, reshape_toeplitz, enforce_toeplitz, build_frobenius_weights
+from dechorate.utils.dsp_utils import make_toepliz_as_in_mulan, reshape_toeplitz, enforce_toeplitz, build_frobenius_weights
 
 def cadzow_denoise(A, n_spikes, thr_Cadzow=2e-5):
     '''

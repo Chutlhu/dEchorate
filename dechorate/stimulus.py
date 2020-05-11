@@ -4,8 +4,8 @@ import soundfile as sf
 
 import matplotlib.pyplot as plt
 
-from src.utils.file_utils import save_to_pickle, load_from_matlab
-from src.utils.dsp_utils import *
+from dechorate.utils.file_utils import save_to_pickle, load_from_matlab
+from dechorate.utils.dsp_utils import *
 
 
 # =============================================================

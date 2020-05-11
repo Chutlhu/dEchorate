@@ -25,7 +25,7 @@ def trilateration2(anchors, distances):
     return trilaterate(['a',['a']])
 
 
-def trilateration(anchors, distances):
+def trilateration(anchors, distances, init=None):
     # function [estimatedLocation, totalError] = trilaterate_beck(anchors, distances)
     # %------------------------------------------------------------------------------
     # % Trilaterates the location of a point from distances to a fixed set of
@@ -40,8 +40,8 @@ def trilateration(anchors, distances):
     # %         totalError        ... sum of absolute distance errors from the
     # %                               estimated point to the anchors
     # %------------------------------------------------------------------------------
-    print(anchors.shape) # M x D
-    print(distances.shape)  # M x 1
+    # print(anchors.shape) # M x D
+    # print(distances.shape)  # M x 1
 
     assert len(distances.shape) == 1
     assert anchors.shape[1] in [1, 2, 3]
@@ -82,42 +82,27 @@ def trilateration(anchors, distances):
         p = (y(x).T @ D @ y(x) + 2 * f.T @ y(x)).squeeze()
         return p
 
-    # eigDAA  = eig(D, A'*A);
     eigDAA = sp.linalg.eigvals(D, A.T @ A)
-    # lambda1 = eigDAA(end);
     lambda1 = eigDAA[-1]
 
-    # a1 = -1/lambda1;
     a1 = -1 / lambda1
-    # a2 = 1000;
     a2 = 1000
 
-    # epsAbs  = 1e-5;
-    epsAbs = 1e-5
-    # epsStep = 1e-5;
-    epsStep = 1e-5
+    epsAbs = 1e-6
+    epsStep = 1e-6
 
     # warning off;
     # while (a2 - a1 >= epsStep || ( abs( phi(a1) ) >= epsAbs && abs( phi(a2) )  >= epsAbs ) )
     while (a2 - a1) >= epsStep \
-            or (np.abs(phi(a1)) >= epsStep and np.abs(phi(a2) >= epsAbs)):
-        #     c = (a1 + a2)/2;
+            or (np.abs(phi(a1)) >= epsAbs and np.abs(phi(a2) >= epsAbs)):
         c = (a1 + a2) / 2
-        #     if ( phi(c) == 0 )
         if (phi(c) == 0):
             break
-        #        break;
         elif (phi(a1) * phi(c) < 0):
             a2 = c
-        #     elseif ( phi(a1)*phi(c) < 0 )
-        #        a2 = c;
         else:
             a1 = c
-        #     else
-        #        a1 = c;
-        #     end
-        # end
-        # warning on;
+
 
     estimatedLocation = np.real(y(c)[:d, :])
 

@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.optimize import minimize, minimize_scalar
 
-from src.dataset import DechorateDataset, SyntheticDataset
-from src.cadzow import cadzow_denoise, condat_denoise
-from src.utils.dsp_utils import *
-from src.utils.file_utils import save_to_pickle, load_from_pickle
-from src import constants
+from dechorate.dataset import DechorateDataset, SyntheticDataset
+from dechorate.cadzow import cadzow_denoise, condat_denoise
+from dechorate.utils.dsp_utils import *
+from dechorate.utils.file_utils import save_to_pickle, load_from_pickle
+from dechorate import constants
 
 dataset_dir = './data/dECHORATE/'
 path_to_processed = './data/processed/'

@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import pyroomacoustics as pra
 
-from src.utils.file_utils import load_from_matlab
+from dechorate.utils.file_utils import load_from_matlab
 
 ## LOAD POSITIONS
 # load arrays' barycenters positions from file generated in excell

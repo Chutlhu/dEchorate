@@ -10,8 +10,8 @@ from shutil import rmtree
 from zipfile import ZipFile
 from tqdm import tqdm
 
-from src.stimulus import ProbeSignal
-from src.utils.dsp_utils import *
+from dechorate.stimulus import ProbeSignal
+from dechorate.utils.dsp_utils import *
 
 # opening the zip file in READ mode
 def get_zipfile_list(path_to_file):
