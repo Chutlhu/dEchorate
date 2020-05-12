@@ -14,6 +14,7 @@ from dechorate.dataset import DechorateDataset, SyntheticDataset
 from dechorate.utils.mds_utils import trilateration
 from dechorate.utils.file_utils import save_to_pickle, load_from_pickle, save_to_matlab
 from dechorate.utils.dsp_utils import normalize, envelope
+from dechorate.utils.geo_utils import plane_from_points, mesh_from_plane
 
 
 class Arrow3D(FancyArrowPatch):
@@ -36,7 +37,6 @@ recording_offset = constants['recording_offset']
 
 # which source?
 srcs_idxs = [0, 1, 2, 3]
-srcs_idxs = [0]
 J = len(srcs_idxs)
 
 # which microphonese?
@@ -109,6 +109,7 @@ ax.scatter(srcs[0, :], srcs[1, :], srcs[2, :], marker='o', label='srcs init')
 
 walls = constants['refl_order_pyroom']
 imgs = np.zeros([3, K, J])
+prjs = np.zeros([3, K, J])
 toas_imgs = np.zeros([K, I, J])
 for j in range(J):
     for k in range(K):
@@ -138,6 +139,7 @@ for j in range(J):
                         mutation_scale=10,
                         lw=1, arrowstyle="-|>", color="r")
             ax.add_artist(a)
+            prjs[:, k, j] = point
 
             # d = -np.sum(point*normal)  # dot product
             # # create x,y
@@ -153,10 +155,11 @@ for j in range(J):
             ax.set_zlim([-0.5, 3])
 
 
-plt.legend()
+# plt.legend()
 plt.tight_layout()
 plt.savefig('./recipes/room_geometry_estimation/estimated_images.pdf', dpi=300)
-plt.show()
+plt.close()
+# plt.show()
 
 for i in range(I):
     errs = np.abs(toas_imgs[:, i, 0] - toas[:, i, 0])*c
@@ -165,6 +168,46 @@ for i in range(I):
     # print(np.max(errs))
 
 
+# CEILING
+k = 3
+normal = plane_from_points(prjs[:, k, :])
+point = np.mean(prjs[:, k, :], axis=-1)
+xx, yy, z = mesh_from_plane(point, normal)
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(mics[0, :], mics[1, :], mics[2, :], marker='o', label='mics init')
+ax.scatter(point[0], point[1], point[2], marker='o', label='mean')
+ax.scatter(prjs[0, k, :], prjs[1, k, :], prjs[2, k, :], c='C%d' %(k+2), marker='x', label='img %d %s' % (k, wall))
+ax.plot_surface(xx, yy, z, alpha=0.2, color=[0, 1, 0])
+ax.set_xlim(-7, 7)
+ax.set_ylim(-7, 7)
+ax.set_zlim(-2, 5)
+plt.show()
+
+for k in range(1, 7):
+    print(walls[k])
+    normal = plane_from_points(prjs[:, k, :])
+    print(normal)
+
+# eye = np.eye(3)
+# # k = 1 is west => -L
+# # k = 2 is east => +L
+# L = plane_from_points(prjs[:, 2, :]) * eye[:, 1] - \
+#     plane_from_points(prjs[:, 1, :]) * eye[:, 1]
+# # k = 3 is south => -W
+# # k = 4 is north => +W
+# W = plane_from_points(prjs[:, 4, :]) * eye[:, 0] - \
+#     plane_from_points(prjs[:, 3, :]) * eye[:, 0]
+# # k = 1 is west => -L
+# # k = 2 is east => +L
+# H = plane_from_points(prjs[:, 6, :]) * eye[:, 2] - \
+#     plane_from_points(prjs[:, 5, :]) * eye[:, 2]
+L = np.linalg.norm(np.mean(prjs[:, 2, :], 1) - np.mean(prjs[:, 1, :], 1))
+W = np.linalg.norm(np.mean(prjs[:, 4, :], 1) - np.mean(prjs[:, 3, :], 1))
+H = np.linalg.norm(np.mean(prjs[:, 6, :], 1) - np.mean(prjs[:, 5, :], 1))
+
+print(L, W, H)
 
 
 ## SKYLINE WITH NEW ESTIMATED IMAGES
@@ -189,23 +232,23 @@ plt.show()
 
 
 
-distances = distance.squareform(distance.pdist(mics.T))
-print(distances)
+# distances = distance.squareform(distance.pdist(mics.T))
+# print(distances)
 
-## PREPARING FOR DOKMANIC:
-dokdict = {
-    'D' : distances,
-    'rirs': rirs,
-    'delay' : 0,
-    'c' : dset.c,
-    'fs' : dset.Fs,
-    'repeat' : False,
-    'mics' : mics,
-    'src' : srcs,
-    'T_direct': toas[0, :, :].squeeze(),
-    'T_reflct' : toas[1:, :, :].squeeze(),
-}
+# ## PREPARING FOR DOKMANIC:
+# dokdict = {
+#     'D' : distances,
+#     'rirs': rirs,
+#     'delay' : 0,
+#     'c' : dset.c,
+#     'fs' : dset.Fs,
+#     'repeat' : False,
+#     'mics' : mics,
+#     'src' : srcs,
+#     'T_direct': toas[0, :, :].squeeze(),
+#     'T_reflct' : toas[1:, :, :].squeeze(),
+# }
 
-save_to_matlab('./recipes/room_geometry_estimation/data_rooge.mat', dokdict)
+# save_to_matlab('./recipes/room_geometry_estimation/data_rooge.mat', dokdict)
 
-# now you can just download and run Dokmanic code
+# # now you can just download and run Dokmanic code

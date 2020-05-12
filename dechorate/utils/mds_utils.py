@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 
-from src.externals.trilaterate import trilaterate
+from dechorate.externals.trilaterate import trilaterate
 
 def edm(X, Y):
     '''

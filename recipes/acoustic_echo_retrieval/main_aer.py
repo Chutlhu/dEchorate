@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src import constants
-from src.dataset import DechorateDataset, SyntheticDataset
-from src.utils.file_utils import save_to_pickle, load_from_pickle, save_to_matlab
-from src.utils.dsp_utils import normalize
+from dechorate import constants
+from dechorate.dataset import DechorateDataset, SyntheticDataset
+from dechorate.utils.file_utils import save_to_pickle, load_from_pickle, save_to_matlab
+from dechorate.utils.dsp_utils import normalize
 
 from blaster.blaster import Blaster
 from blaster.sota import Sota_algos
@@ -20,7 +20,7 @@ Fs = constants['Fs']
 c = constants['speed_of_sound']
 
 # which microphonese?
-mics_idxs = [2, 7]
+mics_idxs = [7, 12]
 I = len(mics_idxs)
 
 # which source?
@@ -98,7 +98,7 @@ x2 = resample(x2, Fs, targetFs)
 oldFs = Fs
 Fs = targetFs
 
-t_max = 0.01
+t_max = 0.050 # early reflection in 50 ms
 
 # ## PREPARING FOR CROCCO:
 # croccodict = {
@@ -124,7 +124,7 @@ t_max = 0.01
 
 ## RUN BLASTER
 blaster = Blaster(x1, x2, t_max, Fs,
-                  max_n_diracs=10, max_iter=100,
+                  max_n_diracs=10, max_iter=200,
                   do_plot=False, domain='time', do_post_processing=True)
 blaster.patience = 100
 blaster.delta = 1e-5

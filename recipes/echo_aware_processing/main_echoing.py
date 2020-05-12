@@ -9,9 +9,8 @@ from mpl_toolkits.mplot3d import proj3d
 
 from dechorate import constants
 from dechorate.dataset import DechorateDataset, SyntheticDataset
-from dechorate.utils.mds_utils import trilateration
 from dechorate.utils.file_utils import save_to_pickle, load_from_pickle, save_to_matlab
-from dechorate.utils.dsp_utils import normalize, envelope
+from dechorate.utils.dsp_utils import normalize
 
 
 class Arrow3D(FancyArrowPatch):
