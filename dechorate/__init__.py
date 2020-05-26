@@ -1,6 +1,7 @@
 constants = {
     'recording_offset': 4444,  # samples
     'Fs' : 48000, # samples / seconds
+    'rir_length': 19556, # samples
     'room_size': [5.705, 5.965, 2.355],  # meters
     'offset_beacon' : [0.08, 0.095, 0], # meters [12-5+1, 13.5-5+1] = offset panels ceiling + offset panes wall + beacon
     # 'room_size': [556.5, 5.680, ]

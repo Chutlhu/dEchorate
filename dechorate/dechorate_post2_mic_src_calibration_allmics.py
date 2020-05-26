@@ -224,8 +224,21 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
 
     rmse = lambda x, y : np.sqrt(np.mean(np.abs(x - y)**2))
 
-    print('Initial margin', np.linalg.norm(Dsym - Dobs))
+    print('Initial fun', np.linalg.norm(Dgeo - Dobs)**2)
     print('Initial rmse',   rmse(Dsym, Dobs))
+
+    print('Before unfolding')
+    me_i = np.max(np.abs(Dobs - Dgeo))
+    mae_i = np.mean(np.abs(Dobs - Dgeo))
+    rmse_i = rmse(Dobs, Dgeo)
+    std_i = np.std(np.abs(Dobs - Dgeo))
+
+    print('input ME', me_i)
+    print('input MAE', mae_i)
+    print('input RMSE', rmse_i)
+    print('input std', std_i)
+
+    print('UNFOLDING')
     if K == 0:
         X_est, A_est = nlls_mds_array(Dobs, X, A)
         # X_est, A_est = nlls_mds(Dobs, X, A)
@@ -238,19 +251,20 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     else:
         pass
     # mics_pos_est, srcs_pos_est = nlls_mds_array(Dtof, X, A)
-    # mics_pos_est, srcs_pos_est = crcc_mds(D, init={'X': X, 'A': A})
+    # mics_pos_est, srcs_pos_est = crcc_mds(D, init={'X': X, 'A': A}
+
     Dgeo_est = edm(X_est, A_est)
     print('After unfolding nlls', np.linalg.norm(Dobs - Dgeo_est))
 
-    me = np.max(np.abs(Dobs - Dgeo_est))
-    mae =  np.mean(np.abs(Dobs - Dgeo_est))
-    rmse = rmse(Dobs, Dgeo_est)
-    std = np.std(np.abs(Dobs - Dgeo_est))
+    me_o = np.max(np.abs(Dobs - Dgeo_est))
+    mae_o =  np.mean(np.abs(Dobs - Dgeo_est))
+    rmse_o = rmse(Dobs, Dgeo_est)
+    std_o = np.std(np.abs(Dobs - Dgeo_est))
 
-    print('ME', me)
-    print('MAE', mae)
-    print('RMSE', rmse)
-    print('std', std)
+    print('output ME', me_o)
+    print('output MAE', mae_o)
+    print('output RMSE', rmse_o)
+    print('output std', std_o)
 
     mics_pos_est = X_est
     srcs_pos_est = A_est
@@ -312,7 +326,11 @@ if __name__ == "__main__":
     # annotation_file = '20200508_12h27_gui_annotation.pkl'
     # annotation_file = '20200508_13h33_gui_annotation.pkl'
     annotation_file = '20200508_16h29_gui_annotation.pkl'
-    annotation_file = '20200508_18h34_gui_annotation.pkl'
+    annotation_file = '20200508_18h34_gui_annotation.pkl' # good one, but the following problems:
+    # src 0: bad south, west
+    # src 1: bad north, east
+    # src 2: bad south, west, east
+    # annotation_file = '20200515_14h57_gui_annotation.pkl'  # starting fixing above problems
     path_to_manual_annotation = './data/processed/rirs_manual_annotation/' + annotation_file
     manual_note = load_from_pickle(path_to_manual_annotation)
     # we select only the reflection of order 0
@@ -340,23 +358,23 @@ if __name__ == "__main__":
     plt.savefig('./reports/figures/cal_positioning3D_k0.pdf')
     plt.show()
 
-    # ## K = 1: echo 1 -- from the ceiling
-    # K = 1
-    # mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs \
-    #     = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
+    ## K = 1: echo 1 -- from the ceiling
+    K = 1
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs \
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
-    # ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
-    # ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
-    # ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
-    # ax.set_xlim([0, Rx])
-    # ax.set_ylim([0, Ry])
-    # ax.set_zlim([0, Rz])
-    # plt.legend()
-    # plt.savefig('./reports/figures/cal_positioning3D_k1.pdf')
-    # plt.show()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(mics_pos[0, :], mics_pos[1, :], mics_pos[2, :], marker='o', label='mics init')
+    ax.scatter(srcs_pos[0, :], srcs_pos[1, :], srcs_pos[2, :], marker='o', label='srcs init')
+    ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :], mics_pos_est[2, :], marker='x', label='mics est')
+    ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], srcs_pos_est[2, :], marker='x', label='srcs est')
+    ax.set_xlim([0, Rx])
+    ax.set_ylim([0, Ry])
+    ax.set_zlim([0, Rz])
+    plt.legend()
+    plt.savefig('./reports/figures/cal_positioning3D_k1.pdf')
+    plt.show()
 
 
     calib_res = {
@@ -382,7 +400,7 @@ if __name__ == "__main__":
             plt.axvline(j*30, color='C7')
 
     # plot time of emission
-    plt.axhline(y=L-recording_offset, label='Time of Emission')
+    # plt.axhline(y=L-recording_offset, label='Time of Emission')
 
     for k in range(7):
         print(curr_reflectors)
@@ -396,8 +414,8 @@ if __name__ == "__main__":
                     marker='o', facecolors='none', edgecolors='C%d' % (k+2), label='%s Pyroom' % wall)
 
     plt.tight_layout()
-    plt.legend()
-    plt.title('RIR SKYLINE K = %d' % K)
+    plt.legend(ncol=7)
+    # plt.title('RIR SKYLINE K = %d' % K)
     plt.savefig('./reports/figures/rir_skyline_final.pdf')
     plt.show()
 

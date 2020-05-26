@@ -4,6 +4,7 @@ import pandas as pd
 import pyroomacoustics as pra
 
 from dechorate import constants
+from dechorate.utils.acu_utils import rt60_with_sabine, rt60_from_rirs
 
 
 class DechorateDataset():
@@ -63,20 +64,20 @@ class DechorateDataset():
         return np.arange(len(self.rir))/self.Fs, self.rir
 
     def get_mic_and_src_pos(self):
-        # self.mic_pos = np.array([self.entry['mic_pos_x'].values + constants['offset_beacon'][0],
-        #                          self.entry['mic_pos_y'].values + constants['offset_beacon'][1],
-        #                          self.entry['mic_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
-        # self.src_pos = np.array([self.entry['src_pos_x'].values + constants['offset_beacon'][0],
-        #                          self.entry['src_pos_y'].values + constants['offset_beacon'][1],
-        #                          self.entry['src_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
+        self.mic_pos = np.array([self.entry['mic_pos_x'].values + constants['offset_beacon'][0],
+                                 self.entry['mic_pos_y'].values + constants['offset_beacon'][1],
+                                 self.entry['mic_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
+        self.src_pos = np.array([self.entry['src_pos_x'].values + constants['offset_beacon'][0],
+                                 self.entry['src_pos_y'].values + constants['offset_beacon'][1],
+                                 self.entry['src_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
 
 
-        self.mic_pos = np.array([self.entry['mic_pos_x'].values,
-                                 self.entry['mic_pos_y'].values,
-                                 self.entry['mic_pos_z'].values]).squeeze()
-        self.src_pos = np.array([self.entry['src_pos_x'].values,
-                                 self.entry['src_pos_y'].values,
-                                 self.entry['src_pos_z'].values]).squeeze()
+        # self.mic_pos = np.array([self.entry['mic_pos_x'].values,
+        #                          self.entry['mic_pos_y'].values,
+        #                          self.entry['mic_pos_z'].values]).squeeze()
+        # self.src_pos = np.array([self.entry['src_pos_x'].values,
+        #                          self.entry['src_pos_y'].values,
+        #                          self.entry['src_pos_z'].values]).squeeze()
 
         self.sdset.set_mic(self.mic_pos[0], self.mic_pos[1], self.mic_pos[2])
         self.sdset.set_src(self.src_pos[0], self.src_pos[1], self.src_pos[2])
@@ -87,6 +88,12 @@ class DechorateDataset():
         self.sdset.set_k_reflc(k_reflc)
         amp, toa, walls, order, generators = self.sdset.get_note()
         return amp, toa, walls, order,generators
+
+    def compute_rt60(self, M=100, snr=45, do_schroeder=True, val_min=-90):
+        if self.rir is None:
+            raise ValueError('RIR not retrieved yet. call get_rir\(\) explicitly')
+        return rt60_from_rirs(self.rir, self.Fs, M=M, snr=snr, do_schroeder=do_schroeder, val_min=val_min)
+
 
 class SyntheticDataset:
     def __init__(self):
@@ -101,6 +108,8 @@ class SyntheticDataset:
         self.amp = None
         self.toa = None
         self.order = None
+
+        self.rir = None
 
         self.absorption = {
             'north': 0.8,
@@ -189,6 +198,7 @@ class SyntheticDataset:
         room.compute_rir()
         rir = room.rir[0][0]
         rir = rir[40:]
+        self.rir = rir
         return np.arange(len(rir))/self.Fs, rir/np.max(np.abs(rir))
 
     def get_walls_name_from_id(self, wall_id):
@@ -253,6 +263,18 @@ class SyntheticDataset:
 
         return amp, toa, walls, order, generators
 
+    def get_rt60_sabine(self):
+        if self.rir is None:
+            raise ValueError('RIR not retrieved yet. call get_rir\(\) explicitly')
+        return rt60_with_sabine(self.room_size, self.absorption)
+
+
+    def compute_rt60(self, M=100, snr=45, do_schroeder=True, val_min=-90):
+        if self.rir is None:
+            raise ValueError(
+                'RIR not retrieved yet. call get_rir\(\) explicitly')
+
+        return rt60_from_rirs(self.rir, self.Fs, M=M, snr=snr, do_schroeder=do_schroeder, val_min=val_min)
 
 if __name__ == "__main__":
     dset = SyntheticDataset()

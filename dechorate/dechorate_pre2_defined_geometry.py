@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import pandas as pd
+
 import matplotlib.pyplot as plt
 import pyroomacoustics as pra
 
@@ -128,35 +129,73 @@ df.to_csv(csv_filename, sep=',')
 
 ## PRINT FIGURES
 # Blueprint 2D xy plane
-plt.figure(figsize=(16,9))
+font_size = 18
+marker_size = 120
+
+plt.figure(figsize=(12,9))
 plt.gca().add_patch(
     plt.Rectangle((0, 0),
                    room_size[0], room_size[1], fill=False,
-                   edgecolor='g', linewidth=1)
+                   edgecolor='g', linewidth=1.5)
 )
 
+plt.scatter(mics[0, :], mics[1, :], marker='X', s=80, label='microphones')
+
+bars = np.zeros([3, 6])
+c = 0
 for i in range(I):
-    plt.scatter(mics[0, i], mics[1, i], marker='X')
-    plt.text(mics[0, i], mics[1, i], '$%d$' %
-             (i+33), fontdict={'fontsize': 8})
+    # if i % 5 == 0 or i % 5 == 4:
+    #     plt.text(mics[0, i], mics[1, i], '$%d$' % (i+33), fontdict={'fontsize': font_size})
+
     if i % 5 == 0:
         bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
-        plt.text(bar[0]+0.1, bar[1]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+        bars[:, c] = bar
+
+        # plt.text(bar[0], bar[1]-0.2, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
+        #          (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': font_size})
+        if i//5 + 1 == 2:
+            plt.text(bar[0]+0.1, bar[1]-+0.05, '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': font_size})
+        else:
+            plt.text(bar[0], bar[1]-0.2, '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': font_size})
+        c += 1
+
+plt.scatter(bars[0, :], bars[1, :], marker='1', s=marker_size, c='k', label='array barycenters')
 
 
-for j in range(J):
-    bar = srcs[:, j]
-    if j < Jd:
-        plt.scatter(bar[0], bar[1], marker='v')
-        plt.text(bar[0], bar[1], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+plt.scatter(srcs[0, :Jd], srcs[1, :Jd], marker='v', s=marker_size, label='directional')
+# for j in range(Jd):
+#     if j == 2:
+#         plt.text(srcs[0, j], srcs[1, j]-0.15, '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
+#                  (j+1, srcs[0, j], srcs[1, j], srcs[2, j]), fontdict={'fontsize': font_size})
+#     elif j == 5:
+#         plt.text(srcs[0, j], srcs[1, j]+0.1, '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
+#                  (j+1, srcs[0, j], srcs[1, j], srcs[2, j]), fontdict={'fontsize': font_size})
+#     else:
+#         plt.text(srcs[0, j], srcs[1, j], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
+#                 (j+1, srcs[0, j], srcs[1, j], srcs[2, j]), fontdict={'fontsize': font_size})
+
+for j in range(Jd):
+    if j == 2:
+        plt.text(srcs[0, j], srcs[1, j]+0.08, '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
+    elif j == 5:
+        plt.text(srcs[0, j], srcs[1, j], '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
     else:
-        plt.scatter(bar[0], bar[1], marker='o')
-        plt.text(bar[0], bar[1], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+        plt.text(srcs[0, j], srcs[1, j], '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
+
+
+plt.scatter(srcs[0, Jd:], srcs[1, Jd:], marker='o', s=marker_size, label='omnidirectional')
+
+for j in range(Jd, J):
+    # plt.text(srcs[0, j], srcs[1, j], '$omni_%d$ [%1.2f, %1.2f, %1.2f]' %
+    #         (j+1, srcs[0, j], srcs[1, j], srcs[2, j]), fontdict={'fontsize': font_size})
+    plt.text(srcs[0, j], srcs[1, j], '$omni_%d$' % (j+1), fontdict={'fontsize': font_size})
+
+plt.legend()
+plt.tight_layout()
 plt.savefig('./reports/figures/positioning2D_xy.pdf')
 plt.show()
+
+1/0
 
 # Blueprint 2D xz plane
 plt.figure(figsize=(16, 9))
@@ -169,11 +208,11 @@ plt.gca().add_patch(
 for i in range(I):
     plt.scatter(mics[0, i], mics[2, i], marker='X')
     plt.text(mics[0, i], mics[2, i], '$%d$' %
-             (i+33), fontdict={'fontsize': 8})
+             (i+33), fontdict={'fontsize': font_size})
     if i % 5 == 0:
         bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
         plt.text(bar[0]+0.1, bar[2]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+                 (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': font_size})
 
 
 for j in range(J):
@@ -181,13 +220,16 @@ for j in range(J):
     if j < Jd:
         plt.scatter(bar[0], bar[2], marker='v')
         plt.text(bar[0], bar[2], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[0], bar[2], bar[2]), fontdict={'fontsize': 8})
+                 (j+1, bar[0], bar[2], bar[2]), fontdict={'fontsize': font_size})
     else:
         plt.scatter(bar[0], bar[2], marker='o')
         plt.text(bar[0], bar[2], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': 8})
+                 (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': font_size})
+
+plt.tight_layout()
 plt.savefig('./reports/figures/positioning2D_xz.pdf')
 plt.show()
+
 
 # Blueprint 2D yz plane
 plt.figure(figsize=(16, 9))
@@ -200,11 +242,11 @@ plt.gca().add_patch(
 for i in range(I):
     plt.scatter(mics[1, i], mics[2, i], marker='X')
     plt.text(mics[1, i], mics[2, i], '$%d$' %
-             (i+33), fontdict={'fontsize': 8})
+             (i+33), fontdict={'fontsize': font_size})
     if i % 5 == 0:
         bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
         plt.text(bar[1]+0.1, bar[2]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (i//5 + 1, bar[1], bar[1], bar[2]), fontdict={'fontsize': 8})
+                 (i//5 + 1, bar[1], bar[1], bar[2]), fontdict={'fontsize': font_size})
 
 
 for j in range(J):
@@ -212,11 +254,11 @@ for j in range(J):
     if j < Jd:
         plt.scatter(bar[1], bar[2], marker='v')
         plt.text(bar[1], bar[2], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[1], bar[2], bar[2]), fontdict={'fontsize': 8})
+                 (j+1, bar[1], bar[2], bar[2]), fontdict={'fontsize': font_size})
     else:
         plt.scatter(bar[1], bar[2], marker='o')
         plt.text(bar[1], bar[2], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[1], bar[1], bar[2]), fontdict={'fontsize': 8})
+                 (j+1, bar[1], bar[1], bar[2]), fontdict={'fontsize': font_size})
 plt.savefig('./reports/figures/positioning2D_yz.pdf')
 plt.show()
 

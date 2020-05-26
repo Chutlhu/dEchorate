@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
 from scipy.spatial import distance
@@ -14,7 +15,7 @@ from dechorate.dataset import DechorateDataset, SyntheticDataset
 from dechorate.utils.mds_utils import trilateration
 from dechorate.utils.file_utils import save_to_pickle, load_from_pickle, save_to_matlab
 from dechorate.utils.dsp_utils import normalize, envelope
-from dechorate.utils.geo_utils import plane_from_points, mesh_from_plane
+from dechorate.utils.geo_utils import plane_from_points, mesh_from_plane, square_within_plane, dist_point_plane
 
 
 class Arrow3D(FancyArrowPatch):
@@ -36,7 +37,7 @@ Fs = constants['Fs']
 recording_offset = constants['recording_offset']
 
 # which source?
-srcs_idxs = [0, 1, 2, 3]
+srcs_idxs = [3]
 J = len(srcs_idxs)
 
 # which microphonese?
@@ -79,8 +80,8 @@ for i, m in enumerate(mics_idxs):
         _, rir = dset.get_rir()
 
         # measure after calibration
-        # mics[:, i] = note_dict['mics'][:, m]
-        # srcs[:, j] = note_dict['srcs'][:, s]
+        mics[:, i] = note_dict['mics'][:, m]
+        srcs[:, j] = note_dict['srcs'][:, s]
         rirs[:, i, j] = normalize(rir)
 
         # print(i, 'cali', mics[:, i] - np.array(constants['room_size']))
@@ -101,12 +102,7 @@ for i, m in enumerate(mics_idxs):
         toas[:7, i, j] = note_dict['toa_pck'][:7, m, s]
 
 
-print(srcs)
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.scatter(mics[0, :], mics[1, :], mics[2, :], marker='o', label='mics init')
-ax.scatter(srcs[0, :], srcs[1, :], srcs[2, :], marker='o', label='srcs init')
-
+## COMPUTE IMAGES POSITIONS
 walls = constants['refl_order_pyroom']
 imgs = np.zeros([3, K, J])
 prjs = np.zeros([3, K, J])
@@ -115,11 +111,27 @@ for j in range(J):
     for k in range(K):
         d = toas[k, :, j] * c
         imgs[:, k, :], error = trilateration(mics.T, d)
-        print(error)
-        wall = walls[k]
-        ax.scatter(imgs[0, k, j], imgs[1, k, j], imgs[2, k, j], c='C%d' % (k+2), marker='x', label='img %d %s' % (k, wall))
         for i in range(I):
             toas_imgs[k, i, j] = np.linalg.norm(imgs[:, k, j] - mics[:, i]) / c
+
+
+## PLOT POSITION OF THE IMAGES
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(mics[0, :], mics[1, :], mics[2, :], marker='o', label='microphones')
+ax.scatter(srcs[0, :], srcs[1, :], srcs[2, :], marker='o', label='sources')
+
+walls = ['direct', 'ceiling', 'floor', 'west', 'south', 'east', 'north']
+walls = ['direct', 'west', 'east', 'south', 'north', 'floor', 'ceiling']
+
+for j in range(J):
+
+    ax.scatter(imgs[0, :, j], imgs[1, :, j], imgs[2, :, j], c='C%d' % (k+2), label='images')
+
+    for k in range(K):
+        wall = walls[k]
+        # ax.scatter(imgs[0, k, j], imgs[1, k, j], imgs[2, k, j], c='C%d' % (k+2), marker='x', label='img %d %s' % (k, wall))
+        ax.text(imgs[0, k, j], imgs[1, k, j], imgs[2, k, j], wall)
 
         if k > 0:
             plt.plot([imgs[0, 0, j], imgs[0, k, j]],
@@ -141,74 +153,182 @@ for j in range(J):
             ax.add_artist(a)
             prjs[:, k, j] = point
 
-            # d = -np.sum(point*normal)  # dot product
-            # # create x,y
-            # xx, yy = np.meshgrid(range(-2, 2), range(-2, 2))
+a = Arrow3D([-0.5, 1.5], [0, 0], [0, 0], mutation_scale=10, lw=1, arrowstyle="-|>", color="k", alpha=0.4)
+ax.add_artist(a)
+a = Arrow3D([0, 0], [-0.5, 1.5], [0, 0], mutation_scale=10, lw=1, arrowstyle="-|>", color="k", alpha=0.4)
+ax.add_artist(a)
+a = Arrow3D([0, 0], [0, 0], [-0.5, 1], mutation_scale=10, lw=1, arrowstyle="-|>", color="k", alpha=0.4)
+ax.add_artist(a)
 
-            # # calculate corresponding z
-            # z1 = (-normal[0]*xx - normal[1]*yy - d)*1./normal[2]
+ax.set_xlim([-0.5, 6])
+ax.set_ylim([-0.5, 6])
+ax.set_zlim([-0.5, 3])
 
-            # ax.plot_surface(xx, yy, z1, color='blue', alpha=0.1, zorder=k)
-
-            ax.set_xlim([-0.5, 6])
-            ax.set_ylim([-0.5, 6])
-            ax.set_zlim([-0.5, 3])
-
-
-# plt.legend()
+plt.legend()
 plt.tight_layout()
-plt.savefig('./recipes/room_geometry_estimation/estimated_images.pdf', dpi=300)
+plt.savefig('./recipes/room_geometry_estimation/estimated_image.pdf', dpi=300)
+plt.show()
 plt.close()
-# plt.show()
 
-for i in range(I):
-    errs = np.abs(toas_imgs[:, i, 0] - toas[:, i, 0])*c
-    print(['%1.3f' % k for k in errs])
-    # print(np.mean(errs))
-    # print(np.max(errs))
+# WEST
+k = 1
+if prjs.shape[-1] > 2:
+    normal = plane_from_points(prjs[:, k, :])
+    point = np.mean(prjs[:, k, :], axis=-1)
+else:
+    point = prjs[:, k, 0]
+    normal = prjs[:, k, 0] - imgs[:, 0, 0]
+    normal = normal / np.linalg.norm(normal)
+V = square_within_plane(point, normal, size=(3, 3))
+V = [list(zip(V[0, :], V[1, :], V[2, :]))]
 
-
-# CEILING
-k = 3
-normal = plane_from_points(prjs[:, k, :])
-point = np.mean(prjs[:, k, :], axis=-1)
-xx, yy, z = mesh_from_plane(point, normal)
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(mics[0, :], mics[1, :], mics[2, :], marker='o', label='mics init')
-ax.scatter(point[0], point[1], point[2], marker='o', label='mean')
-ax.scatter(prjs[0, k, :], prjs[1, k, :], prjs[2, k, :], c='C%d' %(k+2), marker='x', label='img %d %s' % (k, wall))
-ax.plot_surface(xx, yy, z, alpha=0.2, color=[0, 1, 0])
-ax.set_xlim(-7, 7)
-ax.set_ylim(-7, 7)
-ax.set_zlim(-2, 5)
+ax.scatter(mics[0, :], mics[1, :], mics[2, :], marker='o', label='microphones')
+ax.scatter(point[0], point[1], point[2], marker='X', label='wall intercept')
+ax.add_collection3d(Poly3DCollection(V, alpha=0.5, edgecolor='k'))
+
+for j in range(J):
+
+    ax.scatter(imgs[0, :, j], imgs[1, :, j], imgs[2, :, j], label='images')
+
+    for k in range(7):
+
+        wall = walls[k]
+        ax.text(imgs[0, k, j], imgs[1, k, j], imgs[2, k, j], wall)
+
+        if k == 0:
+            continue
+
+        plt.plot([imgs[0, 0, j], imgs[0, k, j]],
+                [imgs[1, 0, j], imgs[1, k, j]],
+                [imgs[2, 0, j], imgs[2, k, j]], alpha=1-np.clip(error, 0, 0.7), c='C%d' % (k+2))
+
+        point = prjs[:, k, j]
+        normal = prjs[:, k, j] - imgs[:, 0, j]
+
+        normal = normal/np.linalg.norm(normal)
+
+        ax.scatter(prjs[0, k, :], prjs[1, k, :], prjs[2, k, :], c='C%d' %(k+2), marker='x')
+
+        a = Arrow3D([point[0], point[0] + normal[0]],
+                    [point[1], point[1] + normal[1]],
+                    [point[2], point[2] + normal[2]],
+                    mutation_scale=10,
+                    lw=1, arrowstyle="-|>", color="r")
+        ax.add_artist(a)
+
+a = Arrow3D([-0.5, 1.5], [0, 0], [0, 0], mutation_scale=10, lw=1, arrowstyle="-|>", color="k", alpha=0.4)
+ax.add_artist(a)
+a = Arrow3D([0, 0], [-0.5, 1.5], [0, 0], mutation_scale=10, lw=1, arrowstyle="-|>", color="k", alpha=0.4)
+ax.add_artist(a)
+a = Arrow3D([0, 0], [0, 0], [-0.5, 1], mutation_scale=10, lw=1, arrowstyle="-|>", color="k", alpha=0.4)
+ax.add_artist(a)
+
+ax.set_xlim([-0.5, 6])
+ax.set_ylim([-0.5, 6])
+ax.set_zlim([-0.5, 3])
+
+plt.legend()
+plt.tight_layout()
+plt.savefig('./recipes/room_geometry_estimation/estimated_reflector.pdf' , dpi=300)
 plt.show()
+plt.close()
 
-for k in range(1, 7):
-    print(walls[k])
-    normal = plane_from_points(prjs[:, k, :])
-    print(normal)
 
-# eye = np.eye(3)
-# # k = 1 is west => -L
-# # k = 2 is east => +L
-# L = plane_from_points(prjs[:, 2, :]) * eye[:, 1] - \
-#     plane_from_points(prjs[:, 1, :]) * eye[:, 1]
-# # k = 3 is south => -W
-# # k = 4 is north => +W
-# W = plane_from_points(prjs[:, 4, :]) * eye[:, 0] - \
-#     plane_from_points(prjs[:, 3, :]) * eye[:, 0]
-# # k = 1 is west => -L
-# # k = 2 is east => +L
-# H = plane_from_points(prjs[:, 6, :]) * eye[:, 2] - \
-#     plane_from_points(prjs[:, 5, :]) * eye[:, 2]
-L = np.linalg.norm(np.mean(prjs[:, 2, :], 1) - np.mean(prjs[:, 1, :], 1))
-W = np.linalg.norm(np.mean(prjs[:, 4, :], 1) - np.mean(prjs[:, 3, :], 1))
-H = np.linalg.norm(np.mean(prjs[:, 6, :], 1) - np.mean(prjs[:, 5, :], 1))
+# ## all the bounding box
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
+# ax.scatter(mics[0, :], mics[1, :], mics[2, :], marker='o', label='microphones')
+# ax.scatter(imgs[0, 0], imgs[1, 0], imgs[2, 0], marker='o', label='srcs init')
 
-print(L, W, H)
+# for k in range(1, 7):
 
+#     print(prjs[:, k, :])
+
+#     ax.scatter(prjs[0, k, :], prjs[1, k, :], prjs[2, k, :], c='C%d' %
+#             (k+2), marker='x', label='img %d %s' % (k, wall))
+
+#     if k in [0, 5, 6]:
+#         continue
+
+#     if prjs.shape[-1] > 2:
+#         normal = plane_from_points(prjs[:, k, :])
+#         point = np.mean(prjs[:, k, :], axis=-1)
+#     else:
+#         point =  prjs[:, k, 0]
+#         normal = prjs[:, k, 0] - imgs[:, 0, 0]
+#         normal = normal / np.linalg.norm(normal)
+#     # xx, yy, z = mesh_from_plane(point, normal)
+#     V = square_within_plane(point, normal, size=(10, 10))
+#     V = [list(zip(V[0, :], V[1, :], V[2, :]))]
+
+
+#     # ax.scatter(point[0], point[1], point[2], marker='o', label='mean')
+#     ax.add_collection3d(Poly3DCollection(V, alpha=0.5, facecolor='C%d' % k, edgecolor='k'))
+
+# ax.set_xlim(-1, 6)
+# ax.set_ylim(-1, 6)
+# ax.set_zlim(-1, 2)
+# plt.show()
+
+## COMPUTE ERRORS
+# hardcoded normals
+normals = {
+    'direct' : np.array([ 0, 0,  0]),
+    'west' : np.array([-1,  0,  0]),
+    'east' : np.array([ 1,  0,  0]),
+    'south': np.array([ 0, -1,  0]),
+    'north': np.array([ 0,  1,  0]),
+    'floor': np.array([ 0,  0, -1]),
+    'ceiling': np.array([0,  0, 1]),
+}
+L, W, H = constants['room_size']
+points = {
+    'direct': np.array([0, 0,  0]),
+    'west': np.array([0,  W/2,  H/2]),
+    'east': np.array([L,  W/2,  H/2]),
+    'south': np.array([L/2, 0,  H/2]),
+    'north': np.array([L/2, W,  H/2]),
+    'floor':   np.array([L/2,  W/2, 0]),
+    'ceiling': np.array([L/2,  W/2, H]),
+}
+
+if J == 1:
+
+    for k in range(1, 7):
+        for j in range(J):
+            wall = walls[k]
+            normal = prjs[:, k, j] - imgs[:, 0, j]
+            normal = normal/np.linalg.norm(normal)
+
+
+            n1 = normal
+            n2 = normals[wall]
+            ang = np.rad2deg(np.arccos(np.dot(n1, n2) / (np.linalg.norm(n1) * np.linalg.norm(n2))))
+
+            wall_point = points[wall]
+            dst = dist_point_plane(wall_point, prjs[:, k, j], normal)
+
+            print(wall, '\t', dst, '\t', ang)
+
+else:
+    for k in range(1, 7):
+
+        wall = walls[k]
+        normal = plane_from_points(prjs[:, k, :])
+        point = np.mean(prjs[:, k, :], axis=-1)
+
+        n1 = normal
+        n2 = normals[wall]
+        ang = np.rad2deg(np.arccos(np.dot(n1, n2) / (np.linalg.norm(n1) * np.linalg.norm(n2))))
+
+        wall_point = points[wall]
+        dst = dist_point_plane(wall_point, point, normal)
+
+        print(wall, '\t', dst, '\t', ang)
+1/0
 
 ## SKYLINE WITH NEW ESTIMATED IMAGES
 L, I, J = rirs.shape

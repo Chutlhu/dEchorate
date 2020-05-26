@@ -12,10 +12,10 @@ from datetime import datetime
 from matplotlib.widgets import Slider, RadioButtons, Button, TextBox, CheckButtons
 from mpl_toolkits.mplot3d import Axes3D
 
-from src import constants
-from src.dataset import SyntheticDataset, DechorateDataset
-from src.utils.file_utils import load_from_pickle, save_to_pickle
-from src.utils.dsp_utils import normalize
+from dechorate import constants
+from dechorate.dataset import SyntheticDataset, DechorateDataset
+from dechorate.utils.file_utils import load_from_pickle, save_to_pickle
+from dechorate.utils.dsp_utils import normalize
 
 from tkinter.filedialog import askopenfilename
 
@@ -41,8 +41,8 @@ plt.subplots_adjust(left=0.15)
 plt.subplots_adjust(right=0.85)
 
 all_rirs = np.load('./data/interim/all_rirs_9srcs.npy')
-toa_note = load_from_pickle('./data/interim/toa_note_9srcs.pkl')
 
+toa_note = load_from_pickle('./data/interim/toa_note_9srcs.pkl')
 L, I, J, D = all_rirs.shape
 K, I, J, D = toa_note['toa'].shape
 Fs = params['Fs']
