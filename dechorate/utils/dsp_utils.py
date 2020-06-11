@@ -55,3 +55,4 @@ def enforce_toeplitz(A):
 
     return make_toepliz_as_in_mulan(z, P)
 
+
