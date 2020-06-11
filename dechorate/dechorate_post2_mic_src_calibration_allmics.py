@@ -186,10 +186,10 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     if K == 0:
         curr_refl_name = 'd'
         r = refl_order.index(curr_refl_name)
-        Dobs = toa_peak[r, :I, :J] * speed_of_sound
+        Dtoa = toa_peak[r, :I, :J] * speed_of_sound
         Dsym = toa_sym[r, :I, :J] * speed_of_sound
     if K == 1:
-        Dobs = toa_peak[0, :I, :J] * speed_of_sound
+        Dtoa = toa_peak[0, :I, :J] * speed_of_sound
         Dsym = toa_sym[0, :I, :J] * speed_of_sound
         wall = curr_reflectors[1]
         r = refl_order.index(wall)
@@ -208,63 +208,90 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
 
     assert np.allclose(Dgeo, Dsym)
 
-    plt.subplot(141)
-    plt.imshow(Dgeo, aspect='auto')
-    plt.title('Geometry init')
-    plt.subplot(142)
-    plt.imshow(Dsym, aspect='auto')
-    plt.title('Pyroom init')
-    plt.subplot(143)
-    plt.imshow(Dobs, aspect='auto')
-    plt.title('Peak picking')
-    plt.subplot(144)
-    plt.imshow(np.abs(Dobs - Dsym), aspect='auto')
-    plt.title('Diff')
-    plt.show()
+    # plt.subplot(141)
+    # plt.imshow(Dgeo, aspect='auto')
+    # plt.title('Geometry init')
+    # plt.subplot(142)
+    # plt.imshow(Dsym, aspect='auto')
+    # plt.title('Pyroom init')
+    # plt.subplot(143)
+    # plt.imshow(Dobs, aspect='auto')
+    # plt.title('Peak picking')
+    # plt.subplot(144)
+    # plt.imshow(np.abs(Dobs - Dsym), aspect='auto')
+    # plt.title('Diff')
+    # plt.show()
 
     rmse = lambda x, y : np.sqrt(np.mean(np.abs(x - y)**2))
 
-    print('Initial fun', np.linalg.norm(Dgeo - Dobs)**2)
-    print('Initial rmse',   rmse(Dsym, Dobs))
 
-    print('Before unfolding')
-    me_i = np.max(np.abs(Dobs - Dgeo))
-    mae_i = np.mean(np.abs(Dobs - Dgeo))
-    rmse_i = rmse(Dobs, Dgeo)
-    std_i = np.std(np.abs(Dobs - Dgeo))
+    print('# GEOM/SIGNAL MISSMATCH')
+    Dgeo = Dgeo.copy()
+    Dsgn = Dtoa.copy()
+    Dcal = Dtoa.copy()
 
-    print('input ME', me_i)
-    print('input MAE', mae_i)
-    print('input RMSE', rmse_i)
-    print('input std', std_i)
+    print('## Before unfolding')
+    print('### calib vs geo')
+    me_i = np.max(np.abs(Dcal - Dgeo))
+    mae_i = np.mean(np.abs(Dcal - Dgeo))
+    rmse_i = rmse(Dcal, Dgeo)
+    std_i = np.std(np.abs(Dcal - Dgeo))
+    print('- input ME', me_i)
+    print('- input MAE', mae_i)
+    print('- input RMSE', rmse_i)
+    print('- input std', std_i)
+
+    print('### calib vs sig')
+    me_i = np.max(np.abs(Dcal - Dsgn))
+    mae_i = np.mean(np.abs(Dcal - Dsgn))
+    rmse_i = rmse(Dcal, Dsgn)
+    std_i = np.std(np.abs(Dcal - Dsgn))
+    print('- input ME', me_i)
+    print('- input MAE', mae_i)
+    print('- input RMSE', rmse_i)
+    print('- input std', std_i)
+
+
 
     print('UNFOLDING')
     if K == 0:
-        X_est, A_est = nlls_mds_array(Dobs, X, A)
-        # X_est, A_est = nlls_mds(Dobs, X, A)
+        X_est, A_est = nlls_mds_array(Dsgn, X, A)
+        # X_est, A_est = nlls_mds(Dsgn, X, A)
     elif K == 1:
-        X_est, A_est = nlls_mds_array_ceiling(Dobs, De_c, X, A)
-        # X_est, A_est = nlls_mds_ceiling(Dobs, De_c, X, A)
+        X_est, A_est = nlls_mds_array_ceiling(Dsgn, De_c, X, A)
+        # X_est, A_est = nlls_mds_ceiling(Dsgn, De_c, X, A)
     elif K == 2:
-        X_est, A_est = nlls_mds_array_images(Dobs, De_c, De_f, X, A)
-        # X_est, A_est = nlls_mds_images(Dobs, De_c, De_f, X, A)
+        X_est, A_est = nlls_mds_array_images(Dsgn, De_c, De_f, X, A)
+        # X_est, A_est = nlls_mds_images(Dsgn, De_c, De_f, X, A)
     else:
         pass
     # mics_pos_est, srcs_pos_est = nlls_mds_array(Dtof, X, A)
     # mics_pos_est, srcs_pos_est = crcc_mds(D, init={'X': X, 'A': A}
 
-    Dgeo_est = edm(X_est, A_est)
-    print('After unfolding nlls', np.linalg.norm(Dobs - Dgeo_est))
+    Dcal = edm(X_est, A_est)
 
-    me_o = np.max(np.abs(Dobs - Dgeo_est))
-    mae_o =  np.mean(np.abs(Dobs - Dgeo_est))
-    rmse_o = rmse(Dobs, Dgeo_est)
-    std_o = np.std(np.abs(Dobs - Dgeo_est))
+    print('## AFTER unfolding')
+    print('### calib vs geo')
+    me_o = np.max(np.abs(Dgeo - Dcal))
+    mae_o = np.mean(np.abs(Dgeo - Dcal))
+    rmse_o = rmse(Dgeo, Dcal)
+    std_o = np.std(np.abs(Dgeo - Dcal))
+    print('- output ME', me_o)
+    print('- output MAE', mae_o)
+    print('- output RMSE', rmse_o)
+    print('- output std', std_o)
 
-    print('output ME', me_o)
-    print('output MAE', mae_o)
-    print('output RMSE', rmse_o)
-    print('output std', std_o)
+    print('### calib vs sig')
+    me_o = np.max(np.abs(Dsgn - Dcal))
+    mae_o = np.mean(np.abs(Dsgn - Dcal))
+    rmse_o = rmse(Dsgn, Dcal)
+    std_o = np.std(np.abs(Dsgn - Dcal))
+    print('- output ME', me_o)
+    print('- output MAE', mae_o)
+    print('- output RMSE', rmse_o)
+    print('- output std', std_o)
+
+
 
     mics_pos_est = X_est
     srcs_pos_est = A_est
@@ -302,7 +329,7 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
 
     plt.tight_layout()
     plt.legend()
-    plt.savefig('./reports/figures/rir_skyline_after_calibration.pdf')
+    plt.savefig('./reports/figures/rir_skyline_after_calibration_k-%d.pdf' % K)
     plt.show()
 
     return mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs

@@ -129,14 +129,14 @@ df.to_csv(csv_filename, sep=',')
 
 ## PRINT FIGURES
 # Blueprint 2D xy plane
-font_size = 18
+font_size = 22
 marker_size = 120
 
 plt.figure(figsize=(12,9))
 plt.gca().add_patch(
     plt.Rectangle((0, 0),
                    room_size[0], room_size[1], fill=False,
-                   edgecolor='g', linewidth=1.5)
+                   edgecolor='g', linewidth=2)
 )
 
 plt.scatter(mics[0, :], mics[1, :], marker='X', s=80, label='microphones')
@@ -154,7 +154,7 @@ for i in range(I):
         # plt.text(bar[0], bar[1]-0.2, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
         #          (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': font_size})
         if i//5 + 1 == 2:
-            plt.text(bar[0]+0.1, bar[1]-+0.05, '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': font_size})
+            plt.text(bar[0]+0.1, bar[1]-0.05, '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': font_size})
         else:
             plt.text(bar[0], bar[1]-0.2, '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': font_size})
         c += 1
@@ -176,9 +176,9 @@ plt.scatter(srcs[0, :Jd], srcs[1, :Jd], marker='v', s=marker_size, label='direct
 
 for j in range(Jd):
     if j == 2:
-        plt.text(srcs[0, j], srcs[1, j]+0.08, '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
+        plt.text(srcs[0, j], srcs[1, j]+0.1, '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
     elif j == 5:
-        plt.text(srcs[0, j], srcs[1, j], '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
+        plt.text(srcs[0, j], srcs[1, j]-0.15, '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
     else:
         plt.text(srcs[0, j], srcs[1, j], '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
 
@@ -202,7 +202,7 @@ plt.figure(figsize=(16, 9))
 plt.gca().add_patch(
     plt.Rectangle((0, 0),
                   room_size[0], room_size[2], fill=False,
-                  edgecolor='g', linewidth=1)
+                  edgecolor='g', linewidth=2)
 )
 
 for i in range(I):
