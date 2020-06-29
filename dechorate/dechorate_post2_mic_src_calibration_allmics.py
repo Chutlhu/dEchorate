@@ -23,12 +23,18 @@ from dechorate.utils.mds_utils import edm
 
 from risotto import deconvolution as deconv
 
+
 ox, oy, oz = constants['offset_beacon']
 
 Fs = constants['Fs'] # Sampling frequency
 recording_offset = constants['recording_offset']
 Rx, Ry, Rz = constants['room_size']
 speed_of_sound = constants['speed_of_sound']  # speed of sound
+
+ACC_ECHO_THR_SAMLPS = 5
+ACC_ECHO_THR_SECNDS = ACC_ECHO_THR_SAMLPS/Fs
+ACC_ECHO_THR_SECNDS = 0.0001
+ACC_ECHO_THR_METERS = ACC_ECHO_THR_SECNDS/speed_of_sound  # meters
 
 dataset_dir = './data/dECHORATE/'
 path_to_processed = './data/processed/'
@@ -143,6 +149,13 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     # and COMPUTED PYROOM ANNOTATION
     rirs, toa_sym, mics_pos, srcs_pos = load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos)
 
+    acc = np.sum(np.abs(toa_sym[:7, :, :] - toa_peak[:7, :, :])<ACC_ECHO_THR_SECNDS)/np.size(toa_peak[:7, :, :])
+    print('---- iter %d -----', K)
+    print('ACCURACY input', acc)
+    print('--------------------')
+    print(toa_sym[:7, 0, 0])
+    print(toa_peak[:7, 0, 0])
+
     print(toa_peak.shape, toa_sym.shape)
     assert toa_peak.shape == toa_sym.shape
     assert toa_peak.shape[1] == mics_pos.shape[1]
@@ -172,6 +185,10 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     plt.legend()
     plt.title('RIR SKYLINE K = %d' % K)
     plt.savefig('./reports/figures/rir_skyline.pdf')
+
+    acc = np.sum(np.abs(toa_sym[:7, :, :] - toa_peak[:7, :, :])<ACC_ECHO_THR_SECNDS)/np.size(toa_peak[:7, :, :])
+    print('ACCURACY', acc)
+
     plt.show()
     # plt.close()
 
@@ -236,6 +253,8 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     mae_i = np.mean(np.abs(Dcal - Dgeo))
     rmse_i = rmse(Dcal, Dgeo)
     std_i = np.std(np.abs(Dcal - Dgeo))
+    print(np.size(Dcal))
+    print(np.shape(Dcal))
     print('- input ME', me_i)
     print('- input MAE', mae_i)
     print('- input RMSE', rmse_i)
@@ -292,7 +311,6 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     print('- output std', std_o)
 
 
-
     mics_pos_est = X_est
     srcs_pos_est = A_est
 
@@ -303,34 +321,32 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
 
 
     # plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
-    for j in range(J):
-        plt.axvline(j*30, color='C7')
-    plt.axhline(y=L-recording_offset, label='Time of Emission')
-    for k in range(K+1):
-        wall = curr_reflectors[k]
-        r = refl_order.index(wall)
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
+    # for j in range(J):
+    #     plt.axvline(j*30, color='C7')
+    # plt.axhline(y=L-recording_offset, label='Time of Emission')
+    # for k in range(K+1):
+    #     wall = curr_reflectors[k]
+    #     r = refl_order.index(wall)
+    #     plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
+    #     plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
 
-        if k == 0:
-            A = A_est.copy()
-        if k == 1:
-            A = A_est.copy()
-            A[2,:] = 2*Rz - A_est[2, :]
+    #     if k == 0:
+    #         A = A_est.copy()
+    #     if k == 1:
+    #         A = A_est.copy()
+    #         A[2,:] = 2*Rz - A_est[2, :]
 
-        if k == 2:
-            A = A_est.copy()
-            A[2, :] = - A_est[2, :]
+    #     if k == 2:
+    #         A = A_est.copy()
+    #         A[2, :] = - A_est[2, :]
 
-        D = edm(X_est, A)
-        new_tofs = D / speed_of_sound
-        plt.scatter(np.arange(I*J)+0.5, L - recording_offset - new_tofs.T.flatten()*Fs, c='C3', marker='X', label='EDM k%d' % k)
-
-
-    plt.tight_layout()
-    plt.legend()
-    plt.savefig('./reports/figures/rir_skyline_after_calibration_k-%d.pdf' % K)
-    plt.show()
+    #     D = edm(X_est, A)
+    #     new_tofs = D / speed_of_sound
+    #     plt.scatter(np.arange(I*J)+0.5, L - recording_offset - new_tofs.T.flatten()*Fs, c='C3', marker='X', label='EDM k%d' % k)
+    # plt.tight_layout()
+    # plt.legend()
+    # plt.savefig('./reports/figures/rir_skyline_after_calibration_k-%d.pdf' % K)
+    # plt.show()
 
     return mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs
 
@@ -433,6 +449,7 @@ if __name__ == "__main__":
         print(curr_reflectors)
         wall = curr_reflectors[k]
         r = refl_order.index(wall)
+        print(r)
         # plot peak annotation
         plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r, :, :].T.flatten()*Fs,
                     c='C%d' % (k+2), marker='x', label='%s Picking' % wall)
@@ -440,13 +457,14 @@ if __name__ == "__main__":
         plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r, :, :].T.flatten()*Fs,
                     marker='o', facecolors='none', edgecolors='C%d' % (k+2), label='%s Pyroom' % wall)
 
+    # plt.xticks(ticks=[0, J, 2*J, 3*J], lables=['source #1', 'source #2', 'source #3', 'source #4'])
+    plt.xlabel('microphone index per source')
+    plt.ylabel('Time [samples]')
     plt.tight_layout()
     plt.legend(ncol=7)
     # plt.title('RIR SKYLINE K = %d' % K)
     plt.savefig('./reports/figures/rir_skyline_final.pdf')
     plt.show()
-
-    print(np.abs(toa_peak[:,0,0] - toa_sym[:,0,0]))
 
     ## save here for the GUI later
     new_manual_note = manual_note.copy()
@@ -458,8 +476,8 @@ if __name__ == "__main__":
 
     # ## K = 2: echo 1,2 -- from the ceiling and the floor
     # K = 2
-    # mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
-    #     = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+        = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')

@@ -250,6 +250,7 @@ class Segmentation:
         if self.discrete_mode is 'first':
             # Find peaks in the DYPSA output
             locs_all = np.transpose(np.array(np.where(p_pos[:, 0] != 0)))
+            print(locs_all)
             locs = locs_all[:(self.nPeaks + 5)]
             peaks = np.squeeze(p_pos[locs])
             firstearlypeaks = []
@@ -273,11 +274,27 @@ class Segmentation:
         self.TOAs_sample_single_mic = uniquelocs[0:self.nPeaks]
 
         # Create a dictionary and store inside the reflection segments
-        self.segments = {'Direct_sound': self.RIRs[self.TOAs_sample_single_mic[0]-self.hamm_lengths[0]:
-                                                   self.TOAs_sample_single_mic[0] + self.hamm_lengths[0], :]}
+        t_support = np.arange(self.TOAs_sample_single_mic[0]-self.hamm_lengths[0],
+                              self.TOAs_sample_single_mic[0] + self.hamm_lengths[0])
+        self.segments = {'Direct_sound': (t_support, self.RIRs[t_support, :])}
         for idx_refl in range(1, self.nPeaks):
-            self.segments['Reflection' + str(idx_refl)] = self.RIRs[self.TOAs_sample_single_mic[idx_refl] -
-                                                                    self.hamm_lengths[idx_refl]:self.TOAs_sample_single_mic[idx_refl] +
-                                                                    self.hamm_lengths[idx_refl], :]
+            t_support = np.arange(self.TOAs_sample_single_mic[idx_refl] - self.hamm_lengths[idx_refl],
+                                  self.TOAs_sample_single_mic[idx_refl] + self.hamm_lengths[idx_refl])
+            self.segments['Reflection' + str(idx_refl)] = (t_support, self.RIRs[t_support, :])
 
         return self
+
+
+    # def segments2toa(self):
+    #     K = len(self.segments)  # num reflection
+    #     _, I = self.RIRs.shape  # num mics
+    #     toa = np.zeros([K, I])
+    #     for i in range(I):
+    #         for k in range(K):
+    #             if k == 0: # direct path
+    #                 print(len(self.segments['Direct_sound']))
+    #                 print(len(self.segments['Direct_sound']))
+    #                 toa[k, i] = self.segments['Direct_sound']
+    #             else: # reflection
+    #                 toa[k, i] = self.segments['Reflection' + str(k)][i]
+    #     return toa

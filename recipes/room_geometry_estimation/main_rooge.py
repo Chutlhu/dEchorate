@@ -17,7 +17,6 @@ from dechorate.utils.file_utils import save_to_pickle, load_from_pickle, save_to
 from dechorate.utils.dsp_utils import normalize, envelope
 from dechorate.utils.geo_utils import plane_from_points, mesh_from_plane, square_within_plane, dist_point_plane
 
-
 class Arrow3D(FancyArrowPatch):
     def __init__(self, xs, ys, zs, *args, **kwargs):
         FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
@@ -37,7 +36,7 @@ Fs = constants['Fs']
 recording_offset = constants['recording_offset']
 
 # which source?
-srcs_idxs = [3]
+srcs_idxs = [0]
 J = len(srcs_idxs)
 
 # which microphonese?
@@ -327,7 +326,7 @@ else:
         wall_point = points[wall]
         dst = dist_point_plane(wall_point, point, normal)
 
-        print(wall, '\t', dst, '\t', ang)
+        print(wall, '\t', dst, '\t', ang, '\t')
 1/0
 
 ## SKYLINE WITH NEW ESTIMATED IMAGES

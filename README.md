@@ -13,5 +13,15 @@ List of todos for Laurent
 
 List of todos for journal
 
-- [ ] Table 1 - Dataset: change array and mic pos columns
+- [x] Table 1 - Dataset: change array and mic pos columns
 - [ ] Edit bibliography (import from Mendeley)
+- [ ] write RT60 analysis
+- [ ] write DDR analysis
+- [ ] write TDOA estimation
+- [ ] write Rake Beamformers
+
+Code:
+
+- [ ] Remaggi's and Ivan's code for RIR segmentation
+- [ ] Crocco and Blaster for TDOA estimation
+- [ ] Kowalkzy code for Rake Receiver
