@@ -92,3 +92,4 @@ venv/
 references/BarIlan_matlab
 externals/
 reports/figures/rirs
+recipes/echo_aware_processing/TIMIT_long_nil/*

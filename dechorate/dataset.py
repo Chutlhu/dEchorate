@@ -192,16 +192,19 @@ class SyntheticDataset:
 
         return
 
-    def get_rir(self):
+    def get_rir(self, normalize : bool):
         room = self.make_room()
         room.image_source_model()
         room.compute_rir()
         rir = room.rir[0][0]
         rir = rir[40:]
         self.rir = rir
-        return np.arange(len(rir))/self.Fs, rir/np.max(np.abs(rir))
+        if normalize:
+            return np.arange(len(rir))/self.Fs, rir/np.max(np.abs(rir))
+        else:
+            return np.arange(len(rir))/self.Fs, rir
 
-    def get_walls_name_from_id(self, wall_id):
+    def get_walls_name_from_id(self, wall_id : int):
         if wall_id == -1:
             return 'direct'
         return self.wallsId[wall_id]

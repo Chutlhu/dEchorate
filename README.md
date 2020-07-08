@@ -14,7 +14,7 @@ List of todos for Laurent
 List of todos for journal
 
 - [x] Table 1 - Dataset: change array and mic pos columns
-- [ ] Edit bibliography (import from Mendeley)
+- [x] Edit bibliography (import from Mendeley)
 - [ ] write RT60 analysis
 - [ ] write DDR analysis
 - [ ] write TDOA estimation

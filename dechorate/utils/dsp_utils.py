@@ -2,6 +2,8 @@ import numpy as np
 import scipy as sp
 import scipy.signal as sg
 
+import librosa as lr
+
 def normalize(x):
     return x/np.max(np.abs(x))
 
@@ -56,3 +58,5 @@ def enforce_toeplitz(A):
     return make_toepliz_as_in_mulan(z, P)
 
 
+def resample(x, old_fs, new_fs):
+    return lr.resample(x.T, old_fs, new_fs).T
