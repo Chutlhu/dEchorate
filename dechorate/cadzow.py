@@ -63,3 +63,17 @@ def condat_denoise(A, n_spikes, thr_Cadzow=2e-5):
     Tdensd = reshape_toeplitz(Tdensd, K+1)
     assert Tdensd.shape[1] == K+1
     return Tdensd
+
+
+def amplitudes_from_locations(obs, taus, nfft, Fs):
+    # according to Condat's paper (Condat2015cadzow)
+    # observation are in the FFT domain
+    # [-M, M] Fourier coefficient of the signal
+    assert len(obs) > nfft
+    v = np.fft.fft(obs, nfft)
+    assert len(v) == 2*nfft+1
+    M = nfft
+
+    U = np.exp(-1j*2*np.pi/tau*MM@tk)
+    akest = np.real(np.linalg.lstsq(U, vobs)[0].T)
+    return akest
