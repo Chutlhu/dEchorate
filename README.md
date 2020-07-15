@@ -19,7 +19,8 @@ List of todos for journal
 - [ ] write DDR analysis
 - [ ] write TDOA estimation
 - [ ] write Rake Beamformers
-
+- [ ] Edit table existing dBs
+- [ ] Add GoM 0.05 ms
 Code:
 
 - [ ] Remaggi's and Ivan's code for RIR segmentation

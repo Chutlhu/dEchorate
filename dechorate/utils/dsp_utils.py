@@ -14,6 +14,20 @@ def envelope(x):
     return np.abs(sg.hilbert(x))
 
 
+def todB(x):
+    return 10*np.log10(x)
+
+
+def rake_filter(ak, tk, omegas):
+    assert len(ak) == len(tk)
+    assert len(ak.shape) == len(tk.shape) == 1
+
+    H = np.exp(-1j*omegas[:, None] @ tk[None, :]) @ ak[:, None]
+    assert H.shape == (len(omegas), 1)
+
+    return H.squeeze()
+
+
 def make_toepliz_as_in_mulan(v, L):
     D = v.shape[0]
     T = np.zeros([D-L+1, L], dtype=np.complex64)
