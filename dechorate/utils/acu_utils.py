@@ -44,7 +44,7 @@ def find_nearest_value(array, value):
     return array[idx]
 
 
-def rt60_from_rirs(h, Fs, M, snr=45, do_shroeder=True, val_min=-90):
+def rt60_from_rirs(h, Fs, M, snr=45, do_schroeder=True, val_min=-90):
     # for Fs = 48kHz, M=5001
     # Schroeder's limit of integration td depends on noise
     Lh = len(h)
@@ -63,7 +63,7 @@ def rt60_from_rirs(h, Fs, M, snr=45, do_shroeder=True, val_min=-90):
     E = h_amp_smooth/np.max(h_amp_smooth)
     EdB = 20*np.log10(E)
     # 3. Schroeder Integration method
-    if do_shroeder:
+    if do_schroeder:
         # 3.1 Reverse integration points according to the SNR
         h_amp_dB_tmp = 20*np.log10(h_amp_smooth/np.max(h_amp_smooth))
         idx_max = np.argmax(h_amp_dB_tmp)

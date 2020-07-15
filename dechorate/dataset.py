@@ -126,6 +126,9 @@ class SyntheticDataset:
     def set_room_size(self, room_size):
         self.room_size = room_size
 
+    def set_fs(self, fs):
+        self.Fs = fs
+
     def set_c(self, c):
         self.c = c
 
@@ -160,7 +163,7 @@ class SyntheticDataset:
         room = pra.ShoeBox(
             self.room_size, fs=self.Fs,
             absorption=self.absorption, max_order=self.k_order)
-
+        room.set_sound_speed(self.c)
         room.add_microphone_array(
             pra.MicrophoneArray(
                 np.array(self.x)[:, None], room.fs))
@@ -214,57 +217,73 @@ class SyntheticDataset:
         #     if int(curr_wall_id) == int(wall_id):
         #         return wall_name
 
-
-    def get_note(self):
+    def get_note(self, ak_normalize: bool = False, tk_order : str = 'reflection'):
 
         room = self.make_room()
-        room.image_source_model(use_libroom=False)
+        room.image_source_model()
         self.wallsId = room.wall_names
 
         assert room.mic_array.R.shape[1] == 1
         assert len(room.sources) == 1
 
         j = 0
-        images = room.sources[j].images
+        K = self.k_reflc
+        source = room.sources[j]
+
+        images = source.images
+        orders = source.orders
+        dampings = source.damping
+
         distances = np.linalg.norm(
             images - room.mic_array.R, axis=0)
 
-        K = min(self.k_reflc, len(distances))
-        toa = np.zeros(K)
-        amp = np.zeros(K)
-        walls = []
-        order = np.zeros(K)
-        generators = []
+
+        tk = distances / self.c
+        dk = dampings.squeeze()
+        ak = dk / (distances)
+
+        # walls = []
+        # order = np.zeros(K)
+        # generators = []
 
         # order for location
-        ordering = np.argsort(distances)[:K]
-        # order for orders
-        ordering = np.argsort(room.sources[j].orders)[:K]
+        if tk_order == 'earliest':
+            indices = np.argsort(tk)
+        elif tk_order == 'reflection':
+            indices = np.argsort(orders)
+        elif tk_order == 'strongest':
+            indices = np.argsort(np.abs(ak))[::-1]
+        else:
+            raise ValueError('Wrong ordering option')
 
-        for o, k in enumerate(ordering):
-            amp[o] = room.sources[j].damping[k] / (4 * np.pi * distances[k])
-            toa[o] = distances[k]/self.c
-            order[o] = room.sources[j].orders[k]
+        tk = tk[indices[:K]]
+        dk = dk[indices[:K]]
+        ak = ak[indices[:K]]
 
-            wall_id = self.get_walls_name_from_id(room.sources[j].walls[k])
-            wall_sequence = room.sources[j].wall_sequence(k)
-            wall_sequence = [self.get_walls_name_from_id(wall) for wall in wall_sequence]
-            wall_sequence = wall_sequence
-            if len(wall_sequence) > 1:
-                wall_sequence = wall_sequence[:-1]
-            wall_sequence = '_'.join(wall_sequence)
-            generators.append(wall_sequence)
-            walls.append(wall_id)
+        # for o, k in enumerate(ordering):
+            # print(room.sources[j].damping)
+            # amp[o] = room.sources[j].damping[k] / (4 * np.pi * distances[k])
+            # toa[o] = distances[k]/self.c
+            # order[o] = room.sources[j].orders[k]
+
+            # wall_id = self.get_walls_name_from_id(room.sources[j].walls[k])
+            # wall_sequence = room.sources[j].wall_sequence(k)
+            # wall_sequence = [self.get_walls_name_from_id(wall) for wall in wall_sequence]
+            # wall_sequence = wall_sequence
+            # if len(wall_sequence) > 1:
+            #     wall_sequence = wall_sequence[:-1]
+            # wall_sequence = '_'.join(wall_sequence)
+            # generators.append(wall_sequence)
+            # walls.append(wall_id)
 
             # assert wall_id == generators[o][0]
             # assert 'direct' == generators[o][-1]
 
 
-        amp = amp/amp[0]
+        if ak_normalize:
+            ak = ak/np.max(np.abs(ak))
 
-        assert len(generators) == K
-
-        return amp, toa, walls, order, generators
+        return tk, ak
 
     def get_rt60_sabine(self):
         if self.rir is None:
