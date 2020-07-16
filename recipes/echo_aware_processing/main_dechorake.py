@@ -448,7 +448,10 @@ if __name__ == "__main__":
                 for sir in [0, 10, 20]:
                     for snr in [0, 10, 20]:
 
-                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data)
+                        try:
+                            res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data)
+                        except:
+                            continue
 
                         if len(res) == 0:
                             continue
