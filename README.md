@@ -19,10 +19,15 @@ List of todos for journal
 - [ ] write DDR analysis
 - [ ] write TDOA estimation
 - [ ] write Rake Beamformers
-- [ ] Edit table existing dBs
+  - [ ] write
+  - [x] compute synth data
+  - [ ] compute real data
+- [ ] Edit table existing databases
+  - [ ] out voiceHome, in ACE challenge)
+  - [ ] Compact array?
 - [ ] Add GoM 0.05 ms
 Code:
 
 - [ ] Remaggi's and Ivan's code for RIR segmentation
 - [ ] Crocco and Blaster for TDOA estimation
-- [ ] Kowalkzy code for Rake Receiver
+- [n] Kowalkzy code for Rake Receiver --> "not for now. From TDOA to DOA"

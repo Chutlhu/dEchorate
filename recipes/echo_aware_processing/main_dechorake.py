@@ -34,7 +34,7 @@ sdset = SyntheticDataset()
 note_dict.keys()
 
 
-def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr):
+def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data):
 
     # Some constant of the dataset
     L = constants['rir_length']
@@ -169,12 +169,29 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr):
     print('Audio rate is', fs)
 
 
-    # which rirs
-    h_ = rirs_synt  # real rirs
+    if data == 'synt':
+        # which rirs?
+        h_ = rirs_synt
+        # with annotation?
+        toas = toas_cmds
+        amps = amps_cmds
+    if data == 'real':
+        h_ = rirs_real
+        toas = toas_cmds
 
-    # with annotation?
-    toas = toas_cmds
-    amps = amps_cmds
+        # restore amps based on direct path eight
+        amps_rirs = np.zeros_like(toas_synt)
+        for j in range(J):
+            for i in range(I):
+                print(i, j)
+                for k in range(K):
+                    t = int(toas_peak[k, i, j]*Fs)
+                    a = np.max(np.abs(rirs_real[t-5:t+5, i, j]))
+                    amps_rirs[k, i, j] = a
+
+        amps = amps_rirs
+        toas = toas_peak
+
 
     r = ref_mic  # reference mic
 
@@ -417,8 +434,10 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr):
 
 if __name__ == "__main__":
 
+    data = 'real'
+
     results = pd.DataFrame()
-    results.to_csv(curr_dir + 'results.csv')
+    results.to_csv(curr_dir + 'results_%s.csv' % data)
 
     target_idx = 0
     interf_idx = 2
@@ -430,7 +449,7 @@ if __name__ == "__main__":
                 for sir in [0, 10, 20]:
                     for snr in [0, 10, 20]:
 
-                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr)
+                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data)
 
                         if len(res) == 0:
                             continue
