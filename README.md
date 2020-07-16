@@ -23,9 +23,9 @@ List of todos for journal
   - [x] compute synth data
   - [ ] compute real data
 - [ ] Edit table existing databases
-  - [ ] out voiceHome, in ACE challenge)
+  - [ ] out voiceHome, in ACE challenge
   - [ ] Compact array?
-- [ ] Add GoM 0.05 ms
+- [x] Add GoM 0.05 ms
 Code:
 
 - [ ] Remaggi's and Ivan's code for RIR segmentation
