@@ -33,7 +33,7 @@ speed_of_sound = constants['speed_of_sound']  # speed of sound
 
 ACC_ECHO_THR_SAMLPS = 5
 ACC_ECHO_THR_SECNDS = ACC_ECHO_THR_SAMLPS/Fs
-ACC_ECHO_THR_SECNDS = 0.0001
+ACC_ECHO_THR_SECNDS = 0.05e-3
 ACC_ECHO_THR_METERS = ACC_ECHO_THR_SECNDS/speed_of_sound  # meters
 
 dataset_dir = './data/dECHORATE/'
@@ -110,12 +110,12 @@ def load_rirs(path_to_dataset_rir, dataset, K, dataset_id, mics_pos, srcs_pos):
             synth_dset.set_k_reflc(7)
             synth_dset.set_mic(mics_pos[0, i], mics_pos[1, i], mics_pos[2, i])
             synth_dset.set_src(srcs_pos[0, j], srcs_pos[1, j], srcs_pos[2, j])
-            amp, tau, wall, order, gen = synth_dset.get_note()
+            tau, amp = synth_dset.get_note()
 
             toa_sym[:, i, j] = tau
             amp_sym[:, i, j] = amp
-            wal_sym[:, i, j] = wall
-            ord_sym[:, i, j] = order
+            wal_sym[:, i, j] = 0 #FIXME
+            ord_sym[:, i, j] = 0 #FIXME
 
     return rirs, toa_sym, mics_pos, srcs_pos
 
@@ -314,40 +314,6 @@ def iterative_calibration(dataset_id, mics_pos, srcs_pos, K, toa_peak):
     mics_pos_est = X_est
     srcs_pos_est = A_est
 
-    # np.save(path_to_processed + 'mics_pos_est_nlls.npy', mics_pos_est)
-    # np.save(path_to_processed + 'srcs_pos_est_nlls.npy', srcs_pos_est)
-    # mics_pos_est = np.load(path_to_processed + 'mics_pos_est_nlls.npy')
-    # srcs_pos_est = np.load(path_to_processed + 'srcs_pos_est_nlls.npy')
-
-
-    # plt.imshow(rirs, extent=[0, I*J, 0, L], aspect='auto')
-    # for j in range(J):
-    #     plt.axvline(j*30, color='C7')
-    # plt.axhline(y=L-recording_offset, label='Time of Emission')
-    # for k in range(K+1):
-    #     wall = curr_reflectors[k]
-    #     r = refl_order.index(wall)
-    #     plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_peak[r,:,:].T.flatten()*Fs, c='C1', label='Peak Picking')
-    #     plt.scatter(np.arange(I*J)+0.5, L - recording_offset - toa_sym[r,:,:].T.flatten()*Fs, c='C2', label='Pyroom')
-
-    #     if k == 0:
-    #         A = A_est.copy()
-    #     if k == 1:
-    #         A = A_est.copy()
-    #         A[2,:] = 2*Rz - A_est[2, :]
-
-    #     if k == 2:
-    #         A = A_est.copy()
-    #         A[2, :] = - A_est[2, :]
-
-    #     D = edm(X_est, A)
-    #     new_tofs = D / speed_of_sound
-    #     plt.scatter(np.arange(I*J)+0.5, L - recording_offset - new_tofs.T.flatten()*Fs, c='C3', marker='X', label='EDM k%d' % k)
-    # plt.tight_layout()
-    # plt.legend()
-    # plt.savefig('./reports/figures/rir_skyline_after_calibration_k-%d.pdf' % K)
-    # plt.show()
-
     return mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs
 
 
@@ -361,19 +327,11 @@ if __name__ == "__main__":
     dataset_id = '011111'
 
     # LOAD MANUAL ANNOTATION
-    # path_to_manual_annotation = './data/interim/manual_annotation/20200422_21h03_gui_annotation.pkl'
-    # path_to_manual_annotation = 'data/interim/manual_annotation/20200424_20h19_gui_annotation.pkl'
-    # path_to_manual_annotation = 'data/interim/manual_annotation/20200428_12h27_gui_annotation.pkl'
-    # path_to_manual_annotation = './data/processed/rirs_manual_annotation/20200505_12h38_gui_annotation.pkl'
-
-    # annotation_file = '20200508_12h27_gui_annotation.pkl'
-    # annotation_file = '20200508_13h33_gui_annotation.pkl'
     annotation_file = '20200508_16h29_gui_annotation.pkl'
     annotation_file = '20200508_18h34_gui_annotation.pkl' # good one, but the following problems:
     # src 0: bad south, west
     # src 1: bad north, east
     # src 2: bad south, west, east
-    # annotation_file = '20200515_14h57_gui_annotation.pkl'  # starting fixing above problems
     path_to_manual_annotation = './data/processed/rirs_manual_annotation/' + annotation_file
     manual_note = load_from_pickle(path_to_manual_annotation)
     # we select only the reflection of order 0
@@ -476,124 +434,8 @@ if __name__ == "__main__":
 
     # ## K = 2: echo 1,2 -- from the ceiling and the floor
     # K = 2
-    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
+    print('Here K=', K)
+    mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym, rirs \
         = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(mics_pos[0, :], mics_pos[1, :],
-    #            mics_pos[2, :], marker='o', label='mics init')
-    # ax.scatter(srcs_pos[0, :], srcs_pos[1, :],
-    #            srcs_pos[2, :], marker='o', label='srcs init')
-    # ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :],
-    #            mics_pos_est[2, :], marker='x', label='mics est')
-    # ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :],
-    #            srcs_pos_est[2, :], marker='x', label='srcs est')
-    # ax.set_xlim([0, Rx])
-    # ax.set_ylim([0, Ry])
-    # ax.set_zlim([0, Rz])
-    # plt.legend()
-    # plt.savefig('./reports/figures/cal_positioning3D.pdf')
-    # plt.show()
-
-
-    # # save current refine TOAs
-    # print(toa_sym)
-    # manual_note['toa'][:7, :, :, 0] = toa_sym
-    # path_to_output_toa = './data/interim/toa_after_calibration.pkl'
-    # save_to_pickle(path_to_output_toa, manual_note)
-
-    # ## K = 3: echo 1,2,3 -- from the ceiling and the floor, west
-    # K = 3
-    # mics_pos_est, srcs_pos_est, mics_pos, srcs_pos, toa_sym \
-    #     = iterative_calibration(dataset_id, mics_pos_est, srcs_pos_est, K, toa_peak)
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(mics_pos[0, :], mics_pos[1, :],
-    #            mics_pos[2, :], marker='o', label='mics init')
-    # ax.scatter(srcs_pos[0, :], srcs_pos[1, :],
-    #            srcs_pos[2, :], marker='o', label='srcs init')
-    # ax.scatter(mics_pos_est[0, :], mics_pos_est[1, :],
-    #            mics_pos_est[2, :], marker='x', label='mics est')
-    # ax.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :],
-    #            srcs_pos_est[2, :], marker='x', label='srcs est')
-    # ax.set_xlim([0, Rx])
-    # ax.set_ylim([0, Ry])
-    # ax.set_zlim([0, Rz])
-    # plt.legend()
-    # plt.savefig('./reports/figures/cal_positioning3D.pdf')
-    # plt.show()
-
     pass
-
-
-
- # # Blueprint 2D xz plane
-# room_size = [5.543, 5.675, 2.353]
-# plt.figure(figsize=(16, 9))
-# plt.gca().add_patch(
-#     plt.Rectangle((0, 0),
-#                 room_size[0], room_size[2], fill=False,
-#                 edgecolor='g', linewidth=1)
-# )
-# plt.scatter(mics_pos[0, :], mics_pos[2, :], marker='X', label='mic init')
-# plt.scatter(mics_pos_est[0, :], mics_pos_est[2, :], marker='X', label='mic est')
-# plt.scatter(srcs_pos[0, :], srcs_pos[2, :], marker='v', label='src init')
-# plt.scatter(srcs_pos_est[0, :], srcs_pos_est[2, :], marker='v', label='src est')
-# for i in range(I):
-#     if i % 5 == 0:
-#         bar = np.mean(mics_pos[:, 5*i//5:5*(i//5+1)], axis=1)
-#         plt.text(bar[0], bar[2], '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': 8})
-#         bar = np.mean(mics_pos_est[:, 5*i//5:5*(i//5+1)], axis=1)
-#         plt.text(bar[0], bar[2], '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': 8})
-# for j in range(J):
-#     bar = srcs_pos[:, j]
-#     if j < 6:
-#         plt.text(bar[0], bar[2], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
-#     else:
-#         plt.text(bar[0], bar[2], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
-#     bar = srcs_pos_est[:, j]
-#     if j < 6:
-#         plt.text(bar[0], bar[2], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
-#     else:
-#         plt.text(bar[0], bar[2], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
-# plt.legend()
-# plt.title('Projection: xz')
-# plt.savefig('./reports/figures/cal_positioning2D_xz.pdf')
-# plt.show()
-
-# # Blueprint 2D xy plane
-# room_size = [5.543, 5.675, 2.353]
-# plt.figure(figsize=(16, 9))
-# plt.gca().add_patch(
-#     plt.Rectangle((0, 0),
-#                 room_size[0], room_size[1], fill=False,
-#                 edgecolor='g', linewidth=1)
-# )
-
-# plt.scatter(mics_pos[0, :], mics_pos[1, :], marker='X', label='mic init')
-# plt.scatter(mics_pos_est[0, :], mics_pos_est[1, :], marker='X', label='mic est')
-# plt.scatter(srcs_pos[0, :], srcs_pos[1, :], marker='v', label='src init')
-# plt.scatter(srcs_pos_est[0, :], srcs_pos_est[1, :], marker='v', label='src est')
-# for i in range(I):
-#     if i % 5 == 0:
-#         bar = np.mean(mics_pos[:, 5*i//5:5*(i//5+1)], axis=1)
-#         plt.text(bar[0], bar[1], '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': 8})
-#         bar = np.mean(mics_pos_est[:, 5*i//5:5*(i//5+1)], axis=1)
-#         plt.text(bar[0], bar[1], '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': 8})
-# for j in range(J):
-#     bar = srcs_pos[:, j]
-#     if j < 6:
-#         plt.text(bar[0], bar[1], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
-#     else:
-#         plt.text(bar[0], bar[1], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
-#     bar = srcs_pos_est[:, j]
-#     if j < 6:
-#         plt.text(bar[0], bar[1], '$dir_%d$' % (j+1), fontdict={'fontsize': 8})
-#     else:
-#         plt.text(bar[0], bar[1], '$omn_%d$' % (j+1), fontdict={'fontsize': 8})
-# plt.legend()
-# plt.title('Projection: xy')
-# plt.savefig('./reports/figures/cal_positioning2D_xy.pdf')
-# plt.show()

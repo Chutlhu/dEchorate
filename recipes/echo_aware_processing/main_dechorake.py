@@ -34,7 +34,7 @@ sdset = SyntheticDataset()
 note_dict.keys()
 
 
-def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data):
+def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
 
     # Some constant of the dataset
     L = constants['rir_length']
@@ -169,18 +169,17 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data):
     print('Audio rate is', fs)
 
 
-    if data == 'synt':
+    if data_kind == 'synt':
         # which rirs?
         h_ = rirs_synt
         # with annotation?
         toas = toas_cmds
         amps = amps_cmds
-    if data == 'real':
+    if data_kind == 'real':
         h_ = rirs_real
-        toas = toas_cmds
 
         # restore amps based on direct path eight
-        amps_rirs = np.zeros_like(toas_synt)
+        amps_rirs = np.zeros_like(toas_cmds)
         for j in range(J):
             for i in range(I):
                 print(i, j)
