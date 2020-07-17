@@ -438,6 +438,8 @@ if __name__ == "__main__":
     results = pd.DataFrame()
     results.to_csv(curr_dir + 'results_%s.csv' % data)
 
+    input('Data are %s\nWanna continue?' % data)
+
     target_idx = 0
     interf_idx = 2
 
