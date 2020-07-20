@@ -446,7 +446,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
 
 if __name__ == "__main__":
 
-    data = 'real'
+    data = 'synt'
 
     today = date.today()
 
