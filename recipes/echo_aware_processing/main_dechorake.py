@@ -3,11 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import soundfile as sf
 
+from datetime import date
+
 from dechorate import constants
 from dechorate.dataset import DechorateDataset, SyntheticDataset
 from dechorate.utils.file_utils import save_to_pickle, load_from_pickle, save_to_matlab
 from dechorate.utils.dsp_utils import normalize, resample, envelope, todB, rake_filter
 from dechorate.utils.viz_utils import plt_time_signal
+from dechorate.utils.evl_utils import snr_dB
 
 from risotto.rtf import estimate_rtf
 from risotto.utils.dsp_utils import stft, istft
@@ -249,7 +252,13 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
     cs2 = np.concatenate([np.zeros([2*fs, I]), np.zeros([4*fs, I]),
                         c_[:, :, 1], np.zeros([2*fs, I])], axis=0)
     # diffuse noise field simulation given the array geometry
-    dn = diffuse_noise(mic_pos, cs1.shape[0], fs, c=343, N=32, mode='sphere').T
+
+    dn_name = curr_dir + 'diffuse.npz'
+    try:
+        dn = np.load(dn_name)
+    except:
+        dn = diffuse_noise(mic_pos, cs1.shape[0], fs, c=343, N=32, mode='sphere').T
+        np.save(dn_name, dn)
     assert dn.shape == cs1.shape
     # and unit-variance with respect to the ref mic
     dn = dn / np.std(dn[:, r])
@@ -378,7 +387,6 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
         cs2out = istft(CS2out, Fs=fs, nfft=nfft, hop=hop)[-1].real
         cdnout = istft(CDNout, Fs=fs, nfft=nfft, hop=hop)[-1].real
 
-
         # # plot
         # plt.figure(figsize=(16, 4))
         # plt.plot(xout, label='out')
@@ -402,16 +410,21 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
         # plt.show()
 
         # metrics
-        sar_out = todB(np.var(cs1in[2*fs:9*fs]) / np.var(cs1out[2*fs:9*fs]))
-        print('SAR', sar_out)
-
-        snr_in = todB(np.var(cs1in[2*fs:9*fs]) / np.var(cdnin[2*fs:9*fs]))
-        snr_out = todB(np.var(cs1out[2*fs:9*fs]) / np.var(cdnout[2*fs:9*fs]))
+        time = np.arange(2*fs, 9*fs)
+        snr_in = snr_dB(cs1[time, r], cdn[time, r])
+        snr_out = snr_dB(cs1out[time], cdnout[time])
         print('SNR', snr_in, '-->', snr_out, ':', snr_out - snr_in)
 
-        sir_in = todB(np.var(cs1in[2*fs:9*fs]) / np.var(cs2in[6*fs:13*fs]))
-        sir_out = todB(np.var(cs1out[2*fs:9*fs]) / np.var(cs2out[6*fs:13*fs]))
+        sir_in = snr_dB(cs1[time, r], cs2[time, r])
+        sir_out = snr_dB(cs1out[time], cs2out[time])
         print('SIR', sir_in, '-->', sir_out, ':', sir_out - sir_in)
+
+        sar_out = snr_dB(cs1[time, r], cs1out[time] - cs1[time, r])
+        print('SAR', sar_out)
+
+        sdr_in = snr_dB(cs1[time, r], cs2[time, r] + cdn[time, r])
+        sdr_out = snr_dB(cs1out[time], xout[time] - cs1out[time])
+        print('SDR', sdr_in, '-->', sdr_out, ':', sdr_out - sdr_in)
 
         pesq_in = metrics(xin[7*fs:9*fs], cs1in[7*fs:9*fs], rate=fs)['pesq'][0]
         pesq_out = metrics(xout[7*fs:9*fs], cs1in[7*fs:9*fs], rate=fs)['pesq'][0]
@@ -435,6 +448,8 @@ if __name__ == "__main__":
 
     data = 'real'
 
+    today = date.today()
+
     results = pd.DataFrame()
     results.to_csv(curr_dir + 'results_%s.csv' % data)
 
@@ -445,14 +460,16 @@ if __name__ == "__main__":
 
     c = 0
     for arr_idx in range(5):
-        for dataset_idx in range(5):
+        for dataset_idx in [0]:
             for target_idx in range(4):
                 for sir in [0, 10, 20]:
-                    for snr in [0, 10, 20]:
+                    for snr in [0, 10 , 20]:
 
                         try:
                             res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data)
-                        except:
+                        except Exception as e:
+                            print(e)
+                            input('Continue?')
                             continue
 
                         if len(res) == 0:
@@ -477,5 +494,5 @@ if __name__ == "__main__":
 
                             c += 1
 
-                        results.to_csv(curr_dir + 'results.csv')
+                        results.to_csv(curr_dir + '%s_results_%s_dataset-%d.csv'%(today, data, dataset_idx))
     pass
