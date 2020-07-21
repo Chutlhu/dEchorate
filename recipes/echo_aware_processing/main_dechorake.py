@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import soundfile as sf
 
+from tqdm import tqdm
 from datetime import date
 
 from dechorate import constants
@@ -435,8 +436,10 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
             'sar_out' : sar_out,
             'sir_in': sir_in,
             'snr_in': snr_in,
+            'sdr_in': sdr_in,
             'sir_out' : sir_out,
             'snr_out': snr_out,
+            'sdr_out': sdr_out,
             'pesq_in': pesq_in,
             'pesq_out': pesq_out,
         }
@@ -455,13 +458,13 @@ if __name__ == "__main__":
 
     input('Data are %s\nWanna continue?' % data)
 
-    target_idx = 0
     interf_idx = 2
 
     c = 0
-    for arr_idx in range(5):
+
+    for arr_idx in tqdm(range(5)):
         for dataset_idx in [0]:
-            for target_idx in range(4):
+            for target_idx in tqdm(range(4)):
                 for sir in [0, 10, 20]:
                     for snr in [0, 10 , 20]:
 
