@@ -492,7 +492,7 @@ if __name__ == "__main__":
             for interf_idx in range(4):
                 for sir in [0, 10, 20]:
                     for snr in [0, 10 , 20]:
-                        for spk_comb in spk_combs:
+                        for s, spk_comb in enumerate(spk_combs):
 
                             try:
                                 res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
@@ -513,7 +513,7 @@ if __name__ == "__main__":
                                 results.at[c, 'interf_idx'] = interf_idx
                                 results.at[c, 'sir'] = sir
                                 results.at[c, 'snr'] = snr
-                                results.at[c, 'spk_comb'] = spk_comb
+                                results.at[c, 'spk_comb'] = s
                                 results.at[c, 'bf'] = res_bf['bf']
                                 results.at[c, 'sar_out'] = res_bf['sar_out']
                                 results.at[c, 'sir_in'] = res_bf['sir_in']
@@ -527,5 +527,5 @@ if __name__ == "__main__":
 
                                 c += 1
 
-                        results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
+                            results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
     pass
