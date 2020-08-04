@@ -1,8 +1,8 @@
+import librosa as lr
 import numpy as np
 import scipy as sp
 import scipy.signal as sg
 
-import librosa as lr
 
 def normalize(x):
     return x/np.max(np.abs(x))

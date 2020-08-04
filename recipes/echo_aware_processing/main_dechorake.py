@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -38,7 +39,7 @@ sdset = SyntheticDataset()
 note_dict.keys()
 
 
-def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
+def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_comb):
 
     # Some constant of the dataset
     L = constants['rir_length']
@@ -206,8 +207,8 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
     print('input SIR', sir)
     print('input SNR', snr)
 
-    s1 = wavs[0]
-    s2 = wavs[2]
+    s1 = wavs[spk_comb[0]]
+    s2 = wavs[spk_comb[1]]
 
     # center and scale for unit variance
     ss1 = (s1-np.mean(s1))/np.std(s1)
@@ -447,20 +448,43 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
 
     return results
 
+
+
 if __name__ == "__main__":
 
-    data = 'real'
-    interf_idx = 0
-    dataset_idx = 0
-    spk_comb = [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]
+    parser = argparse.ArgumentParser(
+        description='Run Echo-aware Beamformers')
+    parser.add_argument(
+        '-d', '--data', help='Real or Synthetic?', required=True, type=str)
+    parser.add_argument(
+        '-i', '--idx_interf', help='Idx of the interfer', required=True, type=int)
+    parser.add_argument(
+        '-t', '--idx_target', help='Idx of the target', required=True, type=int)
+    parser.add_argument(
+        '-D', '--dataset', help='Which dataset? from 0 to 6', required=True, type=int)
+    parser.add_argument(
+        '-s', '--spk', help='Speaker combination', required=True, type=int)
+
+    args = vars(parser.parse_args())
+
+
+    data = args['data']
+    target_idx = args['idx_target']
+    interf_idx = args['idx_interf']
+    dataset_idx = args['dataset']
+    spk_comb_idx = args['spk']
+
+    spk_comb = [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)][spk_comb_idx]
 
     today = date.today()
     result_dir = curr_dir + 'data/interim/'
 
     results = pd.DataFrame()
-    results.to_csv(result_dir + 'results_%s.csv' % data)
 
-    input('Data are %s\nWanna continue?' % data)
+    # input('Data are %s\nWanna continue?' % data)
+
+    suffix = 'd-%s_t-%d_i-%d_d-%d_s-%d_' % (data, target_idx, interf_idx, dataset_idx, spk_comb_idx)
+    results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
 
     c = 0
     for arr_idx in tqdm(range(5)):
@@ -469,10 +493,10 @@ if __name__ == "__main__":
                 for snr in [0, 10 , 20]:
 
                     try:
-                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data)
+                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
                     except Exception as e:
                         print(e)
-                        input('Continue?')
+                        # input('Continue?')
                         continue
 
                     if len(res) == 0:
@@ -499,6 +523,5 @@ if __name__ == "__main__":
 
                         c += 1
 
-                    results.to_csv(result_dir + '%s_results_%s_dataset-%d_interf-%d.csv' %
-                                    (today, data, dataset_idx, interf_idx))
+                    results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
     pass
