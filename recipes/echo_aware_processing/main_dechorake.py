@@ -41,6 +41,15 @@ note_dict.keys()
 
 def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_comb):
 
+    print('arr_idx', arr_idx)
+    print('dataset_idx', dataset_idx)
+    print('target_idx', target_idx)
+    print('interf_idx', interf_idx)
+    print('sir', sir)
+    print('snr', snr)
+    print('data_kind', data_kind)
+    print('spk_comb', spk_comb)
+
     # Some constant of the dataset
     L = constants['rir_length']
     Fs = constants['Fs']
@@ -65,7 +74,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
 
     # which source?
     if interf_idx == target_idx:
-        return []
+        raise ValueError('Same interf')
 
     srcs_idxs = [target_idx, interf_idx]
     print(':: Srcs index', srcs_idxs)
@@ -488,40 +497,39 @@ if __name__ == "__main__":
 
     c = 0
     for arr_idx in tqdm(range(5)):
-        for target_idx in tqdm(range(4)):
-            for sir in [0, 10, 20]:
-                for snr in [0, 10 , 20]:
+        for sir in [0, 10, 20]:
+            for snr in [0, 10 , 20]:
 
-                    try:
-                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
-                    except Exception as e:
-                        print(e)
-                        # input('Continue?')
-                        continue
+                try:
+                    res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
+                except Exception as e:
+                    print(e)
+                    # input('Continue?')
+                    continue
 
-                    if len(res) == 0:
-                        continue
+                if len(res) == 0:
+                    continue
 
-                    for res_bf in res:
+                for res_bf in res:
 
-                        results.at[c, 'array'] = arr_idx
-                        results.at[c, 'dataset'] = dataset_idx
-                        results.at[c, 'target_idx'] = target_idx
-                        results.at[c, 'interf_idx'] = interf_idx
-                        results.at[c, 'sir'] = sir
-                        results.at[c, 'snr'] = snr
-                        results.at[c, 'bf'] = res_bf['bf']
-                        results.at[c, 'sar_out'] = res_bf['sar_out']
-                        results.at[c, 'sir_in'] = res_bf['sir_in']
-                        results.at[c, 'snr_in'] = res_bf['snr_in']
-                        results.at[c, 'sdr_in'] = res_bf['sdr_in']
-                        results.at[c, 'sir_out'] = res_bf['sir_out']
-                        results.at[c, 'snr_out'] = res_bf['snr_out']
-                        results.at[c, 'sdr_out'] = res_bf['sdr_out']
-                        results.at[c, 'pesq_in'] = res_bf['pesq_in']
-                        results.at[c, 'pesq_out'] = res_bf['pesq_out']
+                    results.at[c, 'array'] = arr_idx
+                    results.at[c, 'dataset'] = dataset_idx
+                    results.at[c, 'target_idx'] = target_idx
+                    results.at[c, 'interf_idx'] = interf_idx
+                    results.at[c, 'sir'] = sir
+                    results.at[c, 'snr'] = snr
+                    results.at[c, 'bf'] = res_bf['bf']
+                    results.at[c, 'sar_out'] = res_bf['sar_out']
+                    results.at[c, 'sir_in'] = res_bf['sir_in']
+                    results.at[c, 'snr_in'] = res_bf['snr_in']
+                    results.at[c, 'sdr_in'] = res_bf['sdr_in']
+                    results.at[c, 'sir_out'] = res_bf['sir_out']
+                    results.at[c, 'snr_out'] = res_bf['snr_out']
+                    results.at[c, 'sdr_out'] = res_bf['sdr_out']
+                    results.at[c, 'pesq_in'] = res_bf['pesq_in']
+                    results.at[c, 'pesq_out'] = res_bf['pesq_out']
 
-                        c += 1
+                    c += 1
 
-                    results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
+                results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
     pass
