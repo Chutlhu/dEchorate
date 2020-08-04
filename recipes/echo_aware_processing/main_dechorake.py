@@ -466,24 +466,15 @@ if __name__ == "__main__":
     parser.add_argument(
         '-d', '--data', help='Real or Synthetic?', required=True, type=str)
     parser.add_argument(
-        '-i', '--idx_interf', help='Idx of the interfer', required=True, type=int)
-    parser.add_argument(
-        '-t', '--idx_target', help='Idx of the target', required=True, type=int)
-    parser.add_argument(
         '-D', '--dataset', help='Which dataset? from 0 to 6', required=True, type=int)
-    parser.add_argument(
-        '-s', '--spk', help='Speaker combination', required=True, type=int)
 
     args = vars(parser.parse_args())
 
 
     data = args['data']
-    target_idx = args['idx_target']
-    interf_idx = args['idx_interf']
     dataset_idx = args['dataset']
-    spk_comb_idx = args['spk']
 
-    spk_comb = [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)][spk_comb_idx]
+    spk_combs = [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]
 
     today = date.today()
     result_dir = curr_dir + 'data/interim/'
@@ -492,44 +483,49 @@ if __name__ == "__main__":
 
     # input('Data are %s\nWanna continue?' % data)
 
-    suffix = 'd-%s_t-%d_i-%d_d-%d_s-%d_' % (data, target_idx, interf_idx, dataset_idx, spk_comb_idx)
+    suffix = 'data-%s_dataset-%d' % (data, dataset_idx)
     results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
 
     c = 0
     for arr_idx in tqdm(range(5)):
-        for sir in [0, 10, 20]:
-            for snr in [0, 10 , 20]:
+        for target_idx in range(4):
+            for interf_idx in range(4):
+                for sir in [0, 10, 20]:
+                    for snr in [0, 10 , 20]:
+                        for spk_comb in spk_combs:
 
-                try:
-                    res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
-                except Exception as e:
-                    print(e)
-                    # input('Continue?')
-                    continue
+                            try:
+                                res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
+                            except Exception as e:
+                                print(e)
+                                # input('Continue?')
+                                continue
 
-                if len(res) == 0:
-                    continue
+                            if len(res) == 0:
+                                continue
 
-                for res_bf in res:
+                            for res_bf in res:
 
-                    results.at[c, 'array'] = arr_idx
-                    results.at[c, 'dataset'] = dataset_idx
-                    results.at[c, 'target_idx'] = target_idx
-                    results.at[c, 'interf_idx'] = interf_idx
-                    results.at[c, 'sir'] = sir
-                    results.at[c, 'snr'] = snr
-                    results.at[c, 'bf'] = res_bf['bf']
-                    results.at[c, 'sar_out'] = res_bf['sar_out']
-                    results.at[c, 'sir_in'] = res_bf['sir_in']
-                    results.at[c, 'snr_in'] = res_bf['snr_in']
-                    results.at[c, 'sdr_in'] = res_bf['sdr_in']
-                    results.at[c, 'sir_out'] = res_bf['sir_out']
-                    results.at[c, 'snr_out'] = res_bf['snr_out']
-                    results.at[c, 'sdr_out'] = res_bf['sdr_out']
-                    results.at[c, 'pesq_in'] = res_bf['pesq_in']
-                    results.at[c, 'pesq_out'] = res_bf['pesq_out']
+                                results.at[c, 'data'] = data
+                                results.at[c, 'array'] = arr_idx
+                                results.at[c, 'dataset'] = dataset_idx
+                                results.at[c, 'target_idx'] = target_idx
+                                results.at[c, 'interf_idx'] = interf_idx
+                                results.at[c, 'sir'] = sir
+                                results.at[c, 'snr'] = snr
+                                results.at[c, 'spk_comb'] = spk_comb
+                                results.at[c, 'bf'] = res_bf['bf']
+                                results.at[c, 'sar_out'] = res_bf['sar_out']
+                                results.at[c, 'sir_in'] = res_bf['sir_in']
+                                results.at[c, 'snr_in'] = res_bf['snr_in']
+                                results.at[c, 'sdr_in'] = res_bf['sdr_in']
+                                results.at[c, 'sir_out'] = res_bf['sir_out']
+                                results.at[c, 'snr_out'] = res_bf['snr_out']
+                                results.at[c, 'sdr_out'] = res_bf['sdr_out']
+                                results.at[c, 'pesq_in'] = res_bf['pesq_in']
+                                results.at[c, 'pesq_out'] = res_bf['pesq_out']
 
-                    c += 1
+                                c += 1
 
-                results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
+                        results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
     pass
