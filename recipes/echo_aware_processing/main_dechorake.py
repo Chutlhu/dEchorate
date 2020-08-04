@@ -449,53 +449,56 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind):
 
 if __name__ == "__main__":
 
-    data = 'synt'
+    data = 'real'
+    interf_idx = 0
+    dataset_idx = 0
+    spk_comb = [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]
 
     today = date.today()
+    result_dir = curr_dir + 'data/interim/'
 
     results = pd.DataFrame()
-    results.to_csv(curr_dir + 'results_%s.csv' % data)
+    results.to_csv(result_dir + 'results_%s.csv' % data)
 
     input('Data are %s\nWanna continue?' % data)
 
-    interf_idx = 2
-
     c = 0
-
     for arr_idx in tqdm(range(5)):
-        for dataset_idx in [0]:
-            for target_idx in tqdm(range(4)):
-                for sir in [0, 10, 20]:
-                    for snr in [0, 10 , 20]:
+        for target_idx in tqdm(range(4)):
+            for sir in [0, 10, 20]:
+                for snr in [0, 10 , 20]:
 
-                        try:
-                            res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data)
-                        except Exception as e:
-                            print(e)
-                            input('Continue?')
-                            continue
+                    try:
+                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data)
+                    except Exception as e:
+                        print(e)
+                        input('Continue?')
+                        continue
 
-                        if len(res) == 0:
-                            continue
+                    if len(res) == 0:
+                        continue
 
-                        for res_bf in res:
+                    for res_bf in res:
 
-                            results.at[c, 'array'] = arr_idx
-                            results.at[c, 'dataset'] = dataset_idx
-                            results.at[c, 'target_idx'] = target_idx
-                            results.at[c, 'interf_idx'] = interf_idx
-                            results.at[c, 'sir'] = sir
-                            results.at[c, 'snr'] = snr
-                            results.at[c, 'bf'] = res_bf['bf']
-                            results.at[c, 'sar_out'] = res_bf['sar_out']
-                            results.at[c, 'sir_in'] = res_bf['sir_in']
-                            results.at[c, 'snr_in'] = res_bf['snr_in']
-                            results.at[c, 'sir_out'] = res_bf['sir_out']
-                            results.at[c, 'snr_out'] = res_bf['snr_out']
-                            results.at[c, 'pesq_in'] = res_bf['pesq_in']
-                            results.at[c, 'pesq_out'] = res_bf['pesq_out']
+                        results.at[c, 'array'] = arr_idx
+                        results.at[c, 'dataset'] = dataset_idx
+                        results.at[c, 'target_idx'] = target_idx
+                        results.at[c, 'interf_idx'] = interf_idx
+                        results.at[c, 'sir'] = sir
+                        results.at[c, 'snr'] = snr
+                        results.at[c, 'bf'] = res_bf['bf']
+                        results.at[c, 'sar_out'] = res_bf['sar_out']
+                        results.at[c, 'sir_in'] = res_bf['sir_in']
+                        results.at[c, 'snr_in'] = res_bf['snr_in']
+                        results.at[c, 'sdr_in'] = res_bf['sdr_in']
+                        results.at[c, 'sir_out'] = res_bf['sir_out']
+                        results.at[c, 'snr_out'] = res_bf['snr_out']
+                        results.at[c, 'sdr_out'] = res_bf['sdr_out']
+                        results.at[c, 'pesq_in'] = res_bf['pesq_in']
+                        results.at[c, 'pesq_out'] = res_bf['pesq_out']
 
-                            c += 1
+                        c += 1
 
-                        results.to_csv(curr_dir + '%s_results_%s_dataset-%d.csv'%(today, data, dataset_idx))
+                    results.to_csv(result_dir + '%s_results_%s_dataset-%d_interf-%d.csv' %
+                                    (today, data, dataset_idx, interf_idx))
     pass
