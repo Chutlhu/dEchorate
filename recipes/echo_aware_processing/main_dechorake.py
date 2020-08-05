@@ -464,7 +464,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Run Echo-aware Beamformers')
     parser.add_argument(
-        '-a', '--arr', help='Which array?', required=True, type=str)
+        '-a', '--arr', help='Which array?', required=True, type=int)
     parser.add_argument(
         '-d', '--data', help='Real or Synthetic?', required=True, type=str)
     parser.add_argument(
