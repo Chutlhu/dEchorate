@@ -264,7 +264,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
                         c_[:, :, 1], np.zeros([2*fs, I])], axis=0)
     # diffuse noise field simulation given the array geometry
 
-    dn_name = curr_dir + 'diffuse.npz'
+    dn_name = curr_dir + 'diffuse.npy'
     try:
         dn = np.load(dn_name)
     except:
@@ -464,15 +464,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Run Echo-aware Beamformers')
     parser.add_argument(
+        '-a', '--arr', help='Which array?', required=True, type=str)
+    parser.add_argument(
         '-d', '--data', help='Real or Synthetic?', required=True, type=str)
     parser.add_argument(
         '-D', '--dataset', help='Which dataset? from 0 to 6', required=True, type=int)
 
     args = vars(parser.parse_args())
 
-
     data = args['data']
     dataset_idx = args['dataset']
+    arr_idx = args['arr']
 
     spk_combs = [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]
 
@@ -487,45 +489,44 @@ if __name__ == "__main__":
     results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
 
     c = 0
-    for arr_idx in tqdm(range(5)):
-        for target_idx in range(4):
-            for interf_idx in range(4):
-                for sir in [0, 10, 20]:
-                    for snr in [0, 10 , 20]:
-                        for s, spk_comb in enumerate(spk_combs):
+    for target_idx in range(4):
+        for interf_idx in range(4):
+            for sir in [0, 10, 20]:
+                for snr in [0, 10 , 20]:
+                    for s, spk_comb in enumerate(spk_combs):
 
-                            try:
-                                res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
-                            except Exception as e:
-                                print(e)
-                                # input('Continue?')
-                                continue
+                        try:
+                            res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
+                        except Exception as e:
+                            print(e)
+                            # input('Continue?')
+                            continue
 
-                            if len(res) == 0:
-                                continue
+                        if len(res) == 0:
+                            continue
 
-                            for res_bf in res:
+                        for res_bf in res:
 
-                                results.at[c, 'data'] = data
-                                results.at[c, 'array'] = arr_idx
-                                results.at[c, 'dataset'] = dataset_idx
-                                results.at[c, 'target_idx'] = target_idx
-                                results.at[c, 'interf_idx'] = interf_idx
-                                results.at[c, 'sir'] = sir
-                                results.at[c, 'snr'] = snr
-                                results.at[c, 'spk_comb'] = s
-                                results.at[c, 'bf'] = res_bf['bf']
-                                results.at[c, 'sar_out'] = res_bf['sar_out']
-                                results.at[c, 'sir_in'] = res_bf['sir_in']
-                                results.at[c, 'snr_in'] = res_bf['snr_in']
-                                results.at[c, 'sdr_in'] = res_bf['sdr_in']
-                                results.at[c, 'sir_out'] = res_bf['sir_out']
-                                results.at[c, 'snr_out'] = res_bf['snr_out']
-                                results.at[c, 'sdr_out'] = res_bf['sdr_out']
-                                results.at[c, 'pesq_in'] = res_bf['pesq_in']
-                                results.at[c, 'pesq_out'] = res_bf['pesq_out']
+                            results.at[c, 'data'] = data
+                            results.at[c, 'array'] = arr_idx
+                            results.at[c, 'dataset'] = dataset_idx
+                            results.at[c, 'target_idx'] = target_idx
+                            results.at[c, 'interf_idx'] = interf_idx
+                            results.at[c, 'sir'] = sir
+                            results.at[c, 'snr'] = snr
+                            results.at[c, 'spk_comb'] = s
+                            results.at[c, 'bf'] = res_bf['bf']
+                            results.at[c, 'sar_out'] = res_bf['sar_out']
+                            results.at[c, 'sir_in'] = res_bf['sir_in']
+                            results.at[c, 'snr_in'] = res_bf['snr_in']
+                            results.at[c, 'sdr_in'] = res_bf['sdr_in']
+                            results.at[c, 'sir_out'] = res_bf['sir_out']
+                            results.at[c, 'snr_out'] = res_bf['snr_out']
+                            results.at[c, 'sdr_out'] = res_bf['sdr_out']
+                            results.at[c, 'pesq_in'] = res_bf['pesq_in']
+                            results.at[c, 'pesq_out'] = res_bf['pesq_out']
 
-                                c += 1
+                            c += 1
 
-                            results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
+                        results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
     pass
