@@ -485,7 +485,7 @@ if __name__ == "__main__":
 
     # input('Data are %s\nWanna continue?' % data)
 
-    suffix = 'data-%s_dataset-%d' % (data, dataset_idx)
+    suffix = 'arr-%d_data-%s_dataset-%d' % (arr_idx, data, dataset_idx)
     results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
 
     c = 0
