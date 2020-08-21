@@ -14,7 +14,7 @@ from dechorate.utils.dsp_utils import normalize, resample, envelope, todB, rake_
 from dechorate.utils.viz_utils import plt_time_signal
 from dechorate.utils.evl_utils import snr_dB
 
-from risotto.rtf import estimate_rtf
+from risotto.rtf import estimate_rtf, estimates_PSDs_PSDr_from_RTF
 from risotto.utils.dsp_utils import stft, istft
 
 from brioche.beamformer import DS, MVDR, LCMV, GSC
@@ -205,12 +205,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         amps = amps_rirs
         toas = toas_peak
 
-
     r = ref_mic  # reference mic
-
-    # inr = 15  # dB
-    # snr = 15  # dB
-    # sir = snr - inr  # dB
 
     print('Ref mic', r)
     print('input SIR', sir)
@@ -234,18 +229,20 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     Lc = 10*fs
     c_ = np.zeros([Lc, I, J])
 
-    # Convolution, downsampling and stacking
-    print('Convolution and downsampling', Fs, '-->', fs)
-    for i in range(I):
-        for j in range(J):
-            cs = np.convolve(h_[:, i, j], s_[:, j], 'full')
-            cs = resample(cs, Fs, fs)
-            L = len(cs)
-            print(i, j, L)
-            c_[:L, i, j] = cs
 
+    # # Convolution, downsampling and stacking
+    # print('Convolution and downsampling', Fs, '-->', fs)
+    # for i in range(I):
+    #     for j in range(J):
+    #         cs = np.convolve(h_[:, i, j], s_[:, j], 'full')
+    #         cs = resample(cs, Fs, fs)
+    #         L = len(cs)
+    #         print(i, j, L)
+    #         c_[:L, i, j] = cs
+    # save_to_pickle(curr_dir + 'cs_pkl', c_)
+
+    c_ = load_from_pickle(curr_dir + 'cs_pkl')
     print('Done.')
-
 
     # Standardization wtr reference microphone
     sigma_target = np.std(c_[:7*fs, r, 0])
@@ -255,7 +252,6 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     c_[:, :, 1] = c_[:, :, 1] / sigma_interf
 
     # hereafter we assume that the two images have unit-variance at the reference microphone
-
 
     # lets add some silence and shift the source such that there is overlap
     cs1 = np.concatenate([np.zeros([2*fs, I]), c_[:, :, 0],
@@ -289,7 +285,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     vad = {
         'target': (int(2*fs), int(4.5*fs)),
         'interf': (int(10*fs), int(12.5*fs)),
-        'noise': (int(0.5*fs), int(1.5*fs)),
+        'noise':  (int(0.5*fs), int(1.5*fs)),
     }
 
     x = cs1 + cs2 + cdn
@@ -328,13 +324,25 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
             if i == r:
                 dRTF[:, r, j] = np.ones(nrfft)
             else:
-                print(vad[src][0], vad[src][1])
                 mi = x[vad[src][0]:vad[src][1], i]
                 mr = x[vad[src][0]:vad[src][1], r]
                 nd = x[vad['noise'][0]:vad['noise'][1], [r, i]]
                 dRTF[:, i, j] = estimate_rtf(mi, mr, 'gevdRTF', 'full', Lh=None, n=nd,
                                             Fs=fs, nfft=nfft, hop=hop)
     print('... done.')
+
+    print('ground-truth RTF.')
+    tRTF = np.zeros([nrfft, I, J], dtype=np.complex)
+    for j, src in enumerate(['target', 'interf']):
+        for i in range(I):
+            if i == r:
+                tRTF[:, r, j] = np.ones(nrfft)
+            else:
+                mi = h_[:, i, j]
+                mr = h_[:, r, j]
+                tRTF[:, i, j] = estimate_rtf(mi, mr, 'xcrsRTF', 'full', Lh=None, n=nd, Fs=fs, nfft=nfft, hop=hop)
+    print('... done.')
+
 
     freqs = np.linspace(0, fs//2, F)
     omegas = 2*np.pi*freqs
@@ -372,11 +380,25 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         Sigma_n[f, :, :] = np.cov(CDN[f, :, :].T)
     print('Done with noise covariance.')
 
+    # compute early and late PSD
+    PSDs, PSDr, PSDl, COVn = estimates_PSDs_PSDr_from_RTF(
+        eRTF[:, :, 0],
+        x[vad['target'][0]:vad['target'][1], :],
+        x[vad['noise'][0]:vad['noise'][1], :],
+        mic_pos, ref_mic = ref_mic,
+        Fs=fs, nrfft=F, hop=hop, fstart=fstart, fend=fend, speed_of_sound=constants['speed_of_sound'])
+
+    print(np.abs(np.mean(COVn, 0)))
+    print(np.abs(np.mean(Sigma_n, 0)))
+    1/0
+
     bfs = [
         (DS(name='dpDS', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0]), dRTF),
         (MVDR(name='rtfMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dRTF[:, :, 0], Sigma_n), dRTF),
-        (MVDR(name='ecoMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF[:, :, 0], Sigma_n), eRTF),
+        (MVDR(name='gtrMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(tRTF[:, :, 0], Sigma_n), dRTF),
+        (MVDR(name='ecoMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF[:, :, 0], Sigma_n ), eRTF),
         (LCMV(name='rtfLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dRTF, Sigma_n), dRTF),
+        (LCMV(name='gtfLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(gRTF, Sigma_n), dRTF),
         (LCMV(name='ecoLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF, Sigma_n), eRTF),
     ]
 
@@ -393,33 +415,6 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         CS2out = bf.enhance(CS2.copy())
         CDNout = bf.enhance(CDN.copy())
 
-        xout = istft(Xout, Fs=fs, nfft=nfft, hop=hop)[-1].real
-        cs1out = istft(CS1out, Fs=fs, nfft=nfft, hop=hop)[-1].real
-        cs2out = istft(CS2out, Fs=fs, nfft=nfft, hop=hop)[-1].real
-        cdnout = istft(CDNout, Fs=fs, nfft=nfft, hop=hop)[-1].real
-
-        # # plot
-        # plt.figure(figsize=(16, 4))
-        # plt.plot(xout, label='out')
-        # plt.plot(xin, alpha=0.5, label='in')
-        # plt.legend(loc='upper left')
-        # plt.show()
-
-        # plt.figure(figsize=(16, 4))
-        # plt.subplot(131)
-        # plt.plot(cs1out[2*fs:9*fs], label='cs1 out')
-        # plt.plot(cs1in[2*fs:9*fs], alpha=0.5, label='cs1')
-        # plt.legend(loc='upper left')
-        # plt.subplot(132)
-        # plt.plot(cs2out[6*fs:13*fs], label='cs2 out')
-        # plt.plot(cs2in[6*fs:13*fs], alpha=0.5, label='cs2')
-        # plt.legend(loc='upper left')
-        # plt.subplot(133)
-        # plt.plot(cdnout[2*fs:9*fs], label='cdn out')
-        # plt.plot(cdnin[2*fs:9*fs], alpha=0.5, label='cdn')
-        # plt.legend(loc='upper left')
-        # plt.show()
-
         # metrics
         time = np.arange(2*fs, 9*fs)
         snr_in = snr_dB(cs1[time, r], cdn[time, r])
@@ -430,20 +425,22 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         sir_out = snr_dB(cs1out[time], cs2out[time])
         print('SIR', sir_in, '-->', sir_out, ':', sir_out - sir_in)
 
-        sar_out = snr_dB(cs1[time, r], cs1out[time] - cs1[time, r])
-        print('SAR', sar_out)
-
         sdr_in = snr_dB(cs1[time, r], cs2[time, r] + cdn[time, r])
         sdr_out = snr_dB(cs1out[time], xout[time] - cs1out[time])
         print('SDR', sdr_in, '-->', sdr_out, ':', sdr_out - sdr_in)
+
+        xout = istft(Xout, Fs=fs, nfft=nfft, hop=hop)[-1].real
+        cs1out = istft(CS1out, Fs=fs, nfft=nfft, hop=hop)[-1].real
+        cs2out = istft(CS2out, Fs=fs, nfft=nfft, hop=hop)[-1].real
+        cdnout = istft(CDNout, Fs=fs, nfft=nfft, hop=hop)[-1].real
 
         pesq_in = metrics(xin[7*fs:9*fs], cs1in[7*fs:9*fs], rate=fs)['pesq'][0]
         pesq_out = metrics(xout[7*fs:9*fs], cs1in[7*fs:9*fs], rate=fs)['pesq'][0]
         print('PESQ', pesq_in, '-->', pesq_out, ':', pesq_out - pesq_in)
 
+
         result = {
             'bf' : str(bf),
-            'sar_out' : sar_out,
             'sir_in': sir_in,
             'snr_in': snr_in,
             'sdr_in': sdr_in,
@@ -495,12 +492,15 @@ if __name__ == "__main__":
                 for snr in [0, 10 , 20]:
                     for s, spk_comb in enumerate(spk_combs):
 
-                        try:
-                            res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
-                        except Exception as e:
-                            print(e)
-                            # input('Continue?')
-                            continue
+                        target_idx = 0
+                        interf_idx = 1
+
+                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
+                        # try:
+                        # except Exception as e:
+                        #     print(e)
+                        #     # input('Continue?')
+                        #     continue
 
                         if len(res) == 0:
                             continue
