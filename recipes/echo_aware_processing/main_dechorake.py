@@ -331,19 +331,6 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
                                             Fs=fs, nfft=nfft, hop=hop)
     print('... done.')
 
-    print('ground-truth RTF.')
-    tRTF = np.zeros([nrfft, I, J], dtype=np.complex)
-    for j, src in enumerate(['target', 'interf']):
-        for i in range(I):
-            if i == r:
-                tRTF[:, r, j] = np.ones(nrfft)
-            else:
-                mi = h_[:, i, j]
-                mr = h_[:, r, j]
-                tRTF[:, i, j] = estimate_rtf(mi, mr, 'xcrsRTF', 'full', Lh=None, n=nd, Fs=fs, nfft=nfft, hop=hop)
-    print('... done.')
-
-
     freqs = np.linspace(0, fs//2, F)
     omegas = 2*np.pi*freqs
 
@@ -375,36 +362,53 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
                 dpTF[:, i, j] = Hi / Hr
     print('... done.')
 
+    # mix with noise only
+    xn = x[vad['noise'][0]:vad['noise'][1], :]
+    # mix with target only
+    xs = x[vad['target'][0]:vad['target'][1], :]
+
+    # computed Sigma_n from noise-only
     Sigma_n = np.zeros([F, I, I], dtype=np.complex64)
+    XN = stft(xn.T, Fs=Fs, nfft=nfft, hop=hop)[-1]
+    XN = XN.transpose([1, 2, 0])
     for f in range(F):
-        Sigma_n[f, :, :] = np.cov(CDN[f, :, :].T)
+        Sigma_n[f, :, :] = np.cov(XN[f, :, :].T)
     print('Done with noise covariance.')
 
     # compute early and late PSD
-    PSDs, PSDr, PSDl, COVn = estimates_PSDs_PSDr_from_RTF(
+    PSDs1, PSDr1, PSDl1, COVn1 = estimates_PSDs_PSDr_from_RTF(
         eRTF[:, :, 0],
-        x[vad['target'][0]:vad['target'][1], :],
-        x[vad['noise'][0]:vad['noise'][1], :],
+        xs, xn,
         mic_pos, ref_mic = ref_mic,
         Fs=fs, nrfft=F, hop=hop, fstart=fstart, fend=fend, speed_of_sound=constants['speed_of_sound'])
+    PSDs2, PSDr2, PSDl2, COVn2 = estimates_PSDs_PSDr_from_RTF(
+        eRTF[:, :, 1],
+        xs, xn,
+        mic_pos, ref_mic=ref_mic,
+        Fs=fs, nrfft=F, hop=hop, fstart=fstart, fend=fend, speed_of_sound=constants['speed_of_sound'])
 
-    print(np.abs(np.mean(COVn, 0)))
-    print(np.abs(np.mean(Sigma_n, 0)))
-    1/0
+    assert np.allclose(COVn1[200:800, :, :],  Sigma_n[200:800, :, :])
+    assert np.allclose(COVn2[200:800, :, :],  Sigma_n[200:800, :, :])
+
+    Sigma_ln = np.zeros_like(COVn1)
+    Sigma_ln2 = np.zeros_like(COVn1)
+    for f in range(F):
+        Sigma_ln[f, :, :] = COVn1[f, :, :] + PSDl1[f, :, :]
+        Sigma_ln2[f, :, :] = COVn1[f, :, :] + PSDl1[f, :, :] + PSDl2[f, :, :]
 
     bfs = [
         (DS(name='dpDS', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0]), dRTF),
         (MVDR(name='rtfMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dRTF[:, :, 0], Sigma_n), dRTF),
-        (MVDR(name='gtrMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(tRTF[:, :, 0], Sigma_n), dRTF),
-        (MVDR(name='ecoMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF[:, :, 0], Sigma_n ), eRTF),
+        (MVDR(name='ecoMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF[:, :, 0], Sigma_ln), eRTF),
         (LCMV(name='rtfLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dRTF, Sigma_n), dRTF),
-        (LCMV(name='gtfLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(gRTF, Sigma_n), dRTF),
-        (LCMV(name='ecoLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF, Sigma_n), eRTF),
+        (LCMV(name='ecoLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF, Sigma_ln2), eRTF),
     ]
 
     results = []
 
     for (bf, RTF) in bfs:
+
+        print(bf)
 
         print('TARGET', np.mean(np.abs(bf.enhance(RTF[:, :, 0]))))
         print('INTERF', np.mean(np.abs(bf.enhance(RTF[:, :, 1]))))
@@ -415,28 +419,42 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         CS2out = bf.enhance(CS2.copy())
         CDNout = bf.enhance(CDN.copy())
 
-        # metrics
-        time = np.arange(2*fs, 9*fs)
-        snr_in = snr_dB(cs1[time, r], cdn[time, r])
-        snr_out = snr_dB(cs1out[time], cdnout[time])
-        print('SNR', snr_in, '-->', snr_out, ':', snr_out - snr_in)
-
-        sir_in = snr_dB(cs1[time, r], cs2[time, r])
-        sir_out = snr_dB(cs1out[time], cs2out[time])
-        print('SIR', sir_in, '-->', sir_out, ':', sir_out - sir_in)
-
-        sdr_in = snr_dB(cs1[time, r], cs2[time, r] + cdn[time, r])
-        sdr_out = snr_dB(cs1out[time], xout[time] - cs1out[time])
-        print('SDR', sdr_in, '-->', sdr_out, ':', sdr_out - sdr_in)
-
         xout = istft(Xout, Fs=fs, nfft=nfft, hop=hop)[-1].real
         cs1out = istft(CS1out, Fs=fs, nfft=nfft, hop=hop)[-1].real
         cs2out = istft(CS2out, Fs=fs, nfft=nfft, hop=hop)[-1].real
         cdnout = istft(CDNout, Fs=fs, nfft=nfft, hop=hop)[-1].real
 
-        pesq_in = metrics(xin[7*fs:9*fs], cs1in[7*fs:9*fs], rate=fs)['pesq'][0]
-        pesq_out = metrics(xout[7*fs:9*fs], cs1in[7*fs:9*fs], rate=fs)['pesq'][0]
+        # metrics
+        time = np.arange(2*fs, 9*fs)
+        snr_in = snr_dB(cs1in[time], cdnin[time])
+        snr_out = snr_dB(cs1out[time], cdnout[time])
+        print('SNR', snr_in, '-->', snr_out, ':', snr_out - snr_in)
+
+        sir_in = snr_dB(cs1in[time], cs2in[time])
+        sir_out = snr_dB(cs1out[time], cs2out[time])
+        print('SIR', sir_in, '-->', sir_out, ':', sir_out - sir_in)
+
+        sdr_in = snr_dB(cs1in[time], xin[time] - cs1in[time])
+        sdr_out = snr_dB(cs1out[time], xout[time] - cs1out[time])
+        print('SDR', sdr_in, '-->', sdr_out, ':', sdr_out - sdr_in)
+
+        pesq_in = metrics(xin[time], cs1in[time], rate=fs)['pesq'][0]
+        pesq_out = metrics(xout[time], cs1in[time], rate=fs)['pesq'][0]
         print('PESQ', pesq_in, '-->', pesq_out, ':', pesq_out - pesq_in)
+
+        suffix = 'data/interim/wav/bf-%s_' % bf
+
+        gin = np.abs(np.max(xin))
+        gout = np.abs(np.max(xout))
+
+        sf.write(curr_dir + suffix + 'x_out.wav', xout/gout, fs)
+        sf.write(curr_dir + suffix + 'cs1_out.wav', cs1out/gout, fs)
+        sf.write(curr_dir + suffix + 'cs2_out.wav', cs2out/gout, fs)
+        sf.write(curr_dir + suffix + 'cdn_out.wav', cdnout/gout, fs)
+        sf.write(curr_dir + suffix + 'x_in.wav', xin/gin, fs)
+        sf.write(curr_dir + suffix + 'cs1_in.wav', cs1in/gin, fs)
+        sf.write(curr_dir + suffix + 'cs2_in.wav', cs2in/gin, fs)
+        sf.write(curr_dir + suffix + 'cdn_in.wav', cdnin/gin, fs)
 
 
         result = {
@@ -451,6 +469,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
             'pesq_out': pesq_out,
         }
         results.append(result)
+    1/0
 
     return results
 
@@ -484,6 +503,9 @@ if __name__ == "__main__":
 
     suffix = 'arr-%d_data-%s_dataset-%d' % (arr_idx, data, dataset_idx)
     results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
+
+    res = main(arr_idx, dataset_idx, 0, 1, 10, 10, data, (0,1))
+    1/0
 
     c = 0
     for target_idx in range(4):
