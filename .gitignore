@@ -95,4 +95,5 @@ reports/figures/rirs
 recipes/echo_aware_processing/TIMIT_long_nili
 recipes/echo_aware_processing/data
 recipes/echo_aware_processing/data/*
-recipes/echo_aware_processing/diffuse.npz.npy
+recipes/echo_aware_processing/diffuse.npy
+runs/
