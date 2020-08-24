@@ -13,8 +13,13 @@ CMD = 'python recipes/echo_aware_processing/main_dechorake.py.py '
 ARR_IT = [0, 1, 2, 3, 4]
 DATA_IT = ['real', 'synth']
 ROOM_IT = [0, 1, 2, 3, 4, 5]
+SNR_IT = [0, 10, 20]
+SIR_IT = [0, 10, 20]
 
-N_SAMPLES = len(ARR_IT) * len(DATA_IT) * len(ROOM_IT)
+N_SAMPLES = len(ARR_IT) * len(DATA_IT) * len(ROOM_IT) * len(SNR_IT) * len(SIR_IT)
+
+n_cores = 2
+n_hours = 10
 
 ###############
 # AUXILIARY FUN
@@ -139,24 +144,26 @@ def main():
     for arr in ARR_IT:
         for data in DATA_IT:
             for room in ROOM_IT:
+                for snr in SNR_IT:
+                    for sir in SIR_IT:
 
-                # python command
-                cmd = '%s -a %d -d %s -D %s' % (CMD, arr, data, room)
+                        # python command
+                        cmd = '%s -array %d -data %s -dataset %s --snr %d --sir %d' % (CMD, arr, data, room, snr, sir)
 
-                # create bash wrapper script
-                filename = write_bash_file(cmd, "./run_job%d.sh" % (c))
+                        # create bash wrapper script
+                        filename = write_bash_file(cmd, "./run_job%d.sh" % (c))
 
-                #compute resources (n_core, time) for the job
-                n_cores, max_duration_hours = 2, 8
-                wcmd = gen_wrapper_command(
-                    filename,                       # path to the binar
-                    SHORTNAME + str(c),             # shortname for JOBID
-                    n_cores, max_duration_hours,    # resources
-                    './runs/')  # log directory
+                        #compute resources (n_core, time) for the job
+                        n_cores, max_duration_hours = n_cores, n_hours
+                        wcmd = gen_wrapper_command(
+                            filename,                       # path to the binar
+                            SHORTNAME + str(c),             # shortname for JOBID
+                            n_cores, max_duration_hours,    # resources
+                            './runs/')  # log directory
 
-                oar_submit(wcmd)
-                sleep(0.2)
-                c += 1
+                        oar_submit(wcmd)
+                        sleep(0.2)
+                        c += 1
 
     print(" SO LONG AND THANKS FOR THE FISH.")
 # end main
