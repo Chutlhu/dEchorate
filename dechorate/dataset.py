@@ -217,7 +217,7 @@ class SyntheticDataset:
         #     if int(curr_wall_id) == int(wall_id):
         #         return wall_name
 
-    def get_note(self, ak_normalize: bool = False, tk_order : str = 'reflection'):
+    def get_note(self, ak_normalize: bool = False, tk_order : str = 'pra_order'):
 
         room = self.make_room()
         room.image_source_model()
@@ -249,7 +249,7 @@ class SyntheticDataset:
         # order for location
         if tk_order == 'earliest':
             indices = np.argsort(tk)
-        elif tk_order == 'reflection':
+        elif tk_order == 'pra_order':
             indices = np.argsort(orders)
         elif tk_order == 'strongest':
             indices = np.argsort(np.abs(ak))[::-1]

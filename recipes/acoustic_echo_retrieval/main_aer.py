@@ -22,7 +22,7 @@ sdset = SyntheticDataset()
 
 
 # which dataset?
-dataset_id = '011111'
+dataset_id = '011100'
 L = 19556
 Fs = constants['Fs']
 c = constants['speed_of_sound']
@@ -44,6 +44,7 @@ rirs_synt = np.zeros([L, I, J])
 mics = np.zeros([3, I])
 srcs = np.zeros([3, J])
 toas = np.zeros([K, I, J])
+amps = np.zeros([K, I, J])
 
 for i, m in enumerate(mics_idxs):
     for j, s in enumerate(srcs_idxs):
@@ -65,19 +66,64 @@ for i, m in enumerate(mics_idxs):
         sdset.set_k_order(17)
         sdset.set_mic(mics[0, m], mics[1, m], mics[2, m])
         sdset.set_src(srcs[0, s], srcs[1, s], srcs[2, s])
-        _, srir = sdset.get_rir()
+        _, srir = sdset.get_rir(normalize=True)
         Ls = len(srir)
 
         # measure after calibration
         rirs_real[:, i, j] = rrir[:L]
         rirs_synt[:Ls, i, j] = srir[:Ls]
 
+        tk, ak = sdset.get_note(ak_normalize=True, tk_order='strongest')
+        toas[:K, i, j] = tk[:K]
+        amps[:K, i, j] = ak[:K]
+
 print('done with the extraction')
 rirs_real = np.squeeze(rirs_real)
 rirs_synt = np.squeeze(rirs_synt)
-
-
 print('Data loaded.')
+
+## CHECK DATA
+i, j = 0, 0
+
+plt.plot(rirs_real[:, i])
+plt.plot(rirs_synt[:, i])
+plt.scatter(toas[:, i, j]*Fs, amps[:, i, j])
+
+## direct path deconvolution
+def direct_path_deconvolution(rir, tau, pa, pb, Fs):
+    p = int(tau*Fs)
+    a = int(p - pa)
+    b = int(p + pb)
+    dp = rir[a:b]
+    L = len(rir)
+    dp_deconv = np.real(np.fft.ifft(np.fft.fft(rir, L) / np.fft.fft(dp, L)))[:L-pa]
+    # restore the direct path
+    dp_deconv = np.concatenate([np.zeros(pa), dp_deconv])
+    return dp_deconv
+dp_rir = direct_path_deconvolution(rirs_real[:, i], toas[0, i, j], 100, 120, Fs)
+
+plt.plot(dp_rir)
+plt.show()
+
+dp_rirs_real = np.zeros_like(rirs_real)
+for i in range(I):
+    dp_rirs_real[:, i] = direct_path_deconvolution(rirs_real[:, i], toas[0, i, 0], 100, 120, Fs)
+
+
+
+## PREPARING FOR CROCCO:
+croccodict = {
+    'hr'   : rirs_real,
+    'hs'   : rirs_synt,
+    'hd'   : dp_rirs_real,
+    'Fs'   : Fs,
+    'toas' : toas,
+    'amps' : amps,
+}
+
+save_to_matlab(
+    './recipes/acoustic_echo_retrieval/data_aer.mat', croccodict)
+1/0
 
 ## ACOUSTIC ECHO RETRIEVAL
 targetFs = 16000    # Hz
@@ -105,35 +151,17 @@ for i in range(I):
     x_real.append(resample(np.convolve(rirs_real[:, i], s1, 'full')[L1:L1+L], Fs, targetFs))
     x_synt.append(resample(np.convolve(rirs_synt[:, i], s1, 'full')[L1:L1+L], Fs, targetFs))
 
-plt.plot(x_real[0])
-plt.title('observations')
-plt.show()
+# plt.plot(x_real[0])
+# plt.title('observations')
+# plt.show()
 
 x_real = np.concatenate([x[:, None] for x in x_real], axis=-1)
 x_synt = np.concatenate([x[:, None] for x in x_synt], axis=-1)
-
-print(x_real.shape)
-print(x_synt.shape)
 
 oldFs = Fs
 Fs = targetFs
 
 t_max = np.max(toas) # early reflection in 50 ms
-
-## PREPARING FOR CROCCO:
-croccodict = {
-    'xr': x_real,
-    'xs': x_synt,
-    'hr': rirs_real,
-    'hs': rirs_synt,
-    's' : s1,
-    'Fs': Fs,
-    'toas': toas,
-    't_max' : t_max,
-}
-
-save_to_matlab(
-    './recipes/acoustic_echo_retrieval/data_aer.mat', croccodict)
 
 ## RUN BSN
 # init = {'h1': np.random.random(int(t_max*Fs)),
