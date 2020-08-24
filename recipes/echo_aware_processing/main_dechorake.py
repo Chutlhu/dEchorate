@@ -39,7 +39,7 @@ sdset = SyntheticDataset()
 note_dict.keys()
 
 
-def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_comb):
+def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_comb, ref_mic=0, render=False):
 
     print('arr_idx', arr_idx)
     print('dataset_idx', dataset_idx)
@@ -68,7 +68,6 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     print(':: Mics index', mics_idxs)
     I = len(mics_idxs)
     # which one is the reference mic?
-    ref_mic = 4
     r = ref_mic
     print(':: Ref mics', mics_idxs[ref_mic])
 
@@ -230,18 +229,19 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     c_ = np.zeros([Lc, I, J])
 
 
-    # # Convolution, downsampling and stacking
-    # print('Convolution and downsampling', Fs, '-->', fs)
-    # for i in range(I):
-    #     for j in range(J):
-    #         cs = np.convolve(h_[:, i, j], s_[:, j], 'full')
-    #         cs = resample(cs, Fs, fs)
-    #         L = len(cs)
-    #         print(i, j, L)
-    #         c_[:L, i, j] = cs
-    # save_to_pickle(curr_dir + 'cs_pkl', c_)
+    # Convolution, downsampling and stacking
+    print('Convolution and downsampling', Fs, '-->', fs)
+    for i in range(I):
+        for j in range(J):
+            cs = np.convolve(h_[:, i, j], s_[:, j], 'full')
+            cs = resample(cs, Fs, fs)
+            L = len(cs)
+            print(i, j, L)
+            c_[:L, i, j] = cs
 
-    c_ = load_from_pickle(curr_dir + 'cs_pkl')
+    # save_to_pickle(curr_dir + 'cs_pkl', c_)
+    # c_ = load_from_pickle(curr_dir + 'cs_pkl')
+
     print('Done.')
 
     # Standardization wtr reference microphone
@@ -295,8 +295,8 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     hop = 512
     nrfft = nfft+1
     F = nrfft
-    fstart = 200  # Hz
-    fend = 5000  # Hz
+    fstart = 100  # Hz
+    fend = 7500  # Hz
     assert r == ref_mic
 
     # stft of the spatial images
@@ -308,12 +308,12 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     CS2 = CS2.transpose([1, 2, 0])
     CDN = CDN.transpose([1, 2, 0])
     X = X.transpose([1, 2, 0])
+    assert np.allclose(X, CS1+CS2+CDN)
 
     xin = istft(X[:, :, r], Fs=Fs, nfft=nfft, hop=hop)[-1].real
     cs1in = istft(CS1[:, :, r], Fs=Fs, nfft=nfft, hop=hop)[-1].real
     cs2in = istft(CS2[:, :, r], Fs=Fs, nfft=nfft, hop=hop)[-1].real
     cdnin = istft(CDN[:, :, r], Fs=Fs, nfft=nfft, hop=hop)[-1].real
-    assert np.allclose(X, CS1+CS2+CDN)
     assert np.allclose(xin, cs1in + cs2in + cdnin)
 
 
@@ -442,19 +442,21 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         pesq_out = metrics(xout[time], cs1in[time], rate=fs)['pesq'][0]
         print('PESQ', pesq_in, '-->', pesq_out, ':', pesq_out - pesq_in)
 
-        suffix = 'data/interim/wav/bf-%s_' % bf
+        suffix = 'data/interim/wav/data-%s_bf-%s_' % (data_kind, bf)
 
         gin = np.abs(np.max(xin))
         gout = np.abs(np.max(xout))
 
-        sf.write(curr_dir + suffix + 'x_out.wav', xout/gout, fs)
-        sf.write(curr_dir + suffix + 'cs1_out.wav', cs1out/gout, fs)
-        sf.write(curr_dir + suffix + 'cs2_out.wav', cs2out/gout, fs)
-        sf.write(curr_dir + suffix + 'cdn_out.wav', cdnout/gout, fs)
-        sf.write(curr_dir + suffix + 'x_in.wav', xin/gin, fs)
-        sf.write(curr_dir + suffix + 'cs1_in.wav', cs1in/gin, fs)
-        sf.write(curr_dir + suffix + 'cs2_in.wav', cs2in/gin, fs)
-        sf.write(curr_dir + suffix + 'cdn_in.wav', cdnin/gin, fs)
+
+        if render:
+            sf.write(curr_dir + suffix + 'x_out.wav', xout/gout, fs)
+            sf.write(curr_dir + suffix + 'cs1_out.wav', cs1out/gout, fs)
+            sf.write(curr_dir + suffix + 'cs2_out.wav', cs2out/gout, fs)
+            sf.write(curr_dir + suffix + 'cdn_out.wav', cdnout/gout, fs)
+            sf.write(curr_dir + suffix + 'x_in.wav', xin/gin, fs)
+            sf.write(curr_dir + suffix + 'cs1_in.wav', cs1in/gin, fs)
+            sf.write(curr_dir + suffix + 'cs2_in.wav', cs2in/gin, fs)
+            sf.write(curr_dir + suffix + 'cdn_in.wav', cdnin/gin, fs)
 
 
         result = {
@@ -469,7 +471,6 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
             'pesq_out': pesq_out,
         }
         results.append(result)
-    1/0
 
     return results
 
@@ -479,18 +480,22 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='Run Echo-aware Beamformers')
-    parser.add_argument(
-        '-a', '--arr', help='Which array?', required=True, type=int)
-    parser.add_argument(
-        '-d', '--data', help='Real or Synthetic?', required=True, type=str)
-    parser.add_argument(
-        '-D', '--dataset', help='Which dataset? from 0 to 6', required=True, type=int)
+    parser.add_argument('-a', '--array', help='Which array?', required=True, type=int)
+    parser.add_argument('-d', '--data', help='Real or Synthetic?', required=True, type=str)
+    parser.add_argument('-D', '--dataset', help='Which dataset? from 0 to 6', required=True, type=int)
+    parser.add_argument('-R', '--render', help='render?', required=False, type=bool, default=False)
+    parser.add_argument('-N', '--snr', help='SNR input [dB]', required=True, type=int)
+    parser.add_argument('-I', '--sir', help='SIR input [dB]', required=True, type=int)
+
 
     args = vars(parser.parse_args())
 
     data = args['data']
     dataset_idx = args['dataset']
-    arr_idx = args['arr']
+    arr_idx = args['array']
+    render = args['render']
+    snr = args['snr']
+    sir = args['sir']
 
     spk_combs = [(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]
 
@@ -501,54 +506,40 @@ if __name__ == "__main__":
 
     # input('Data are %s\nWanna continue?' % data)
 
-    suffix = 'arr-%d_data-%s_dataset-%d' % (arr_idx, data, dataset_idx)
+    suffix = 'arr-%d_data-%s_dataset-%d_snr-%s_sir_%d' % (arr_idx, data, dataset_idx, snr, sir)
     results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
-
-    res = main(arr_idx, dataset_idx, 0, 1, 10, 10, data, (0,1))
-    1/0
 
     c = 0
     for target_idx in range(4):
         for interf_idx in range(4):
-            for sir in [0, 10, 20]:
-                for snr in [0, 10 , 20]:
-                    for s, spk_comb in enumerate(spk_combs):
+            for s, spk_comb in enumerate(spk_combs):
 
-                        target_idx = 0
-                        interf_idx = 1
+                if target_idx == interf_idx:
+                    continue
 
-                        res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb)
-                        # try:
-                        # except Exception as e:
-                        #     print(e)
-                        #     # input('Continue?')
-                        #     continue
+                res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb, ref_mic=3, render=render)
 
-                        if len(res) == 0:
-                            continue
+                for res_bf in res:
 
-                        for res_bf in res:
+                    results.at[c, 'data'] = data
+                    results.at[c, 'array'] = arr_idx
+                    results.at[c, 'dataset'] = dataset_idx
+                    results.at[c, 'target_idx'] = target_idx
+                    results.at[c, 'interf_idx'] = interf_idx
+                    results.at[c, 'sir'] = sir
+                    results.at[c, 'snr'] = snr
+                    results.at[c, 'spk_comb'] = s
+                    results.at[c, 'bf'] = res_bf['bf']
+                    results.at[c, 'sir_in'] = res_bf['sir_in']
+                    results.at[c, 'snr_in'] = res_bf['snr_in']
+                    results.at[c, 'sdr_in'] = res_bf['sdr_in']
+                    results.at[c, 'sir_out'] = res_bf['sir_out']
+                    results.at[c, 'snr_out'] = res_bf['snr_out']
+                    results.at[c, 'sdr_out'] = res_bf['sdr_out']
+                    results.at[c, 'pesq_in'] = res_bf['pesq_in']
+                    results.at[c, 'pesq_out'] = res_bf['pesq_out']
 
-                            results.at[c, 'data'] = data
-                            results.at[c, 'array'] = arr_idx
-                            results.at[c, 'dataset'] = dataset_idx
-                            results.at[c, 'target_idx'] = target_idx
-                            results.at[c, 'interf_idx'] = interf_idx
-                            results.at[c, 'sir'] = sir
-                            results.at[c, 'snr'] = snr
-                            results.at[c, 'spk_comb'] = s
-                            results.at[c, 'bf'] = res_bf['bf']
-                            results.at[c, 'sar_out'] = res_bf['sar_out']
-                            results.at[c, 'sir_in'] = res_bf['sir_in']
-                            results.at[c, 'snr_in'] = res_bf['snr_in']
-                            results.at[c, 'sdr_in'] = res_bf['sdr_in']
-                            results.at[c, 'sir_out'] = res_bf['sir_out']
-                            results.at[c, 'snr_out'] = res_bf['snr_out']
-                            results.at[c, 'sdr_out'] = res_bf['sdr_out']
-                            results.at[c, 'pesq_in'] = res_bf['pesq_in']
-                            results.at[c, 'pesq_out'] = res_bf['pesq_out']
+                    c += 1
 
-                            c += 1
-
-                        results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
+                results.to_csv(result_dir + '%s_results_%s.csv' % (today, suffix))
     pass
