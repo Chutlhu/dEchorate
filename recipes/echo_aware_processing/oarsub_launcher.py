@@ -145,7 +145,7 @@ def main():
                     for sir in SIR_IT:
 
                         # python command
-                        cmd = '%s -array %d -data %s -dataset %s --snr %d --sir %d' % (CMD, arr, data, room, snr, sir)
+                        cmd = '%s --array %d --data %s --dataset %s --snr %d --sir %d' % (CMD, arr, data, room, snr, sir)
 
                         # create bash wrapper script
                         filename = write_bash_file(cmd, "./run_job%d.sh" % (c))
