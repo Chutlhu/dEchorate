@@ -11,15 +11,12 @@ from itertools import product
 SHORTNAME = 'dEchoRake'
 CMD = 'python recipes/echo_aware_processing/main_dechorake.py.py '
 ARR_IT = [0, 2, 4]
-DATA_IT = ['real', 'synth']
+DATA_IT = ['real', 'synt']
 ROOM_IT = [0, 3, 5]
 SNR_IT = [0, 10, 20]
 SIR_IT = [0, 10, 20]
 
 N_SAMPLES = len(ARR_IT) * len(DATA_IT) * len(ROOM_IT) * len(SNR_IT) * len(SIR_IT)
-
-n_cores = 2
-n_hours = 10
 
 ###############
 # AUXILIARY FUN
@@ -154,7 +151,7 @@ def main():
                         filename = write_bash_file(cmd, "./run_job%d.sh" % (c))
 
                         #compute resources (n_core, time) for the job
-                        n_cores, max_duration_hours = n_cores, n_hours
+                        n_cores, max_duration_hours = 2, 10
                         wcmd = gen_wrapper_command(
                             filename,                       # path to the binar
                             SHORTNAME + str(c),             # shortname for JOBID
