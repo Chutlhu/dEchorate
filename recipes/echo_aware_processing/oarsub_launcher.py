@@ -9,7 +9,7 @@ from time import sleep
 from itertools import product
 
 SHORTNAME = 'dEchoRake'
-CMD = 'python recipes/echo_aware_processing/main_dechorake.py.py '
+CMD = 'python recipes/echo_aware_processing/main_dechorake.py '
 ARR_IT = [0, 2, 4]
 DATA_IT = ['real', 'synt']
 ROOM_IT = [0, 3, 5]
