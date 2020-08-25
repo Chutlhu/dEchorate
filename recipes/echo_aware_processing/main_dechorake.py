@@ -401,7 +401,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         (MVDR(name='rtfMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dRTF[:, :, 0], Sigma_n), dRTF),
         (MVDR(name='ecoMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF[:, :, 0], Sigma_ln), eRTF),
         (LCMV(name='rtfLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dRTF, Sigma_n), dRTF),
-        (LCMV(name='ecoLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF, Sigma_ln2), eRTF),
+        (LCMV(name='ecoLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF, Sigma_ln), eRTF),
     ]
 
     results = []

@@ -20,7 +20,7 @@ List of todos for journal
 - [ ] write TDOA estimation
 - [ ] write Rake Beamformers
   - [ ] write
-  - [x] compute synth data
+  - [ ] compute synth data
   - [ ] compute real data
 - [ ] Edit table existing databases
   - [ ] out voiceHome, in ACE challenge
