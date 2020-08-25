@@ -10,9 +10,9 @@ from itertools import product
 
 SHORTNAME = 'dEchoRake'
 CMD = 'python recipes/echo_aware_processing/main_dechorake.py.py '
-ARR_IT = [0, 1, 2, 3, 4]
+ARR_IT = [0, 2, 4]
 DATA_IT = ['real', 'synth']
-ROOM_IT = [0, 1, 2, 3, 4, 5]
+ROOM_IT = [0, 3, 5]
 SNR_IT = [0, 10, 20]
 SIR_IT = [0, 10, 20]
 
@@ -138,8 +138,8 @@ def main():
     print("\n")
 
     # job counter
-    # submit jobs for all parameters conbination
-    # load first pikle
+    # submit jobs for all parameters combinations
+    # load first pickle
     c = 0
     for arr in ARR_IT:
         for data in DATA_IT:
@@ -165,6 +165,10 @@ def main():
                         sleep(0.2)
                         c += 1
 
+                        if c%25 == 0:
+                            print('Submitted %d/%d' % (c, N_SAMPLES))
+
+    print('Submitted %d/%d' % (c, N_SAMPLES))
     print(" SO LONG AND THANKS FOR THE FISH.")
 # end main
 
