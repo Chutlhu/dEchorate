@@ -49,6 +49,7 @@ class DechorateDataset():
         assert len(dset_note) > 0
         self.dataset_data = dset_rir
         self.dataset_note = dset_note
+        self.dset_code = dset_code
         self.sdset.set_dataset(dset_code)
 
     def set_entry(self, i, j):
@@ -62,6 +63,26 @@ class DechorateDataset():
         self.rir = self.dataset_data['rir/%s/%d' % (wavefile, self.mic_i)][()].squeeze()
         self.rir = self.rir[constants['recording_offset']:]
         return np.arange(len(self.rir))/self.Fs, self.rir
+
+    def get_diffuse_noise(self, duration=20):
+        dset_note = pd.read_csv(self.path_to_note_csv)
+        f, c, w, s, e, n = [int(i) for i in list(self.dset_code)]
+        dset_note = dset_note.loc[
+            (dset_note['room_rfl_floor'] == f)
+            & (dset_note['room_rfl_ceiling'] == c)
+            & (dset_note['room_rfl_west'] == w)
+            & (dset_note['room_rfl_east'] == e)
+            & (dset_note['room_rfl_north'] == n)
+            & (dset_note['room_rfl_south'] == s)
+            & (dset_note['room_fornitures'] == False)
+            & (dset_note['room_fornitures'] == False)
+            & (dset_note['src_id'] == self.src_j + 1)
+            & (dset_note['mic_id'] == self.mic_i + 1)
+            & (dset_note['src_signal'] == 'noise')
+        ]
+        noise_filename = dset_note['filename'].unique()
+        print(noise_filename)
+        1/0
 
     def get_mic_and_src_pos(self):
         self.mic_pos = np.array([self.entry['mic_pos_x'].values + constants['offset_beacon'][0],

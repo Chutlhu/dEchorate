@@ -109,6 +109,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
             rdset.set_entry(m, s)
             mic, src = rdset.get_mic_and_src_pos()
             _, rrir = rdset.get_rir()
+            # diffuse_noise = rdset.get_diffuse_noise(duration=20)
 
             # measure after calibration
             mics[:, i] = note_dict['mics'][:, m]
@@ -198,7 +199,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
                 print(i, j)
                 for k in range(K):
                     t = int(toas_peak[k, i, j]*Fs)
-                    a = np.max(np.abs(rirs_real[t-5:t+5, i, j]))
+                    a = np.max(np.abs(rirs_real[t-10:t+10, i, j]))
                     amps_rirs[k, i, j] = a
 
         amps = amps_rirs
@@ -222,7 +223,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     # Upsampling and stacking
     print('Upsampling for convolution', fs, '-->', Fs)
     s_ = np.concatenate([resample(ss1, fs, Fs)[:, None],
-                        resample(ss2, fs, Fs)[:, None]], axis=1)
+                         resample(ss2, fs, Fs)[:, None]], axis=1)
     print(s_.shape)
 
     Lc = 10*fs
@@ -239,8 +240,8 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
             print(i, j, L)
             c_[:L, i, j] = cs
 
-    # save_to_pickle(curr_dir + 'cs_pkl', c_)
-    # c_ = load_from_pickle(curr_dir + 'cs_pkl')
+    save_to_pickle(curr_dir + 'cs_pkl', c_)
+    c_ = load_from_pickle(curr_dir + 'cs_pkl')
 
     print('Done.')
 
@@ -299,6 +300,7 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     fend = 7500  # Hz
     assert r == ref_mic
 
+
     # stft of the spatial images
     CS1 = stft(cs1.T, Fs=Fs, nfft=nfft, hop=hop)[-1]
     CS2 = stft(cs2.T, Fs=Fs, nfft=nfft, hop=hop)[-1]
@@ -316,38 +318,70 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     cdnin = istft(CDN[:, :, r], Fs=Fs, nfft=nfft, hop=hop)[-1].real
     assert np.allclose(xin, cs1in + cs2in + cdnin)
 
-
-    print('gved-based RTF.')
-    dRTF = np.zeros([nrfft, I, J], dtype=np.complex)
-    for j, src in enumerate(['target', 'interf']):
-        for i in range(I):
-            if i == r:
-                dRTF[:, r, j] = np.ones(nrfft)
-            else:
-                mi = x[vad[src][0]:vad[src][1], i]
-                mr = x[vad[src][0]:vad[src][1], r]
-                nd = x[vad['noise'][0]:vad['noise'][1], [r, i]]
-                dRTF[:, i, j] = estimate_rtf(mi, mr, 'gevdRTF', 'full', Lh=None, n=nd,
-                                            Fs=fs, nfft=nfft, hop=hop)
-    print('... done.')
-
+    assert Fs == 48000
+    assert fs == 16000
     freqs = np.linspace(0, fs//2, F)
     omegas = 2*np.pi*freqs
 
-    print('echo-based RTF:')
-    eRTF = np.zeros([F, I, J], dtype=np.complex)
-    for j in range(J):
-        for i in range(I):
-            if i == r:
-                eRTF[:, r, j] = np.ones(nrfft)
-            else:
-                assert len(amps[:, i, j]) == K
-                assert len(toas[:, i, j]) == K
+    print('full measured and synthetic RTF')
+    gevdRTF = np.zeros([nrfft, I, J], dtype=np.complex)
+    syntRTF = np.zeros_like(gevdRTF)
+    rakeRTF = np.zeros_like(gevdRTF)
+    for j, src in enumerate(['target', 'interf']):
 
-                Hr = rake_filter(amps[:, r, j], toas[:, r, j], omegas)
+        Hr = rake_filter(amps[:, r, j], toas[:, r, j], omegas)
+        hr = resample(rirs_synt[:, r, j], Fs, fs)
+
+        for i in range(I):
+
+            if i == r:
+                gevdRTF[:, r, j] = np.ones(nrfft, dtype=np.complex)
+                syntRTF[:, r, j] = np.ones(nrfft, dtype=np.complex)
+                rakeRTF[:, r, j] = np.ones(nrfft, dtype=np.complex)
+
+            else:
+                # measured RTF
+                mi = x[vad[src][0]:vad[src][1], i]
+                mr = x[vad[src][0]:vad[src][1], r]
+                nd = x[vad['noise'][0]:vad['noise'][1], [r, i]]
+                gevdRTF[:, i, j] = estimate_rtf(mi, mr, 'gevdRTF', 'full', Lh=None, n=nd, Fs=fs, nfft=nfft, hop=hop)
+                # synthetic RTF
+                hi = resample(rirs_synt[:, i, j], Fs, fs)
+                syntRTF[:, i, j] = estimate_rtf(hi, hr, 'xcrsRTF', 'full', Lh=None, Fs=fs, nfft=nfft, hop=hop)
+                # early closed RTF
                 Hi = rake_filter(amps[:, i, j], toas[:, i, j], omegas)
-                eRTF[:, i, j] = Hi / Hr
+                rakeRTF[:, i, j] = Hi / Hr
+
     print('... done.')
+
+    # print('gved-based RTF.')
+    # dRTF = np.zeros([nrfft, I, J], dtype=np.complex)
+    # for j, src in enumerate(['target', 'interf']):
+    #     for i in range(I):
+    #         if i == r:
+    #             dRTF[:, r, j] = np.ones(nrfft)
+    #         else:
+    #             mi = x[vad[src][0]:vad[src][1], i]
+    #             mr = x[vad[src][0]:vad[src][1], r]
+    #             nd = x[vad['noise'][0]:vad['noise'][1], [r, i]]
+    #             dRTF[:, i, j] = estimate_rtf(mi, mr, 'gevdRTF', 'full', Lh=None, n=nd,
+    #                                         Fs=fs, nfft=nfft, hop=hop)
+    # print('... done.')
+
+    # print('echo-based RTF:')
+    # eRTF = np.zeros([F, I, J], dtype=np.complex)
+    # for j in range(J):
+    #     for i in range(I):
+    #         if i == r:
+    #             eRTF[:, r, j] = np.ones(nrfft)
+    #         else:
+    #             assert len(amps[:, i, j]) == K
+    #             assert len(toas[:, i, j]) == K
+
+    #             Hr = rake_filter(amps[:, r, j], toas[:, r, j], omegas)
+    #             Hi = rake_filter(amps[:, i, j], toas[:, i, j], omegas)
+    #             eRTF[:, i, j] = Hi / Hr
+    # print('... done.')
 
 
     print('direct-path-based RTF:')
@@ -366,6 +400,8 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
     xn = x[vad['noise'][0]:vad['noise'][1], :]
     # mix with target only
     xs = x[vad['target'][0]:vad['target'][1], :]
+    # mix with interf only
+    xq = x[vad['interf'][0]:vad['interf'][1], :]
 
     # computed Sigma_n from noise-only
     Sigma_n = np.zeros([F, I, I], dtype=np.complex64)
@@ -375,33 +411,40 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         Sigma_n[f, :, :] = np.cov(XN[f, :, :].T)
     print('Done with noise covariance.')
 
+    # computed Sigma_ni from interf-only
+    Sigma_nq = np.zeros([F, I, I], dtype=np.complex64)
+    XNQ = stft(xq.T, Fs=Fs, nfft=nfft, hop=hop)[-1]
+    XNQ = XNQ.transpose([1, 2, 0])
+    for f in range(F):
+        Sigma_nq[f, :, :] = np.cov(XNQ[f, :, :].T)
+    print('Done with noise covariance.')
+
     # compute early and late PSD
-    PSDs1, PSDr1, PSDl1, COVn1 = estimates_PSDs_PSDr_from_RTF(
-        eRTF[:, :, 0],
+    PSDs1, PSDr1, PSDl1, COVn = estimates_PSDs_PSDr_from_RTF(
+        rakeRTF[:, :, 0],
         xs, xn,
         mic_pos, ref_mic = ref_mic,
         Fs=fs, nrfft=F, hop=hop, fstart=fstart, fend=fend, speed_of_sound=constants['speed_of_sound'])
-    PSDs2, PSDr2, PSDl2, COVn2 = estimates_PSDs_PSDr_from_RTF(
-        eRTF[:, :, 1],
-        xs, xn,
-        mic_pos, ref_mic=ref_mic,
-        Fs=fs, nrfft=F, hop=hop, fstart=fstart, fend=fend, speed_of_sound=constants['speed_of_sound'])
 
-    assert np.allclose(COVn1[200:800, :, :],  Sigma_n[200:800, :, :])
-    assert np.allclose(COVn2[200:800, :, :],  Sigma_n[200:800, :, :])
+    assert np.allclose(COVn[200:800, :, :],  Sigma_n[200:800, :, :])
 
-    Sigma_ln = np.zeros_like(COVn1)
-    Sigma_ln2 = np.zeros_like(COVn1)
+    Sigma_ln = np.zeros_like(Sigma_n)
+    Sigma_lnq = np.zeros_like(Sigma_nq)
     for f in range(F):
-        Sigma_ln[f, :, :] = COVn1[f, :, :] + PSDl1[f, :, :]
-        Sigma_ln2[f, :, :] = COVn1[f, :, :] + PSDl1[f, :, :] + PSDl2[f, :, :]
+        Sigma_ln[f, :, :] = Sigma_n[f, :, :] + PSDl1[f, :, :]
+        Sigma_lnq[f, :, :] = Sigma_nq[f, :, :] + PSDl1[f, :, :]
 
     bfs = [
-        (DS(name='dpDS', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0]), dRTF),
-        (MVDR(name='rtfMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dRTF[:, :, 0], Sigma_n), dRTF),
-        (MVDR(name='ecoMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF[:, :, 0], Sigma_ln), eRTF),
-        (LCMV(name='rtfLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dRTF, Sigma_n), dRTF),
-        (LCMV(name='ecoLCMV', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(eRTF, Sigma_ln), eRTF),
+        # DS
+        (DS(name='dpDS', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0]), dpTF),
+        # MVDR
+        (MVDR(name='gevdMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(gevdRTF[:, :, 0], Sigma_n), gevdRTF),
+        (MVDR(name='syntMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(syntRTF[:, :, 0], Sigma_n), syntRTF),
+        (MVDR(name='rakeMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_n), rakeRTF),
+        (MVDR(name='lateMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_ln), rakeRTF),
+        (MVDR(name='minrMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_nq), rakeRTF),
+        (MVDR(name='linrMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_lnq), rakeRTF),
+
     ]
 
     results = []
@@ -442,21 +485,22 @@ def main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data_kind, spk_
         pesq_out = metrics(xout[time], cs1in[time], rate=fs)['pesq'][0]
         print('PESQ', pesq_in, '-->', pesq_out, ':', pesq_out - pesq_in)
 
-        suffix = 'data/interim/wav/data-%s_bf-%s_' % (data_kind, bf)
+        prefix = 'data/interim/wav/'
+        suffix = '_data-%s_bf-%s' % (data_kind, bf)
 
         gin = np.abs(np.max(xin))
         gout = np.abs(np.max(xout))
 
 
         if render:
-            sf.write(curr_dir + suffix + 'x_out.wav', xout/gout, fs)
-            sf.write(curr_dir + suffix + 'cs1_out.wav', cs1out/gout, fs)
-            sf.write(curr_dir + suffix + 'cs2_out.wav', cs2out/gout, fs)
-            sf.write(curr_dir + suffix + 'cdn_out.wav', cdnout/gout, fs)
-            sf.write(curr_dir + suffix + 'x_in.wav', xin/gin, fs)
-            sf.write(curr_dir + suffix + 'cs1_in.wav', cs1in/gin, fs)
-            sf.write(curr_dir + suffix + 'cs2_in.wav', cs2in/gin, fs)
-            sf.write(curr_dir + suffix + 'cdn_in.wav', cdnin/gin, fs)
+            sf.write(curr_dir + prefix + 'x_out' + suffix + '.wav', xout/gout, fs)
+            sf.write(curr_dir + prefix + 'cs1_out' + suffix + '.wav', cs1out/gout, fs)
+            sf.write(curr_dir + prefix + 'cs2_out' + suffix + '.wav', cs2out/gout, fs)
+            sf.write(curr_dir + prefix + 'cdn_out' + suffix + '.wav', cdnout/gout, fs)
+            sf.write(curr_dir + prefix + 'x_in' + suffix + '.wav', xin/gin, fs)
+            sf.write(curr_dir + prefix + 'cs1_in' + suffix + '.wav', cs1in/gin, fs)
+            sf.write(curr_dir + prefix + 'cs2_in' + suffix + '.wav', cs2in/gin, fs)
+            sf.write(curr_dir + prefix + 'cdn_in' + suffix + '.wav', cdnin/gin, fs)
 
 
         result = {
@@ -518,6 +562,7 @@ if __name__ == "__main__":
                     continue
 
                 res = main(arr_idx, dataset_idx, target_idx, interf_idx, sir, snr, data, spk_comb, ref_mic=3, render=render)
+                1/0
 
                 for res_bf in res:
 

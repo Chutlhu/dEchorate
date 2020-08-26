@@ -73,4 +73,4 @@ def enforce_toeplitz(A):
 
 
 def resample(x, old_fs, new_fs):
-    return lr.resample(x.T, old_fs, new_fs).T
+    return lr.resample(np.asfortranarray(x), old_fs, new_fs).T
