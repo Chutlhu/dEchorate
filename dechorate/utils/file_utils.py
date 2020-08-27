@@ -1,3 +1,4 @@
+import os
 import pickle as pkl
 from scipy.io import loadmat, savemat
 
@@ -18,3 +19,7 @@ def save_to_matlab(filename, obj):
     if not isinstance(obj, dict):
         raise ValueError('Object must be a dict of np arrays')
     return savemat(filename, obj)
+
+
+def make_dirs(path):
+    os.makedirs(path, exist_ok=True)

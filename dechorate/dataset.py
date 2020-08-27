@@ -5,7 +5,7 @@ import pyroomacoustics as pra
 
 from dechorate import constants
 from dechorate.utils.acu_utils import rt60_with_sabine, rt60_from_rirs
-
+from dechorate.utils.dsp_utils import resample
 
 class DechorateDataset():
 
@@ -58,11 +58,15 @@ class DechorateDataset():
         self.entry = self.dataset_note.loc[(
             self.dataset_note['src_id'] == j+1) & (self.dataset_note['mic_id'] == i+1)]
 
-    def get_rir(self):
+    def get_rir(self, Fs=None):
         wavefile = self.entry['filename'].values[0]
-        self.rir = self.dataset_data['rir/%s/%d' % (wavefile, self.mic_i)][()].squeeze()
-        self.rir = self.rir[constants['recording_offset']:]
-        return np.arange(len(self.rir))/self.Fs, self.rir
+        rir = self.dataset_data['rir/%s/%d' % (wavefile, self.mic_i)][()].squeeze()
+        rir = rir[constants['recording_offset']:]
+        if not Fs is None:
+            print('Resampling %d --> %d' % (self.Fs, Fs))
+            rir = resample(rir, self.Fs, Fs)
+        self.rir = rir
+        return rir
 
     def get_diffuse_noise(self, duration=20):
         dset_note = pd.read_csv(self.path_to_note_csv)
