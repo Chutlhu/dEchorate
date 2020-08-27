@@ -506,7 +506,7 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
             'drr_out' : drr_out,
         }
         results.append(result)
-        
+
     return results
 
 
