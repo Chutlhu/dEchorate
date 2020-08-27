@@ -184,6 +184,8 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
     mic_pos = mics
     arr_pos = np.mean(mics, 1)
     tgt_pos = srcs[:, 0:1]
+    distance = np.linalg.norm(tgt_pos - mic_pos[:, r])
+    print('Distance ::', distance)
 
     ###########################################################################
     ##   MAKE FILTERS
@@ -228,13 +230,13 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
                 amps[:, i, j] = ak[indices[:K], i, j]
                 toas[:, i, j] = tk[indices[:K], i, j]
 
-    # # compute rt60
-    # rt60s = np.zeros([I, J])
-    # for i in range(I):
-    #     for j in range(J):
-    #         # plt.plot(normalize(rirs_synt[:, i, j]))
-    #         rt60s[i,j] = pra.measure_rt60(h_full[:, i, j], fs=fs)
-
+    # compute rt60
+    rt60s = np.zeros([I, J])
+    for i in range(I):
+        for j in range(J):
+            # plt.plot(normalize(rirs_synt[:, i, j]))
+            rt60s[i,j] = pra.measure_rt60(h_full[:, i, j], fs=fs)
+    rt60 = np.mean(rt60s.flatten())
     # tmix = np.floor(2e-3 * np.sqrt(room_size[]) * fs)
 
 
@@ -282,8 +284,8 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
                 cs[part][:L, i, j] = c[:L]
 
     cs['full'] = cs['early'] + cs['late']
-    save_to_pickle(curr_dir + 'cs_pkl', cs)
-    cs = load_from_pickle(curr_dir + 'cs_pkl')
+    # save_to_pickle(curr_dir + 'cs_pkl', cs)
+    # cs = load_from_pickle(curr_dir + 'cs_pkl')
 
     # sf.write(path_to_results + 'cs_full.wav', cs['full'][:, r, 0], fs)
     # sf.write(path_to_results + 'cs_late.wav', cs['late'][:, r, 0], fs)
@@ -458,9 +460,9 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
         snr_out = snr_dB(cse_out, cn_out, time)
         print('SNR', snr_in, '-->', snr_out, ':', snr_out - snr_in)
 
-        # sdr_in = snr_dB(ref_in, x_in - ref_in, time)
-        # sdr_out = snr_dB(ref_out, x_out - ref_out, time)
-        # print('SDR', sdr_in, '-->', sdr_out, ':', sdr_out - sdr_in)
+        drr_in = snr_dB(ref_in, csf_in, time)
+        drr_out = snr_dB(ref_out, csf_out, time)
+        print('DRR', drr_in, '-->', drr_out, ':', drr_out - drr_in)
 
         snrr_in = snr_dB(ref_in, cn_in + csl_in, time)
         snrr_out = snr_dB(ref_out, cn_out + csl_out, time)
@@ -473,6 +475,7 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
         srmr_in = metrics(x_in[time], ref_in[time], rate=fs)['srmr'][0]
         srmr_out = metrics(x_out[time], ref_in[time], rate=fs)['srmr'][0]
         print('SRMR', srmr_in, '-->', srmr_out, ':', srmr_out - srmr_in)
+
 
         suffix = '_data-%s_bf-%s' % (data_kind, bf)
 
@@ -497,9 +500,13 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
             'pesq_out': pesq_out,
             'srmr_in': srmr_in,
             'srmr_out': srmr_out,
+            'rt60' : rt60,
+            'distance' : distance,
+            'drr_in' : drr_in,
+            'drr_out' : drr_out,
         }
         results.append(result)
-
+        
     return results
 
 
@@ -556,6 +563,10 @@ if __name__ == "__main__":
                 results.at[c, 'srmr_out'] = res_bf['srmr_out']
                 results.at[c, 'pesq_in'] = res_bf['pesq_in']
                 results.at[c, 'pesq_out'] = res_bf['pesq_out']
+                results.at[c, 'rt60'] = res_bf['rt60']
+                results.at[c, 'distance'] = res_bf['distance']
+                results.at[c, 'drr_in'] = res_bf['drr_in']
+                results.at[c, 'drr_out'] = res_bf['drr_out']
 
                 c += 1
 

@@ -10,13 +10,12 @@ from itertools import product
 
 SHORTNAME = 'dEchoRake'
 CMD = 'python recipes/echo_aware_processing/main_dechorake.py '
-ARR_IT = [0, 2, 4]
+ARR_IT = [0, 1, 2, 3, 4, 5]
 DATA_IT = ['real', 'synt']
-ROOM_IT = [0, 3, 5]
+ROOM_IT = [1, 3, 5]
 SNR_IT = [0, 10, 20]
-SIR_IT = [0, 10, 20]
 
-N_SAMPLES = len(ARR_IT) * len(DATA_IT) * len(ROOM_IT) * len(SNR_IT) * len(SIR_IT)
+N_SAMPLES = len(ARR_IT) * len(DATA_IT) * len(ROOM_IT) * len(SNR_IT)
 
 ###############
 # AUXILIARY FUN
@@ -142,10 +141,8 @@ def main():
         for data in DATA_IT:
             for room in ROOM_IT:
                 for snr in SNR_IT:
-                    for sir in SIR_IT:
 
-                        # python command
-                        cmd = '%s --array %d --data %s --dataset %s --snr %d --sir %d' % (CMD, arr, data, room, snr, sir)
+                        cmd = '%s --array %d --data %s --dataset %s --snr %d --rake 4' % (CMD, arr, data, room, snr)
 
                         # create bash wrapper script
                         filename = write_bash_file(cmd, "./run_job%d.sh" % (c))
