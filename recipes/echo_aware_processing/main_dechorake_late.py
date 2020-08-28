@@ -235,8 +235,11 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
     for i in range(I):
         for j in range(J):
             # plt.plot(normalize(rirs_synt[:, i, j]))
-            rt60s[i,j] = pra.measure_rt60(h_full[:, i, j], fs=fs)
-    rt60 = np.mean(rt60s.flatten())
+            try:
+                rt60s[i, j] = pra.measure_rt60(h_full[:, i, j], fs=fs)
+            except:
+                rt60s[i, j] = np.nan
+    rt60 = np.nanmean(rt60s.flatten())
     # tmix = np.floor(2e-3 * np.sqrt(room_size[]) * fs)
 
 
@@ -249,7 +252,7 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
             m = int(np.max(toas[:, i, j])*Fs+10)
             if i == ref_mic:
                 tmix_ref_smpl = m
-            h_late[:int(0.1*fs), i, j] = 0
+            h_late[:m + int(0.05*fs), i, j] = 0
             h_early[m:, i, j] = 0
 
             # plt.plot(np.abs(h_full[:, i, j]), alpha=0.7)
@@ -305,8 +308,11 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
     try:
         dn = np.load(dn_name)
     except:
-        dn = diffuse_noise(mic_pos, cs['full'].shape[0], fs, c=343, N=32, mode='sphere').T
+        L = 20*fs
+        dn = diffuse_noise(mic_pos, L, fs, c=343, N=32, mode='sphere').T
         np.save(dn_name, dn)
+
+    dn = dn[:cs['full'].shape[0], :]
 
     # and unit-variance with respect to the ref mic
     dn = dn / np.std(dn[:, r])
