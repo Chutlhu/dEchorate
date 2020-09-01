@@ -62,11 +62,29 @@ class DechorateDataset():
         wavefile = self.entry['filename'].values[0]
         rir = self.dataset_data['rir/%s/%d' % (wavefile, self.mic_i)][()].squeeze()
         rir = rir[constants['recording_offset']:]
-        if not Fs is None:
+        if not Fs is None and Fs != self.Fs:
             print('Resampling %d --> %d' % (self.Fs, Fs))
             rir = resample(rir, self.Fs, Fs)
         self.rir = rir
         return rir
+
+    def get_file_database_id(self, src_signal):
+        dset_note = pd.read_csv(self.path_to_note_csv)
+        f, c, w, s, e, n = [int(i) for i in list(self.dset_code)]
+        dset_note = dset_note.loc[
+            (dset_note['room_rfl_floor'] == f)
+            & (dset_note['room_rfl_ceiling'] == c)
+            & (dset_note['room_rfl_west'] == w)
+            & (dset_note['room_rfl_east'] == e)
+            & (dset_note['room_rfl_north'] == n)
+            & (dset_note['room_rfl_south'] == s)
+            & (dset_note['room_fornitures'] == False)
+            & (dset_note['src_id'] == self.src_j + 1)
+            & (dset_note['mic_id'] == self.mic_i + 1)
+            & (dset_note['src_signal'] == src_signal)
+        ]
+        for filename in dset_note['filename']:
+            yield filename
 
     def get_diffuse_noise(self, duration=20):
         dset_note = pd.read_csv(self.path_to_note_csv)
@@ -78,7 +96,6 @@ class DechorateDataset():
             & (dset_note['room_rfl_east'] == e)
             & (dset_note['room_rfl_north'] == n)
             & (dset_note['room_rfl_south'] == s)
-            & (dset_note['room_fornitures'] == False)
             & (dset_note['room_fornitures'] == False)
             & (dset_note['src_id'] == self.src_j + 1)
             & (dset_note['mic_id'] == self.mic_i + 1)
