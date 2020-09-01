@@ -61,7 +61,6 @@ for t in target_idxs:
         L = constants['rir_length']
         Fs = constants['Fs']
         c = constants['speed_of_sound']
-        L = constants['rir_length']
 
         # which dataset?
         dset = constants['datasets'][d]
