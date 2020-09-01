@@ -7,7 +7,6 @@ from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-
 from scipy.spatial import distance
 
 from dechorate import constants
