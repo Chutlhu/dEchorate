@@ -100,3 +100,4 @@ runs/
 recipes/echo_aware_processing/data_notebook.pkl
 recipes/acoustic_echo_retrieval/data/interim/synt/*
 recipes/dataset_analysis/*.wav
+recipes/dataset_analysis/*.zip

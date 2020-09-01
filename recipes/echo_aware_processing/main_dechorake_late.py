@@ -428,12 +428,13 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
         Sigma_ln[f, :, :] = Sigma_n[f, :, :] + 0.5*PSDl1[f, :, :]
 
     bfs = [
-        # DS
-        (DS(name='dpDS', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0]), dpTF),
-        # MVDR
-        (MVDR(name='gevdMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(gevdRTF[:, :, 0], Sigma_n), gevdRTF),
-        (MVDR(name='rakeMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_n), rakeRTF),
-        (MVDR(name='lateMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_ln), rakeRTF),
+        # # DS
+        # (DS(name='dpDS', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0]), dpTF),
+        # # MVDR
+        # (MVDR(name='gevdMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(gevdRTF[:, :, 0], Sigma_n), gevdRTF),
+        # (MVDR(name='rakeMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_n), rakeRTF),
+        # (MVDR(name='lateMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_ln), rakeRTF),
+        (MVDR(name='rakelateMVDR', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0], Sigma_ln), rakeRTF),
     ]
 
     results = []
@@ -544,7 +545,7 @@ if __name__ == "__main__":
 
     # input('Data are %s\nWanna continue?' % data)
 
-    suffix = 'arr-%d_data-%s_dataset-%d_snr-%d_rake-%d' % (arr_idx, data, dataset_idx, snr, rake)
+    suffix = 'arr-%d_data-%s_dataset-%d_snr-%d_rake-%d_bf-DSLate' % (arr_idx, data, dataset_idx, snr, rake)
     results.to_csv(path_to_results + '%s_results_%s.csv' % (today, suffix))
 
     c = 0
