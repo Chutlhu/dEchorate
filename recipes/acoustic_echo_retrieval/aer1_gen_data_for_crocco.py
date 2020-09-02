@@ -7,7 +7,7 @@ from itertools import permutations
 from dechorate import constants
 from dechorate.dataset import DechorateDataset, SyntheticDataset
 from dechorate.utils.file_utils import *
-from dechorate.utils.dsp_utils import normalize, resample
+from dechorate.utils.dsp_utils import normalize, resample, envelope
 
 from blaster.blaster import Blaster
 from blaster.channel import Channel, anchor_hp
@@ -18,7 +18,7 @@ from mir_eval.onset import evaluate
 
 curr_dir = './recipes/acoustic_echo_retrieval/'
 
-exp = 'synt'
+exp = 'xval'
 
 dataset_dir = './data/dECHORATE/'
 path_to_processed = './data/processed/'
@@ -50,7 +50,7 @@ for t in target_idxs:
         arr_idx = 2
         data_kind = 1
         target_idx = t
-        k_to_rake = 7
+        k_to_rake = 21
 
         print('arr_idx', arr_idx)
         print('data_kind', data_kind)
@@ -93,7 +93,6 @@ for t in target_idxs:
         rdset.set_dataset(dset)
         rdset.set_entry(15, s)
         mic_pos, src_pos = rdset.get_mic_and_src_pos()
-        rrir = rdset.get_rir(Fs=Fs)
         filename = list(rdset.get_file_database_id('noise'))[0]
 
         wav_bytes = archive.read('room-%s/%s.wav' % (dset, filename))
@@ -122,7 +121,8 @@ for t in target_idxs:
         toas = np.zeros([K, I, J])
         toas_cmds = np.zeros([K, I, J])
         amps_cmds = np.zeros([K, I, J])
-        toas_peak = np.zeros([7, I, J])
+        toas_peak = np.zeros([K, I, J])
+        amps_peak = np.zeros([K, I, J])
 
         for i, m in enumerate(mics_idxs):
             for j, s in enumerate(srcs_idxs):
@@ -141,7 +141,7 @@ for t in target_idxs:
                 # get synthetic rir
                 sdset = SyntheticDataset()
                 sdset.set_room_size(constants['room_size'])
-                sdset.set_dataset(dset, absb=0.7, refl=0.2)
+                sdset.set_dataset(dset, absb=0.7, refl=0.3)
                 sdset.set_c(c)
                 sdset.set_fs(Fs)
                 sdset.set_k_order(30)
@@ -162,17 +162,42 @@ for t in target_idxs:
                 rirs_real[:Lr, i, j] = rrir[:Lr]
                 rirs_synt[:Ls, i, j] = srir[:Ls]
 
-                # ordering in note dict
-                toas_peak[:7, i, j] = note_dict['toa_pck'][:7, m, s]
-                toas_cmds[:K, i, j] = tk[:K]
-                amps_cmds[:K, i, j] = ak[:K]
+                # # ordering in note dict
+                # toas_peak[:7, i, j] = note_dict['toa_pck'][:7, m, s]
+                # toas_cmds[:K, i, j] = tk[:K]
+                # amps_cmds[:K, i, j] = ak[:K]
+
+                # # with annotation?
+                # tk = toas_cmds
+                # # restore amps based on direct path eight
+                # ak = np.zeros_like(tk)
+                # for k in range(len(tk[:,i,j])):
+                #     curr_t = int(tk[k, i, j]*Fs)
+                #     curr_a = np.max(envelope(rirs_real[curr_t-10:curr_t+10, i, j]))
+                #     ak[k, i, j] = curr_a
+
+                # # order for location
+                # if tk_ordering == 'earliest':
+                #     indices = np.argsort(tk[:, i, j])
+                # elif tk_ordering == 'pra_order':
+                #     indices = [0, 1, 2, 3, 4, 5, 6]
+                # elif tk_ordering == 'strongest':
+                #     indices = np.argsort(np.abs(ak[:, i, j]))[::-1]
+                # else:
+                #     raise ValueError('Wrong ordering option')
+
+                # amps_peak[:, i, j] = ak[indices[:K], i, j]
+                # toas_peak[:, i, j] = tk[indices[:K], i, j]
 
         print('done with the extraction')
 
-        plt.plot(rirs_real[:, 0, 0], alpha=0.2)
-        plt.plot(rirs_synt[:, 0, 0], alpha=0.2)
-        plt.scatter(toas_cmds[:, 0, 0]*Fs, amps_cmds[:, 0, 0])
-        plt.scatter(toas_peak[:, 0, 0]*Fs, amps_cmds[:, 0, 0])
+        # plt.plot(np.abs(rirs_real[:, 0, 0]), alpha=0.2)
+        # plt.plot(np.abs(rirs_synt[:, 0, 0]), alpha=0.2)
+        # plt.scatter(toas_cmds[:, 0, 0]*Fs, amps_cmds[:, 0, 0])
+        # plt.scatter(toas_peak[:, 0, 0]*Fs, amps_peak[:, 0, 0])
+        # plt.show()
+
+        # 1/0
 
         L = 4*Fs
         src = np.random.randn(L)
@@ -189,16 +214,12 @@ for t in target_idxs:
         croccodict = {
             'observation_rec': obs_rec,
             'observation_synt': obs_synt,
-            # 'observation_real': obs_real,
-            # 'rirs_real': rirs_real,
-            # 'rirs_synt': rirs_synt,
+            'rirs_real': rirs_real,
+            'rirs_synt': rirs_synt,
             'dataset' : dset,
             'target' : t,
             'mics': mics,
             'srcs': srcs,
-            'toas_synt': toas_cmds,
-            'toas_peak': toas_peak,
-            'amps_synt': amps_cmds,
             'Fs': Fs,
         }
 
