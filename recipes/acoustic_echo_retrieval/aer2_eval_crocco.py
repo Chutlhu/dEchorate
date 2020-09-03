@@ -34,7 +34,7 @@ n_mics = [2,4,6]
 targets = [0, 1, 2, 3]
 datasets = [(2, '011000'), (4, '011110'), (5, '011111')]
 data = ['synt', 'real']
-thrs_smpl = [1, 3, 5]
+thrs_smpl = [5]
 lambdas = [0.001, 0.005, 0.01, 0.02, 0.05]
 
 results = pd.DataFrame()
@@ -42,64 +42,39 @@ results = pd.DataFrame()
 
 def eval_aer(path_to_results, path_to_data, thr_smpl):
 
-    estimated_toas = load_from_matlab(path_to_results)['toas_est'][0]
+    reference_toas = load_from_matlab(path_to_results)['toas_est'][0]
+    print(reference_toas)
+    print(reference_toas[0])
+    reference_toas = np.concatenate(reference_toas, axis=1).reshape([K, 2])
 
-    # compute the ground truth
+    estimated_toas = load_from_matlab(path_to_results)['toas_ref'][0]
+    print(estimated_toas)
+    estimated_toas = np.concatenate(estimated_toas, axis=1).reshape([K, 2])
 
-    if 'real' in path_to_results:
-        rirs = load_from_matlab(path_to_data)['rirs_real']
-    elif 'synt' in path_to_results:
-        rirs = load_from_matlab(path_to_data)['rirs_synt']
-    else:
-        raise ValueError('Not right rirs')
 
-    M = len(estimated_toas)
-
-    reference_toas = []
-    for i in range(M):
-        x = np.abs(rirs[:, i, 0])**2
-        # find peaks in the RIRs
-        peaks, _ = find_peaks(x)
-        amps = x[peaks]
-
-        sort_amps_index = np.argsort(amps)[::-1][:K]
-        taus = peaks[sort_amps_index]
-        amps = amps[sort_amps_index]
-
-        sort_taus_index = np.argsort(taus)
-        taus = taus[sort_taus_index]
-
-        reference_toas.append(taus)
 
     # remove global delay
-    reference_toas_min = np.min([np.min(x) for x in reference_toas])
-    estimated_toas_min = np.min([np.min(x) for x in estimated_toas])
-
-    print(reference_toas)
-    print(estimated_toas)
-    1/0
+    reference_toas = reference_toas - np.min(reference_toas)
+    estimated_toas = estimated_toas - np.min(estimated_toas)
 
     # search for the best permutation of channel
     perms = []
-    fmeasures_perm = []
+    precisions_perm = []
     for perm in permutations(range(M)):
-        fmeasures_chan = []
+        precisions_chan = []
         for m in range(M):
-            ref = np.array(reference_toas[perm[m]]).reshape([K]) - reference_toas_min
 
-            est = np.array(estimated_toas[m]) - estimated_toas_min
-            est = est.reshape([np.size(est)])
-            if len(est) > 1:
-                est = np.sort(est)
+            ref = reference_toas[:, m]
+            est = estimated_toas[:, perm[m]]
 
             tmp_scores = evaluate(ref, est, window=thr_smpl)
-            fmeasures_chan.append(tmp_scores['F-measure'])
+            precisions_chan.append(tmp_scores['Precision'])
 
-        fmeasures_perm.append(np.sum(fmeasures_chan))
+        precisions_perm.append(np.sum(precisions_chan))
         perms.append(perm)
 
-    best_perm = perms[np.argmax(fmeasures_perm)]
-    fmeasure = fmeasures_perm[np.argmax(fmeasures_perm)]
+    best_perm = perms[np.argmax(precisions_perm)]
+    best_precision = precisions_perm[np.argmax(precisions_perm)]
 
     # print results for the best match
     mean_f = []
@@ -108,13 +83,9 @@ def eval_aer(path_to_results, path_to_data, thr_smpl):
     mean_e = []
 
     for m in range(M):
-        ref = np.array(reference_toas[perm[m]]).reshape([K]) - reference_toas_min
-        ref = np.sort(ref)
 
-        est = np.array(estimated_toas[m]) - estimated_toas_min
-        est = est.reshape([np.size(est)])
-        if len(est) > 1:
-            est = np.sort(est)
+        ref = reference_toas[:, m]
+        est = estimated_toas[:, best_perm[m]]
 
         # F, P, M
         chan_scores = evaluate(ref, est, window=thr_smpl)
