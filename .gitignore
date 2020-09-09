@@ -101,3 +101,4 @@ recipes/echo_aware_processing/data_notebook.pkl
 recipes/acoustic_echo_retrieval/data/interim/*
 recipes/dataset_analysis/*.wav
 recipes/dataset_analysis/*.zip
+run_job*
