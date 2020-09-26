@@ -372,6 +372,7 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
     gevdRTF = np.zeros([nrfft, I, J], dtype=np.complex)
     rakeRTF = np.zeros_like(gevdRTF)
     dpTF = np.zeros([F, I, J], dtype=np.complex)
+    rkTF = np.zeros_like(gevdRTF)
 
     # mix with noise only
     xn = mix['full'][vad['noise'][0]:vad['noise'][1], :]
@@ -402,6 +403,8 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
                 # direct path
                 Di = rake_filter(np.ones(1), toas[:1, i, j], omegas)
                 dpTF[:, i, j] = Di / Dr
+                # Rake with far field
+                rkTF[:, i, j] = Hi / Dr
 
     print('... done.')
 
@@ -428,10 +431,11 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
         Sigma_ln[f, :, :] = Sigma_n[f, :, :] + 0.5*PSDl1[f, :, :]
 
     bfs = [
-        (DS(name='dpDS', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0]), dpTF),
+        (DS(  name='dpDS', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0]), dpTF),
         (MVDR(name='MVDR_dp', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0], Sigma_n), dpTF),
         (MVDR(name='MVDR_rtf', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(gevdRTF[:, :, 0], Sigma_n), gevdRTF),
-        (MVDR(name='MVDR_rake', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_n), rakeRTF),
+        (MVDR(name='MVDR_rtf_rake', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_n), rakeRTF),
+        (MVDR(name='MVDR_rake', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rkTF[:, :, 0], Sigma_n), rkTF),
         (MVDR(name='MVDR_dp_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0], Sigma_ln), dpTF),
         (MVDR(name='MVDR_rtf_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(gevdRTF[:, :, 0], Sigma_ln), gevdRTF),
         (MVDR(name='MVDR_rake_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_ln), rakeRTF),
