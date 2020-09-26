@@ -383,6 +383,7 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
 
         Dr = rake_filter(np.ones(1), toas[:1, r, j], omegas)
         Hr = rake_filter(amps[:, r, j], toas[:, r, j], omegas)
+        Tr = rake_filter(amps[:1, r, j], toas[:1, r, j], omegas)
         mr = xs[:, r]
 
         for i in range(I):
@@ -404,7 +405,7 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
                 Di = rake_filter(np.ones(1), toas[:1, i, j], omegas)
                 dpTF[:, i, j] = Di / Dr
                 # Rake with far field
-                rkTF[:, i, j] = Hi / Dr
+                rkTF[:, i, j] = Hi / Tr
 
     print('... done.')
 
@@ -437,8 +438,8 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
         (MVDR(name='MVDR_rtf_rake', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_n), rakeRTF),
         (MVDR(name='MVDR_rake', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rkTF[:, :, 0], Sigma_n), rkTF),
         (MVDR(name='MVDR_dp_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0], Sigma_ln), dpTF),
-        (MVDR(name='MVDR_rtf_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(gevdRTF[:, :, 0], Sigma_ln), gevdRTF),
-        (MVDR(name='MVDR_rake_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_ln), rakeRTF),
+        (MVDR(name='MVDR_rake_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rkTF[:, :, 0], Sigma_ln), gevdRTF),
+        (MVDR(name='MVDR_rtf_rake_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_ln), rakeRTF),
     ]
 
     results = []
