@@ -6,6 +6,9 @@ from tqdm import tqdm
 from dechorate.exception import NotUniqueSelectionError
 
 
+# path to output folder
+path_to_output_database = './data/final/manual_annatotion.csv'
+
 # load csv with objects position annotation
 path_to_positioning_note = './data/dECHORATE/annotations/manual_annotation_dECHORATE_positioning.csv'
 pos_note_df = pd.read_csv(path_to_positioning_note)
@@ -110,9 +113,8 @@ for r, row in tqdm(rec_note_df.iterrows()):
 
         c += 1
 
-    path_to_database = './data/dECHORATE/annotations/dECHORATE_database.csv'
-    df.to_csv(path_to_database)
+    df.to_csv(path_to_output_database)
 
 
 print('done.')
-print('You can find the current database in:\n%s'%path_to_database)
+print('You can find the current database in:\n%s' % path_to_output_database)
