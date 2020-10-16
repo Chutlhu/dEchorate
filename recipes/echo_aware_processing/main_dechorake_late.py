@@ -438,7 +438,7 @@ def main(arr_idx, dataset_idx, target_idx, snr, data_kind, k_to_rake, spk_idx, r
         (MVDR(name='MVDR_rtf_rake', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_n), rakeRTF),
         (MVDR(name='MVDR_rake', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rkTF[:, :, 0], Sigma_n), rkTF),
         (MVDR(name='MVDR_dp_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(dpTF[:, :, 0], Sigma_ln), dpTF),
-        (MVDR(name='MVDR_rake_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rkTF[:, :, 0], Sigma_ln), gevdRTF),
+        (MVDR(name='MVDR_rake_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rkTF[:, :, 0], Sigma_ln), rkTF),
         (MVDR(name='MVDR_rtf_rake_late', fstart=fstart, fend=fend, Fs=fs, nrfft=F).compute_weights(rakeRTF[:, :, 0], Sigma_ln), rakeRTF),
     ]
 

@@ -1,0 +1,2 @@
+class NotUniqueSelectionError(Exception):
+    pass

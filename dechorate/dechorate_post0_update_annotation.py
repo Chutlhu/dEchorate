@@ -3,15 +3,22 @@ import pandas as pd
 
 from tqdm import tqdm
 
-# load csv with objects position
-path_to_positioning_note = './data/dECHORATE/annotations/dECHORATE_positioning_note.csv'
+from dechorate.exception import NotUniqueSelectionError
+
+
+# load csv with objects position annotation
+path_to_positioning_note = './data/dECHORATE/annotations/manual_annotation_dECHORATE_positioning.csv'
 pos_note_df = pd.read_csv(path_to_positioning_note)
+
 # load csv with recordings annotation
-path_to_recordings_note = './data/dECHORATE/annotations/dECHORATE_recordings_note.csv'
+path_to_recordings_note = './data/dECHORATE/annotations/manual_annotation_dECHORATE_recordings.csv'
 rec_note_df = pd.read_csv(path_to_recordings_note)
 
+# initialize database
 df = pd.DataFrame()
-c = 0
+c = 0  # counter
+
+print('Compiling an unique database')
 
 for r, row in tqdm(rec_note_df.iterrows()):
 
@@ -36,7 +43,8 @@ for r, row in tqdm(rec_note_df.iterrows()):
                 print(row)
                 print(row['sources'], row['channel'], row['id'])
                 print(curr_pos_source)
-                1/0
+                raise NotUniqueSelectionError('Too many sources')
+
             df.at[c, 'src_pos_x'] = float(curr_pos_source['x'].values)
             df.at[c, 'src_pos_y'] = float(curr_pos_source['y'].values)
             df.at[c, 'src_pos_z'] = float(curr_pos_source['z'].values)
@@ -64,12 +72,14 @@ for r, row in tqdm(rec_note_df.iterrows()):
         curr_pos_array = pos_note_df.loc[
             (pos_note_df['type'] == 'array')
             & (pos_note_df['id'] == i//5+1)]
+
+        # check that current selection is unique
         try:
             assert len(curr_pos_array) == 1
         except:
             print('array', i//5+1, i)
             print(curr_pos_array)
-            1/0
+            NotUniqueSelectionError('Too many arrays')
 
         df.at[c, 'array_bar_x'] = float(curr_pos_array['x'].values)
         df.at[c, 'array_bar_y'] = float(curr_pos_array['y'].values)
@@ -81,12 +91,14 @@ for r, row in tqdm(rec_note_df.iterrows()):
         curr_pos_mic = pos_note_df.loc[
             (pos_note_df['type'] == 'mic')
             & (pos_note_df['id'] == i+1)]
+
+        # check that current selection is unique
         try:
             assert len(curr_pos_mic) == 1
         except:
             print('mic', i)
             print(curr_pos_mic)
-            1/0
+            raise NotUniqueSelectionError('Too many microphones')
 
 
         df.at[c, 'mic_id'] = curr_pos_mic['id'].values
@@ -100,3 +112,7 @@ for r, row in tqdm(rec_note_df.iterrows()):
 
     path_to_database = './data/dECHORATE/annotations/dECHORATE_database.csv'
     df.to_csv(path_to_database)
+
+
+print('done.')
+print('You can find the current database in:\n%s'%path_to_database)
