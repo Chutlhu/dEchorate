@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from zipfile import ZipFile
 from tqdm import tqdm
 
+from dechorate import constants # these are stored in the __init__py file
 from dechorate.stimulus import ProbeSignal
 from dechorate.utils.dsp_utils import *
 
@@ -123,24 +124,40 @@ if __name__ == "__main__":
     path_to_output = os.path.join(cwd, 'data', 'final')
     path_to_recordings = os.path.join(cwd, 'data', 'dECHORATE', 'recordings')
 
-    # only anechoic data
-    room_code = "000000"
-    session_filename = "room-%s"%room_code # anechoic data
+    room_codes = constants['datasets']
+    Fs = constants['Fs']
 
-    ## GET FILENAMES FROM THE CSV ANNOTATION DATABASE
-    path_to_note = os.path.join(cwd, 'data', 'final', 'manual_annatotion.csv')
-    wavfiles_chirps = get_signal_filename_from_database(path_to_note, 'chirp', code=room_code)
-    wavfiles_silence = get_signal_filename_from_database(path_to_note, 'silence', code=room_code)
+    # # INITIALIZE THE HDF5 DATASET
+    path_to_output_dataset_hdf5 = os.path.join(path_to_output, 'dechorate.hdf5')
+    f = h5py.File(path_to_output_dataset_hdf5, "w")
+    # open it in append mode
+    f = h5py.File(path_to_output_dataset_hdf5, 'a')
 
-    ## MAKE JUST THE HDF5 ANECHOIC DATASET
-    path_to_session_zip = os.path.join(path_to_recordings, session_filename + '.zip')
-    # os.makedirs(path_to_output_anechoic_dataset,  exist_ok=True)
-    path_to_wavefiles_chirp = built_rec_hdf5(wavfiles_chirps, session_filename, path_to_session_zip, path_to_output)
-    path_to_wavefiles_silence = built_rec_hdf5(wavfiles_silence, session_filename, path_to_session_zip, path_to_output)
+    # DATASET structure: room x mics x srcs x signal + bonus
+    # room = [000000, 010000, ..., 111111, 0F000F]
+    # mics = [0, ..., 29, 30] : 0-29 capsule, 30th loopback
+    # srcs = [0, ..., 9] : 0-3 dir, 4-6 omni
+    # signal = ['chirp', 'silence', 'speech', 'noise', ..., 'RIR']
+    # bonus: book for polarity
 
-    # ## DECONVOLVE THE CHIRPS
-    # path_to_output_anechoic_dataset_rir = path_to_output + 'anechoic_rir_data.hdf5'
-    # build_rir_hdf5(wavfile_chirps, path_to_output_anechoic_dataset, path_to_output_anechoic_dataset_rir)
+    for room_code in room_codes:
+
+        session_filename = "room-%s"%room_code # anechoic data
+
+        ## GET FILENAMES FROM THE CSV ANNOTATION DATABASE
+        path_to_note = os.path.join(cwd, 'data', 'final', 'manual_annatotion.csv')
+        wavfiles_chirps = get_signal_filename_from_database(path_to_note, 'chirp', code=room_code)
+        wavfiles_silence = get_signal_filename_from_database(path_to_note, 'silence', code=room_code)
+
+        ## MAKE JUST THE HDF5 ANECHOIC DATASET
+        path_to_session_zip = os.path.join(path_to_recordings, session_filename + '.zip')
+        # os.makedirs(path_to_output_anechoic_dataset,  exist_ok=True)
+        path_to_wavefiles_chirp = built_rec_hdf5(wavfiles_chirps, session_filename, path_to_session_zip, path_to_output)
+        path_to_wavefiles_silence = built_rec_hdf5(wavfiles_silence, session_filename, path_to_session_zip, path_to_output)
+
+        # ## DECONVOLVE THE CHIRPS
+        # path_to_output_anechoic_dataset_rir = path_to_output + 'anechoic_rir_data.hdf5'
+        # build_rir_hdf5(wavfile_chirps, path_to_output_anechoic_dataset, path_to_output_anechoic_dataset_rir)
 
 
     pass
