@@ -1,3 +1,5 @@
+import numpy as np
+
 constants = {
     'recording_offset': 4444,  # samples
     'Fs' : 48000, # samples / seconds
@@ -11,4 +13,6 @@ constants = {
     'refl_order_calibr': ['d', 'c', 'f', 'w', 's', 'e', 'n'],
     'room_temperature' : 24,     # temperature
     'speed_of_sound' : 331.3 + 0.606 * 24,  # speed of sound
+    'src_ids': np.arange(1,9),
+    'mic_ids': np.arange(1, 31),
 }
