@@ -182,4 +182,9 @@ if __name__ == "__main__":
                 group = '/%s/%s/%d/%d' % (room_code,signal,src_id,mic_id)
                 data_file.create_dataset(group, data=wav[:,mic_id-1])
 
+    # ## DECONVOLVE THE CHIRPS
+    # path_to_output_anechoic_dataset_rir = path_to_output + 'anechoic_rir_data.hdf5'
+    # build_rir_hdf5(wavefile_chirps, path_to_output_anechoic_dataset, path_to_output_anechoic_dataset_rir)
+
+
     pass
