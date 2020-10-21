@@ -13,7 +13,17 @@ constants = {
     'refl_order_calibr': ['d', 'c', 'f', 'w', 's', 'e', 'n'],
     'room_temperature' : 24,     # temperature
     'speed_of_sound' : 331.3 + 0.606 * 24,  # speed of sound
-    'src_ids': np.arange(1,9),
-    'mic_ids': np.arange(1, 31),
-    'signals' : ['chirp', 'silence', 'babble', 'speech', 'noise']
+    'src_ids': np.arange(1,8),
+    'mic_ids': np.arange(1, 32),
+    'signals' : ['rir','chirp', 'silence', 'babble', 'speech', 'noise'],
+    'rir_processing': {
+        'Fs': 48000,
+        'stimulus': 'exp_sine_sweep',
+        'n_seconds': 10,
+        'amplitude': 0.7,
+        'n_repetitions': 3,
+        'silence_at_start': 2,
+        'silence_at_end': 2,
+        'sweeprange': [100, 14e3],
+    }
 }
