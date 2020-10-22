@@ -44,9 +44,6 @@ def get_wavefile_from_database(path_to_note, signals, mic_ids, src_ids, room_cod
                         & (dataset_note['mic_id'] == mic_id)
                         & (dataset_note['src_signal'] == signal)
                     ]
-                    # check that there are not detrimental artifacts
-                    if np.all(wavefiles_db['rec_artifacts']) > 0:
-                        print('**Warnings** artifacts of type', wavefiles_db['rec_artifacts'])
                     # check that there is only one filename
                     if len(wavefiles_db) == 0:
                         print(wavefiles_db)
@@ -54,9 +51,13 @@ def get_wavefile_from_database(path_to_note, signals, mic_ids, src_ids, room_cod
                     if len(wavefiles_db) > 1:
                         print(wavefiles_db)
                         raise ValueError('Multiple entries selected in the Dataframe')
+                    # check that there are not detrimental artifacts
+                    artifact = wavefiles_db['rec_artifacts'].values[0]
+                    if artifact > 0:
+                        print('**Warnings** artifacts of type', artifact)
                     # get only the filename
                     filename = str(wavefiles_db['filename'].values[0])
-                    yield (filename, signal, mic_id, src_id, room_code)
+                    yield (filename, signal, mic_id, src_id, room_code, artifact)
 
 
 def wave_loader(wavefile, session_filename, path_to_session_zip_dir, path_to_output):
@@ -170,7 +171,7 @@ if __name__ == "__main__":
     if not signal == 'rir':
         path_to_note = os.path.join(cwd, 'data', 'final', 'manual_annatotion.csv')
         mics_here = [1] # the wavefile collects all the channels already
-        for (wavename, signal, mic_id, src_id, room_code) in get_wavefile_from_database(path_to_note, signals, mics_here, src_ids, room_codes):
+        for (wavename, signal, mic_id, src_id, room_code, artifact) in get_wavefile_from_database(path_to_note, signals, mics_here, src_ids, room_codes):
             try:
                 print(data_file[room_code][signal][str(src_id)][str(mic_id)])
             except:
@@ -186,53 +187,76 @@ if __name__ == "__main__":
                     data_file.create_dataset(group, data=wav[:,mic_id-1])
 
     if signal == 'rir':
+
         path_to_note = os.path.join(cwd, 'data', 'final', 'manual_annatotion.csv')
         mics_here = [1]  # the wavefile collects all the channels already
-        for (wavename, signal, mic_id, src_id, room_code) in get_wavefile_from_database(path_to_note, ['chirp'], mics_here, src_ids, room_codes):
 
-            # get the chirp recording in the hdf5
-            path_to_rec_in_hdf5 = '/%s/%s/%d/%d' % (room_code,signal,src_id,mic_id)
-            rec = np.array(data_file[path_to_rec_in_hdf5])
+        df = pd.DataFrame()
+        c = 0
 
-            # get the corresponding loopback signal
-            path_to_rec_in_hdf5 = '/%s/%s/%d/%s' % (room_code,signal,src_id,'loopback')
-            loop = np.array(data_file[path_to_rec_in_hdf5])
+        for (wavename, signal, mic_id, src_id, room_code, artifact) in get_wavefile_from_database(path_to_note, ['chirp'], mics_here, src_ids, room_codes):
 
-            # RIR estimation
-            Fs = constants['rir_processing']['Fs']
-            assert Fs == constants['Fs']
-            n_seconds = constants['rir_processing']['n_seconds']
-            amplitude = constants['rir_processing']['amplitude']
-            n_repetitions = constants['rir_processing']['n_repetitions']
-            silence_at_start = constants['rir_processing']['silence_at_start']
-            silence_at_end = constants['rir_processing']['silence_at_end']
-            sweeprange = constants['rir_processing']['sweeprange']
-            stimulus = constants['rir_processing']['stimulus']
-            ps = ProbeSignal(stimulus, Fs)
+            for mic_id in mic_ids:
+                
+                # get the chirp recording in the hdf5
+                if mic_id == 31:
+                    path_to_rec_in_hdf5 = '/%s/%s/%d/%s' % (room_code,signal,src_id,'loopback')
+                else:
+                    path_to_rec_in_hdf5 = '/%s/%s/%d/%d' % (room_code,signal,src_id,mic_id)
 
-            times, signal = ps.generate(n_seconds, amplitude, n_repetitions,
-                                        silence_at_start, silence_at_end, sweeprange)
+                print(path_to_rec_in_hdf5)
+                rec = np.array(data_file[path_to_rec_in_hdf5])
 
-            # compute the global delay from the rir with the playback signal
-            rir_loop = ps.compute_rir(loop[:,None], windowing=False)
-            global_delay = np.argmax(np.abs(rir_loop)) # in samples
+                # get the corresponding loopback signal
+                path_to_rec_in_hdf5 = '/%s/%s/%d/%s' % (room_code,signal,src_id,'loopback')
+                loop = np.array(data_file[path_to_rec_in_hdf5])
 
-            # compute the rir
-            rir = ps.compute_rir(rec[:, None], windowing=False)
-            rir = rir[0:int(5*Fs)]
-            plt.plot(rir)
-            plt.show()
+                # RIR estimation
+                Fs = constants['rir_processing']['Fs']
+                assert Fs == constants['Fs']
+                n_seconds = constants['rir_processing']['n_seconds']
+                amplitude = constants['rir_processing']['amplitude']
+                n_repetitions = constants['rir_processing']['n_repetitions']
+                silence_at_start = constants['rir_processing']['silence_at_start']
+                silence_at_end = constants['rir_processing']['silence_at_end']
+                sweeprange = constants['rir_processing']['sweeprange']
+                stimulus = constants['rir_processing']['stimulus']
+                ps = ProbeSignal(stimulus, Fs)
 
-            group = '/%s/%s/%d/%d' % (room_code, signal, src_id, mic_id)
-            data_file.create_dataset(group, data=rir)
+                times, s = ps.generate(n_seconds, amplitude, n_repetitions, silence_at_start, silence_at_end, sweeprange)
 
-            1/0
-            # for anechoic signal crop after 1 second
+                # compute the global delay from the rir with the playback signal
+                try:
+                    rir_loop = ps.compute_rir(loop[:,None], windowing=False)
+                    delay = np.argmax(np.abs(rir_loop)) # in samples
+                except:
+                    delay = 999999
 
-            # # store info in the anechoic dataset
-            # f_rir.create_dataset('rir/%s/%d' % (wavefile, i), data=rir_i)
-            # f_rir.create_dataset('delay/%s/%d' % (wavefile, i), data=delay_sample)
+                # compute the rir
+                rir = ps.compute_rir(rec[:, None], windowing=False)
+                rir = rir[0:int(5*Fs)]
 
-            1/0
+                if mic_id == 31:
+                    group = '/%s/%s/%d/%s' % (room_code, 'rir', src_id, 'loopback')
+                else:
+                    group = '/%s/%s/%d/%d' % (room_code, 'rir', src_id, mic_id)
+                try:
+                    data_file.create_dataset(group, data=rir)
+                except Exception as e:
+                    print(e)
+                    print(group)
+
+                df.at[c, 'signal'] = 'rir'
+                df.at[c, 'wavefile'] = wavename
+                df.at[c, 'path_hdf5'] = group
+                df.at[c, 'mic_id'] = mic_id
+                df.at[c, 'src_id'] = src_id
+                df.at[c, 'room_code'] = room_code
+                df.at[c, 'delay'] = delay
+                df.at[c, 'artifact'] = artifact
+                c += 1
+
+                df.to_csv(os.path.join(path_to_output, 'database_delay.csv'))
+
 
     pass
