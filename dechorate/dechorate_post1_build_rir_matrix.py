@@ -18,7 +18,7 @@ if __name__ == "__main__":
     path_to_hdf5_dataset = os.path.join(
         cwd, 'data', 'final', 'dechorate_with_rirs.hdf5')
     path_to_output = os.path.join(
-        cwd, 'data', 'final', 'rir_matrix.npz'
+        cwd, 'data', 'final', 'rir_matrix.npy'
     )
 
     # open the hdf5 in read only
