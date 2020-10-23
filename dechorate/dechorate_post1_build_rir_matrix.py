@@ -17,14 +17,36 @@ if __name__ == "__main__":
 
     path_to_hdf5_dataset = os.path.join(
         cwd, 'data', 'final', 'dechorate_with_rirs.hdf5')
+    path_to_output = os.path.join(
+        cwd, 'data', 'final', 'rir_matrix.npz'
+    )
 
+    # open the hdf5 in read only
     data_file = h5py.File(path_to_hdf5_dataset, 'r')
 
-    # get constants and values
+    # get constants and values of the dataset
     room_codes = constants['datasets']
     Fs = constants['Fs']
     src_ids = constants['src_ids']
     mic_ids = constants['mic_ids']
     signals = ['rir']
 
-    #
+    # initialize the numpy array
+    C = len(room_codes)
+    I = len(mic_ids) - 1
+    J = len(src_ids)
+    L = 8 * Fs
+    rirs = np.zeros([C, I, J, L])
+    print(rirs.shape)
+
+    for c in range(C):
+        for i in range(I):
+            for j in range(J):
+
+                group = '/%s/%s/%d/%d' % (room_codes[c], 'rir', src_ids[j], mic_ids[i])
+
+                rir = data_file[group]
+                Lr = len(rir)
+                rirs[c,i,j,:Lr] = rir[:Lr].squeeze()
+
+    np.save(path_to_output, rirs)
