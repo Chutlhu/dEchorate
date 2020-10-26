@@ -137,7 +137,7 @@ class DechorateDataset():
         return rt60_from_rirs(self.rir, self.Fs, M=M, snr=snr, do_schroeder=do_schroeder, val_min=val_min)
 
 
-class SyntheticDataset:
+class SyntheticDataset():
     def __init__(self):
         self.x = [2, 2, 2]
         self.s = [4, 3, 1]

@@ -32,21 +32,21 @@ if __name__ == "__main__":
     signals = ['rir']
 
     # initialize the numpy array
-    C = len(room_codes)
+    D = len(room_codes)
     I = len(mic_ids) - 1
     J = len(src_ids)
     L = 8 * Fs
-    rirs = np.zeros([C, I, J, L])
+    rirs = np.zeros([L, I, J, D])
     print(rirs.shape)
 
-    for c in range(C):
+    for d in range(D):
         for i in range(I):
             for j in range(J):
 
-                group = '/%s/%s/%d/%d' % (room_codes[c], 'rir', src_ids[j], mic_ids[i])
+                group = '/%s/%s/%d/%d' % (room_codes[d], 'rir', src_ids[j], mic_ids[i])
 
                 rir = data_file[group]
                 Lr = len(rir)
-                rirs[c,i,j,:Lr] = rir[:Lr].squeeze()
+                rirs[:Lr,i,j,d] = rir[:Lr].squeeze()
 
     np.save(path_to_output, rirs)
