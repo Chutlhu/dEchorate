@@ -6,130 +6,118 @@ import pyroomacoustics as pra
 from dechorate import constants
 from dechorate.utils.acu_utils import rt60_with_sabine, rt60_from_rirs
 from dechorate.utils.dsp_utils import resample
+from dechorate.utils.file_utils import load_from_pickle
+from dechorate.utils.geo_utils import compute_planes, compute_image, get_point
 
 class DechorateDataset():
 
-    def __init__(self, path_to_processed, path_to_note_csv):
-        self.Fs = 48000
-        self.path_to_processed = path_to_processed
-        self.path_to_note_csv = path_to_note_csv
-        self.dataset_data = None
-        self.dataset_note = None
-        self.entry = None
+    def __init__(self, path_to_data, path_to_note, path_to_mic_src_echo_note):
+
+        # open the dataset files
+        if not path_to_data.split('.')[-1] == 'hdf5':
+            raise ValueError('path_to_data must be the hdf5 file')
+
+        self.path_to_data = path_to_data
+        self.dset_data = h5py.File(self.path_to_data, 'r')
+
+        if not path_to_note.split('.')[-1] == 'csv':
+            raise ValueError('path_to_note must be the csv file')
+        self.path_to_note = path_to_note
+        self.dset_note = pd.read_csv(self.path_to_note)
+
+
+        if not path_to_mic_src_echo_note.split('.')[-1] == 'pkl':
+            raise ValueError('path_to_mic_src_echo_note must be the pkl file')
+        self.path_to_mic_src_echo_note = path_to_mic_src_echo_note
+        self.mic_src_echo_note = load_from_pickle(self.path_to_mic_src_echo_note)
+
+        # field of the dataset
+        self.dset_note_entry = None
+        self.room_code = None
         self.mic_pos = None
         self.src_pos = None
-        self.mic_i = 0
-        self.src_j = 0
+        self.i = None
+        self.j = None
         self.rir = None
 
-
+        # dataset constants
         self.room_size = constants['room_size']
         self.c = constants['speed_of_sound']
         self.Fs = constants['Fs']
 
-        self.sdset = SyntheticDataset()
-        self.sdset.set_room_size(self.room_size)
-        self.sdset.set_c(self.c)
+        # equivalent synthetic dataset
+        self.synth_dset = SyntheticDataset()
 
-    def set_dataset(self, dset_code):
-        path_to_data_hdf5 = self.path_to_processed + '%s_rir_data.hdf5' % dset_code
-        dset_rir = h5py.File(path_to_data_hdf5, 'r')
-        dset_note = pd.read_csv(self.path_to_note_csv)
-        f, c, w, s, e, n = [int(i) for i in list(dset_code)]
-        dset_note = dset_note.loc[
-            (dset_note['room_rfl_floor'] == f)
-            & (dset_note['room_rfl_ceiling'] == c)
-            & (dset_note['room_rfl_west'] == w)
-            & (dset_note['room_rfl_east'] == e)
-            & (dset_note['room_rfl_north'] == n)
-            & (dset_note['room_rfl_south'] == s)
-            & (dset_note['room_fornitures'] == False)
-            & (dset_note['src_signal'] == 'chirp')
+        self.synth_dset.set_room_size(self.room_size)
+        self.synth_dset.set_c(self.c)
+
+    def set_entry(self, room_code, mic, src):
+        self.i = mic
+        self.j = src
+        self.room_code = room_code
+
+    def get_entry(self, src_signal):
+        f, c, w, s, e, n = [int(i) for i in self.room_code]
+        entry = self.dset_note.loc[
+              (self.dset_note['room_rfl_floor'] == f)
+            & (self.dset_note['room_rfl_ceiling'] == c)
+            & (self.dset_note['room_rfl_west'] == w)
+            & (self.dset_note['room_rfl_east'] == e)
+            & (self.dset_note['room_rfl_north'] == n)
+            & (self.dset_note['room_rfl_south'] == s)
+            & (self.dset_note['src_id'] == self.j+1)
+            & (self.dset_note['mic_id'] == self.i+1)
+            & (self.dset_note['src_signal'] == src_signal)
         ]
-        assert len(dset_note) > 0
-        self.dataset_data = dset_rir
-        self.dataset_note = dset_note
-        self.dset_code = dset_code
-        self.sdset.set_dataset(dset_code)
+        assert len(entry) > 0
+        return entry
 
-    def set_entry(self, i, j):
-        self.mic_i = i
-        self.src_j = j
-        self.entry = self.dataset_note.loc[(
-            self.dataset_note['src_id'] == j+1) & (self.dataset_note['mic_id'] == i+1)]
-
-    def get_rir(self, Fs=None):
-        wavefile = self.entry['filename'].values[0]
-        rir = self.dataset_data['rir/%s/%d' % (wavefile, self.mic_i)][()].squeeze()
+    def get_rir(self, Fs_new =None):
+        group = '%s/%s/%d/%d' % (self.room_code, 'rir', self.j+1, self.i+1)
+        rir = self.dset_data[group]
         rir = rir[constants['recording_offset']:]
-        if not Fs is None and Fs != self.Fs:
-            print('Resampling %d --> %d' % (self.Fs, Fs))
-            rir = resample(rir, self.Fs, Fs)
-        self.rir = rir
+        if not Fs_new  is None and Fs_new  != self.Fs:
+            print('Resampling with Librosa %d --> %d' % (self.Fs, Fs_new))
+            rir = resample(rir, self.Fs, Fs_new)
+        self.rir = rir.squeeze()
         return rir
 
-    def get_file_database_id(self, src_signal):
-        dset_note = pd.read_csv(self.path_to_note_csv)
-        f, c, w, s, e, n = [int(i) for i in list(self.dset_code)]
-        dset_note = dset_note.loc[
-            (dset_note['room_rfl_floor'] == f)
-            & (dset_note['room_rfl_ceiling'] == c)
-            & (dset_note['room_rfl_west'] == w)
-            & (dset_note['room_rfl_east'] == e)
-            & (dset_note['room_rfl_north'] == n)
-            & (dset_note['room_rfl_south'] == s)
-            & (dset_note['room_fornitures'] == False)
-            & (dset_note['src_id'] == self.src_j + 1)
-            & (dset_note['mic_id'] == self.mic_i + 1)
-            & (dset_note['src_signal'] == src_signal)
-        ]
-        for filename in dset_note['filename']:
-            yield filename
-
-    def get_diffuse_noise(self, duration=20):
-        dset_note = pd.read_csv(self.path_to_note_csv)
-        f, c, w, s, e, n = [int(i) for i in list(self.dset_code)]
-        dset_note = dset_note.loc[
-            (dset_note['room_rfl_floor'] == f)
-            & (dset_note['room_rfl_ceiling'] == c)
-            & (dset_note['room_rfl_west'] == w)
-            & (dset_note['room_rfl_east'] == e)
-            & (dset_note['room_rfl_north'] == n)
-            & (dset_note['room_rfl_south'] == s)
-            & (dset_note['room_fornitures'] == False)
-            & (dset_note['src_id'] == self.src_j + 1)
-            & (dset_note['mic_id'] == self.mic_i + 1)
-            & (dset_note['src_signal'] == 'noise')
-        ]
-        noise_filename = dset_note['filename'].unique()
-        print(noise_filename)
-        1/0
-
-    def get_mic_and_src_pos(self):
-        self.mic_pos = np.array([self.entry['mic_pos_x'].values + constants['offset_beacon'][0],
-                                 self.entry['mic_pos_y'].values + constants['offset_beacon'][1],
-                                 self.entry['mic_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
-        self.src_pos = np.array([self.entry['src_pos_x'].values + constants['offset_beacon'][0],
-                                 self.entry['src_pos_y'].values + constants['offset_beacon'][1],
-                                 self.entry['src_pos_z'].values + constants['offset_beacon'][2]]).squeeze()
-
-
-        # self.mic_pos = np.array([self.entry['mic_pos_x'].values,
-        #                          self.entry['mic_pos_y'].values,
-        #                          self.entry['mic_pos_z'].values]).squeeze()
-        # self.src_pos = np.array([self.entry['src_pos_x'].values,
-        #                          self.entry['src_pos_y'].values,
-        #                          self.entry['src_pos_z'].values]).squeeze()
-
-        self.sdset.set_mic(self.mic_pos[0], self.mic_pos[1], self.mic_pos[2])
-        self.sdset.set_src(self.src_pos[0], self.src_pos[1], self.src_pos[2])
+    def get_mic_and_src_pos(self, updated=True):
+        self.mic_pos = self.mic_src_echo_note['mics'][:, self.i]
+        self.src_pos = self.mic_src_echo_note['srcs'][:, self.j]
         return self.mic_pos, self.src_pos
 
-    def get_ism_annotation(self, k_order=1, k_reflc=7):
-        self.sdset.set_k_order(k_order)
-        self.sdset.set_k_reflc(k_reflc)
-        amp, toa, walls, order, generators = self.sdset.get_note()
-        return amp, toa, walls, order,generators
+    def get_echo(self, kind='pck', order=0):
+        if not kind in ['sym', 'pck']:
+            raise ValueError('Kind must be either sym or pck')
+        if kind == 'sym':
+            toas = self.mic_src_echo_note['toa_sym'][:, self.i, self.j]
+        if kind == 'pck':
+            toas = self.mic_src_echo_note['toa_pck'][:, self.i, self.j]
+        if order > 0:
+            raise NotImplementedError
+        return toas
+
+
+    def get_synth_echo(self, walls):
+        m = self.mic_pos.copy()
+        s = self.src_pos.copy()
+        W = len(walls)
+        toas = np.zeros(W)
+
+        for w, wall in enumerate(walls):
+            if not wall in constants['refl_order_calibr']:
+                raise ValueError('Wall must be either  "c", "f", "w", "s", "e", or "n"')
+
+            if wall == 'd':
+                im = get_point(m)
+            else:
+                plane = compute_planes(constants['room_size'])[wall]
+                im = compute_image(m, plane)
+
+            toas[w] = float(im.distance(s).evalf())/constants['speed_of_sound']
+
+        return toas
 
     def compute_rt60(self, M=100, snr=45, do_schroeder=True, val_min=-90):
         if self.rir is None:

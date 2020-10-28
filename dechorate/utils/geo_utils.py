@@ -2,8 +2,58 @@ import numpy as np
 import scipy.optimize
 import functools
 
+from sympy import Point3D, Plane, Ray3D
+
+def compute_planes(room_dimension):
+    room_dimension = np.array(room_dimension)
+    if not len(room_dimension) == 3:
+        raise ValueError('This is hard coded for Shoebox')
+    L, W, H = room_dimension
+    planes = {
+        'd': None,
+        'c': sym_plane_from_points(
+                np.transpose(np.array([[0, 0, H], [L, 0, H], [0, W, H], [L, W, H]]))),
+        'f': sym_plane_from_points(
+                np.transpose(np.array([[0, 0, 0], [L, 0, 0], [0, W, 0], [L, W, 0]]))),
+        'w': sym_plane_from_points(
+                np.transpose(np.array([[0, 0, 0], [0, W, 0], [0, 0, H], [0, W, H]]))),
+        's': sym_plane_from_points(
+                np.transpose(np.array([[0, 0, 0], [L, 0, 0], [0, 0, H], [L, 0, H]]))),
+        'e': sym_plane_from_points(
+                np.transpose(np.array([[L, 0, 0], [L, W, 0], [L, 0, H], [L, W, H]]))),
+        'n': sym_plane_from_points(
+                np.transpose(np.array([[0, W, 0], [L, W, 0], [0, W, H], [L, W, H]]))),
+    }
+    return planes
+
+def get_point(x):
+    return Point3D(list(x))
+
+
+def compute_image(x, P):
+    pnt = get_point(x)
+    prj = P.projection(pnt)
+    img = pnt + 2*Ray3D(pnt, prj).direction
+    return img
+
+
+def sym_plane_from_points(points):
+    D, N = points.shape
+    assert D == 3
+    assert N > 3
+    pts = []
+    for n in range(3):
+        pt = Point3D(list(points[:,n]))
+        pts.append(pt)
+    pl = Plane(*pts)
+    return pl
 
 def plane_from_points(points):
+    '''
+    regression plane from stackexchange
+    https://stackoverflow.com/a/20700063/7580944
+    '''
+
     D, N = points.shape
     assert D == 3
     assert N > 3
@@ -33,7 +83,9 @@ def plane_from_points(points):
     b = res.x[1]
     c = res.x[2]
 
-    return np.array([a, b, c])
+    plane = np.array([a, b, c])
+
+    return plane
 
 
 def dist_point_plane(point, plane_point, plane_normal):
