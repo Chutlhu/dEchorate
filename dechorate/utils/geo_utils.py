@@ -41,11 +41,14 @@ def sym_plane_from_points(points):
     D, N = points.shape
     assert D == 3
     assert N > 3
-    pts = []
-    for n in range(3):
-        pt = Point3D(list(points[:,n]))
-        pts.append(pt)
-    pl = Plane(*pts)
+    # from numpy to Point3D
+    pts = [get_point(points[:,n]) for n in range(N)]
+
+    if not Point3D.are_coplanar(*pts):
+        raise ValueError('Not complanar')
+
+    pl = Plane(*pts[:3])
+
     return pl
 
 def plane_from_points(points):

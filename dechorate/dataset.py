@@ -91,7 +91,8 @@ class DechorateDataset():
         if not kind in ['sym', 'pck']:
             raise ValueError('Kind must be either sym or pck')
         if kind == 'sym':
-            toas = self.mic_src_echo_note['toa_sym'][:, self.i, self.j]
+            # toas = self.mic_src_echo_note['toa_sym'][:, self.i, self.j]
+            toas, amps, walls = self.get_synth_note()
         if kind == 'pck':
             toas = self.mic_src_echo_note['toa_pck'][:, self.i, self.j]
         if order > 0:
@@ -102,22 +103,35 @@ class DechorateDataset():
     def get_synth_echo(self, walls):
         m = self.mic_pos.copy()
         s = self.src_pos.copy()
-        W = len(walls)
-        toas = np.zeros(W)
 
-        for w, wall in enumerate(walls):
-            if not wall in constants['refl_order_calibr']:
-                raise ValueError('Wall must be either  "c", "f", "w", "s", "e", or "n"')
 
-            if wall == 'd':
-                im = get_point(m)
-            else:
-                plane = compute_planes(constants['room_size'])[wall]
-                im = compute_image(m, plane)
+        # W = len(walls)
+        # toas = np.zeros(W)
+        # for w, wall in enumerate(walls):
+        #     if not wall in constants['refl_order_calibr']:
+        #         raise ValueError('Wall must be either  "c", "f", "w", "s", "e", or "n"')
 
-            toas[w] = float(im.distance(s).evalf())/constants['speed_of_sound']
+        #     if wall == 'd':
+        #         im = get_point(m)
+        #     else:
+        #         plane = compute_planes(constants['room_size'])[wall]
+        #         im = compute_image(m, plane)
+
+        #     toas[w] = float(im.distance(s).evalf())/constants['speed_of_sound']
 
         return toas
+
+    def get_synth_note(self):
+        sdset = SyntheticDataset()
+        sdset.set_room_size(self.room_size)
+        sdset.set_dataset(self.room_code, absb=0.9, refl=0.1)
+        sdset.set_c(self.c)
+        sdset.set_k_order(1)
+        sdset.set_k_reflc(7)
+        sdset.set_mic(self.mic_pos[0], self.mic_pos[1], self.mic_pos[2])
+        sdset.set_src(self.src_pos[0], self.src_pos[1], self.src_pos[2])
+        taus, amps, walls = sdset.get_note(False, 'pra_order')
+        return taus, amps
 
     def compute_rt60(self, M=100, snr=45, do_schroeder=True, val_min=-90):
         if self.rir is None:
@@ -247,6 +261,35 @@ class SyntheticDataset():
         #     if int(curr_wall_id) == int(wall_id):
         #         return wall_name
 
+
+    def get_wall_order_from_images(self, images, order, room_size):
+
+        print(order)
+        print(room_size)
+        planes = compute_planes(room_size)
+        img0 = images[:, np.where(order == 0)].squeeze()
+        D, K = images.shape
+        walls = []
+        for k in range(K):
+            bar = (img0 + images[:, k])/2
+            dist = np.linalg.norm(img0 - images[:, k])
+            if dist < 1e-16:
+                walls.append('d')
+                continue
+
+            bar = get_point(bar)
+            for p in planes:
+                P = planes[p]
+
+                if P is None:
+                    continue
+                else:
+                    dist = float(P.distance(bar).evalf())
+                    if dist == 0:
+                        walls.append(p)
+        assert len(walls) == K
+        return walls
+
     def get_note(self, ak_normalize: bool = False, tk_order : str = 'pra_order'):
 
         room = self.make_room()
@@ -263,6 +306,11 @@ class SyntheticDataset():
         images = source.images
         orders = source.orders
         dampings = source.damping
+
+        pra_order = constants['refl_order_pyroom']
+        walls = self.get_wall_order_from_images(images,orders,self.room_size)
+        
+
 
         distances = np.linalg.norm(
             images - room.mic_array.R, axis=0)
