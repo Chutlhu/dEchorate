@@ -54,6 +54,8 @@ class DechorateDataset():
     def set_entry(self, room_code, mic, src):
         self.i = mic
         self.j = src
+        self.mic_pos = self.mic_src_echo_note['mics'][:, self.i]
+        self.src_pos = self.mic_src_echo_note['srcs'][:, self.j]
         self.room_code = room_code
 
     def get_entry(self, src_signal):
@@ -92,7 +94,14 @@ class DechorateDataset():
             raise ValueError('Kind must be either sym or pck')
         if kind == 'sym':
             # toas = self.mic_src_echo_note['toa_sym'][:, self.i, self.j]
-            toas, amps, walls = self.get_synth_note()
+            toas, amps, walls = self.get_synth_note(tk_order='earliest')
+            # # sort the toas according to the walls
+            # indices = np.zeros_like(toas)
+            # for i in range(len(indices)):
+            #     indices[i] = constants['refl_order_calibr'].index(walls[i])
+            # indices = np.argsort(indices)
+            # toas = toas[indices]
+            # walls = walls[indices]
         if kind == 'pck':
             toas = self.mic_src_echo_note['toa_pck'][:, self.i, self.j]
         if order > 0:
@@ -121,7 +130,7 @@ class DechorateDataset():
 
         return toas
 
-    def get_synth_note(self):
+    def get_synth_note(self, tk_order='earliest'):
         sdset = SyntheticDataset()
         sdset.set_room_size(self.room_size)
         sdset.set_dataset(self.room_code, absb=0.9, refl=0.1)
@@ -130,8 +139,8 @@ class DechorateDataset():
         sdset.set_k_reflc(7)
         sdset.set_mic(self.mic_pos[0], self.mic_pos[1], self.mic_pos[2])
         sdset.set_src(self.src_pos[0], self.src_pos[1], self.src_pos[2])
-        taus, amps, walls = sdset.get_note(False, 'pra_order')
-        return taus, amps
+        taus, amps, walls = sdset.get_note(False, tk_order=tk_order)
+        return taus, amps, walls
 
     def compute_rt60(self, M=100, snr=45, do_schroeder=True, val_min=-90):
         if self.rir is None:
@@ -261,11 +270,7 @@ class SyntheticDataset():
         #     if int(curr_wall_id) == int(wall_id):
         #         return wall_name
 
-
     def get_wall_order_from_images(self, images, order, room_size):
-
-        print(order)
-        print(room_size)
         planes = compute_planes(room_size)
         img0 = images[:, np.where(order == 0)].squeeze()
         D, K = images.shape
@@ -307,18 +312,16 @@ class SyntheticDataset():
         orders = source.orders
         dampings = source.damping
 
-        pra_order = constants['refl_order_pyroom']
-        walls = self.get_wall_order_from_images(images,orders,self.room_size)
-        
-
+        # walls = self.get_wall_order_from_images(images,orders,self.room_size)
+        walls = None
 
         distances = np.linalg.norm(
             images - room.mic_array.R, axis=0)
 
-
         tk = distances / self.c
         dk = dampings.squeeze()
         ak = dk / (distances)
+        # wk = np.array(walls)
 
         # walls = []
         # order = np.zeros(K)
@@ -328,7 +331,7 @@ class SyntheticDataset():
         if tk_order == 'earliest':
             indices = np.argsort(tk)
         elif tk_order == 'pra_order':
-            indices = np.argsort(orders)
+            indices = np.arange(K)
         elif tk_order == 'strongest':
             indices = np.argsort(np.abs(ak))[::-1]
         else:
@@ -337,6 +340,7 @@ class SyntheticDataset():
         tk = tk[indices[:K]]
         dk = dk[indices[:K]]
         ak = ak[indices[:K]]
+        wk = None
 
         # for o, k in enumerate(ordering):
             # print(room.sources[j].damping)
@@ -361,7 +365,7 @@ class SyntheticDataset():
         if ak_normalize:
             ak = ak/np.max(np.abs(ak))
 
-        return tk, ak
+        return tk, ak, wk
 
     def get_rt60_sabine(self):
         if self.rir is None:
