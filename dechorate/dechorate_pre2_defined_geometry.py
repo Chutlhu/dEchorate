@@ -40,6 +40,8 @@ nULA = np.zeros([3,5])
 nULA[0, :] = np.array([0-3.25-5-4, 0-3.25-5, 0-3.25, 3.25, 3.25+10])/100
 
 def rotate_and_translate(LA, new_center, new_angle):
+    # azimuth rotation
+    # can be extended as in http://planning.cs.uiuc.edu/node102.html
     # rotate
     th = np.deg2rad(new_angle)
     R = np.array([[[np.cos(th), -np.sin(th), 0],

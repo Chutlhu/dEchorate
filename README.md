@@ -26,8 +26,13 @@ List of todos for journal
   - [ ] out voiceHome, in ACE challenge
   - [ ] Compact array?
 - [x] Add GoM 0.05 ms
+
 Code:
 
 - [ ] Remaggi's and Ivan's code for RIR segmentation
 - [ ] Crocco and Blaster for TDOA estimation
 - [n] Kowalkzy code for Rake Receiver --> "not for now. From TDOA to DOA"
+
+RT60 measurements
+
+- double slope

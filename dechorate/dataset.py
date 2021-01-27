@@ -11,7 +11,7 @@ from dechorate.utils.geo_utils import compute_planes, compute_image, get_point
 
 class DechorateDataset():
 
-    def __init__(self, path_to_data, path_to_note, path_to_mic_src_echo_note):
+    def __init__(self, path_to_data, path_to_note, path_to_mic_src_note, path_to_echo_note):
 
         # open the dataset files
         if not path_to_data.split('.')[-1] == 'hdf5':
@@ -26,10 +26,10 @@ class DechorateDataset():
         self.dset_note = pd.read_csv(self.path_to_note)
 
 
-        if not path_to_mic_src_echo_note.split('.')[-1] == 'pkl':
-            raise ValueError('path_to_mic_src_echo_note must be the pkl file')
-        self.path_to_mic_src_echo_note = path_to_mic_src_echo_note
-        self.mic_src_echo_note = load_from_pickle(self.path_to_mic_src_echo_note)
+        if not path_to_mic_src_note.split('.')[-1] == 'pkl':
+            raise ValueError('path_to_mic_src_note must be the pkl file')
+        self.path_to_mic_src_note = path_to_mic_src_note
+        self.mic_src_echo_note = load_from_pickle(self.path_to_mic_src_note)
 
         # field of the dataset
         self.dset_note_entry = None

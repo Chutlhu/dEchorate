@@ -197,7 +197,7 @@ if __name__ == "__main__":
         for (wavename, signal, mic_id, src_id, room_code, artifact) in get_wavefile_from_database(path_to_note, ['chirp'], mics_here, src_ids, room_codes):
 
             for mic_id in mic_ids:
-                
+
                 # get the chirp recording in the hdf5
                 if mic_id == 31:
                     path_to_rec_in_hdf5 = '/%s/%s/%d/%s' % (room_code,signal,src_id,'loopback')
