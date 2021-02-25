@@ -126,7 +126,7 @@ for i in range(I//5):
     df.at[c, 'z'] = mic_bar_pos[2, i]
     c += 1
 
-csv_filename = './data/dECHORATE/annotations/dECHORATE_positioning_note.csv'
+csv_filename = './data/dECHORATE/annotations/dECHORATE_positioning_annotation.csv'
 df.to_csv(csv_filename, sep=',')
 
 ## PRINT FIGURES
