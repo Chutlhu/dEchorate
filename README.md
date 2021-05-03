@@ -4,7 +4,13 @@
 
 ## dECHORATE: A calibrated dataset for echo-aware audio signal processing
 
-You can find a detailed explanation of the dEchorate dataset 
+You can find a detailed explanation of the dEchorate dataset at:
+[dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing](https://hal.archives-ouvertes.fr/hal-03207860/)
+
+`dEchorate` has three main elements:
+- the data (available on Zenodo);
+- the code for working with `dEchorate`;
+- the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/).
 
 ## Contents
 - [Get the Data](#get)
@@ -12,6 +18,8 @@ You can find a detailed explanation of the dEchorate dataset
 - [Citing Us](#citing)
 
 ## Get the Data
+The data is ava
+
 
 ## Examples
 
