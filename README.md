@@ -19,7 +19,7 @@ You can find a detailed explanation of the dEchorate dataset at:
 - [Citing Us](#citing)
 
 ## News:
-- 03 May 2020: v0.0.1 dEchorate is online
+- 03 May 2020: v0.0.1 dEchorate project is alive
 
 ## Get the Data
 The data is available at [Zenodo](www.notavailableyet.com).
