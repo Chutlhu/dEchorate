@@ -26,9 +26,9 @@ The data is available at [Zenodo](www.notavailableyet.com).
 Please, follow that link to download (part of) the data.
 
 The dataset is available in multiple ways:
-- Annotations/Labels: csv file that can be used pandas (Python)
-- Only RIRs: a numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
-- Only Speech: a numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
+- Annotations/labels/metadata: csv file that can be used pandas (Python)
+- Only RIRs: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
+- Only Speech: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
 - Raw data: an hdf5 file (~ 75 GB) containig all the raw recording data (chirps, speech/noise sources, babble noise, room tone)
 
 ## Examples
