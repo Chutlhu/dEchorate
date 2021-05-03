@@ -13,13 +13,23 @@ You can find a detailed explanation of the dEchorate dataset at:
 - the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/).
 
 ## Contents
+- [News](#news)
 - [Get the Data](#get)
 - [Examples](#examples)
 - [Citing Us](#citing)
 
-## Get the Data
-The data is ava
+## News:
+- 03 May 2020: v0.0.1 dEchorate is online
 
+## Get the Data
+The data is available at [Zenodo](www.notavailableyet.com).
+Please, follow that link to download (part of) the data.
+
+The dataset is available in multiple ways:
+- Annotations/Labels: csv file that can be used pandas (Python)
+- Only RIRs: a numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
+- Only Speech: a numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
+- Raw data: an hdf5 file (~ 75 GB) containig all the raw recording data (chirps, speech/noise sources, babble noise, room tone)
 
 ## Examples
 
