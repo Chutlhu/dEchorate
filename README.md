@@ -8,13 +8,10 @@ You can find a detailed explanation of the dEchorate dataset
 
 ## Contents
 - [Get the Data](#get)
-- [Usage](#usage)
 - [Examples](#examples)
 - [Citing Us](#citing)
 
 ## Get the Data
-
-## Usage
 
 ## Examples
 
