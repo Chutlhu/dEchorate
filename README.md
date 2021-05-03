@@ -1,38 +1,32 @@
-Bar Ilan Recordings
-==============================
+# WELCOME to the dECHORATE dataset
 
-dECHORATE: an ECHO RetrievAl dataseT
+> :warning: **This work is under review**: Be very careful here!
 
-List of todos for Laurent
+## dECHORATE: A calibrated dataset for echo-aware audio signal processing
 
-- [x] Larger fonts in Fig. 2,
-- [x] no more "??" in Table 1,
-- [x] no more red text
-- [x] the Table 5 moved out of the bibliography
-- [x] the very big spacings on page 8 removed?
+You can find a detailed explanation of the dEchorate dataset 
 
-List of todos for journal
+## Contents
+- [Get the Data](#get)
+- [Usage](#usage)
+- [Examples](#examples)
+- [Citing Us](#citing)
 
-- [x] Table 1 - Dataset: change array and mic pos columns
-- [x] Edit bibliography (import from Mendeley)
-- [ ] write RT60 analysis
-- [ ] write DDR analysis
-- [ ] write TDOA estimation
-- [ ] write Rake Beamformers
-  - [ ] write
-  - [ ] compute synth data
-  - [ ] compute real data
-- [ ] Edit table existing databases
-  - [ ] out voiceHome, in ACE challenge
-  - [ ] Compact array?
-- [x] Add GoM 0.05 ms
+## Get the Data
 
-Code:
+## Usage
 
-- [ ] Remaggi's and Ivan's code for RIR segmentation
-- [ ] Crocco and Blaster for TDOA estimation
-- [n] Kowalkzy code for Rake Receiver --> "not for now. From TDOA to DOA"
+## Examples
 
-RT60 measurements
+## Citing dEchorate
 
-- double slope
+If you are using `dEchorate` and you want to cite us, please use
+
+```BibTex
+@preprint{di2021dechorate,
+    title={dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing},
+    author={Di Carlo, Diego and Tandeitnik, Pinchas and Foy, C{\'e}dric and Deleforge, Antoine and Bertin, Nancy and Gannot, Sharon},
+    journal={arXiv preprint arXiv:2104.13168},
+    year={2021}
+  }
+```
