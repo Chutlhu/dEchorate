@@ -1,38 +1,53 @@
-Bar Ilan Recordings
-==============================
+# WELCOME to the dECHORATE dataset
 
-dECHORATE: an ECHO RetrievAl dataseT
+> :warning: **This work is under review**: Be very careful here!
 
-List of todos for Laurent
+## dECHORATE: A calibrated dataset for echo-aware audio signal processing
 
-- [x] Larger fonts in Fig. 2,
-- [x] no more "??" in Table 1,
-- [x] no more red text
-- [x] the Table 5 moved out of the bibliography
-- [x] the very big spacings on page 8 removed?
+> The `dEchorate` dataset is a new database of measured multichannel Room Impulse Responses (RIRs) including annotations of early echo timings and 3D positions of microphones, real sources and image sourcesunder different wall configurations in a cuboid room.  
+> These data provide a tool for benchmarking recentmethods inecho-awarespeech enhancement, room geometry estimation, RIR estimation, acoustic echoretrieval, microphone calibration, echo labeling and reflectors estimation.  
+> The database is accompanied withsoftware utilities to easily access, manipulate and visualize the data as well as baseline methods forecho-related tasks.  
 
-List of todos for journal
+**Keywords:** Echo-aware signal processing; Acoustic echoes; Room impulse response; Audio database; AcousticEcho Retrieval; Spatial Filtering; Room Geometry Estimation; Microphone arrays.
 
-- [x] Table 1 - Dataset: change array and mic pos columns
-- [x] Edit bibliography (import from Mendeley)
-- [ ] write RT60 analysis
-- [ ] write DDR analysis
-- [ ] write TDOA estimation
-- [ ] write Rake Beamformers
-  - [ ] write
-  - [ ] compute synth data
-  - [ ] compute real data
-- [ ] Edit table existing databases
-  - [ ] out voiceHome, in ACE challenge
-  - [ ] Compact array?
-- [x] Add GoM 0.05 ms
+You can find a detailed explanation of the dEchorate dataset at:
+[dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing](https://hal.archives-ouvertes.fr/hal-03207860/)
 
-Code:
+`dEchorate` has three main elements:
+- the data (available on Zenodo);
+- the code for working with `dEchorate`;
+- the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/).
 
-- [ ] Remaggi's and Ivan's code for RIR segmentation
-- [ ] Crocco and Blaster for TDOA estimation
-- [n] Kowalkzy code for Rake Receiver --> "not for now. From TDOA to DOA"
+## Contents
+- [News](#news)
+- [Get the Data](#get)
+- [Examples](#examples)
+- [Citing Us](#citing)
 
-RT60 measurements
+## News:
+- 03 May 2020: v0.0.1 dEchorate project is alive
 
-- double slope
+## Get the Data
+The data is available at [Zenodo](www.notavailableyet.com).
+Please, follow that link to download (part of) the data.
+
+The dataset is available in multiple ways:
+- Annotations/labels/metadata: csv file that can be used pandas (Python)
+- Only RIRs: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
+- Only Speech: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
+- Raw data: an hdf5 file (~ 75 GB) containig all the raw recording data (chirps, speech/noise sources, babble noise, room tone)
+
+## Examples
+
+## Citing dEchorate
+
+If you are using `dEchorate` and you want to cite us, please use
+
+```BibTex
+@preprint{di2021dechorate,
+    title={dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing},
+    author={Di Carlo, Diego and Tandeitnik, Pinchas and Foy, C{\'e}dric and Deleforge, Antoine and Bertin, Nancy and Gannot, Sharon},
+    journal={arXiv preprint arXiv:2104.13168},
+    year={2021}
+  }
+```
