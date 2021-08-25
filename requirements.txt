@@ -125,7 +125,7 @@ SRMRpy @ git+https://github.com/jfsantos/SRMRpy@4c67370b22ec2a89a0507e034b28b55b
 statannot==0.2.3
 stempeg==0.1.8
 tensorboard==2.0.2
-tensorflow==2.0.0
+tensorflow==2.5.1
 tensorflow-estimator==2.0.1
 termcolor==1.1.0
 terminado==0.8.3
