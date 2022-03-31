@@ -110,7 +110,7 @@ requests==2.24.0
 requests-oauthlib==1.3.0
 resampy==0.2.2
 -e git+https://github.com/Chutlhu/Risotto.git@ae181bd926d3a6b50f5528653c4789c2cfc18d49#egg=risotto
-rsa==4.6
+rsa==4.7
 scikit-learn==0.22.1
 scipy==1.3.3
 seaborn==0.10.1
