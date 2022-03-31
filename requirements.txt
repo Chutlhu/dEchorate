@@ -92,7 +92,7 @@ pyasn1-modules==0.2.8
 pybind11==2.5.0
 pycodestyle==2.5.0
 pycparser==2.19
-Pygments==2.6.1
+Pygments==2.7.4
 pylint==2.4.4
 pyparsing==2.4.5
 pypesq @ git+https://github.com/vBaiCai/python-pesq@d870dfa9972afa0b82ad0b0d01341010343907ba
