@@ -102,7 +102,7 @@ pystoi==0.3.3
 pytest==5.3.2
 python-dateutil==2.8.1
 pytz==2019.3
-PyYAML==5.3.1
+PyYAML==5.4
 pyzmq==19.0.0
 qtconsole==4.7.3
 QtPy==1.9.0
