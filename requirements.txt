@@ -7,7 +7,7 @@ audioread==2.1.8
 autopep8==1.4.4
 backcall==0.1.0
 -e git+git@gitlab.inria.fr:ddicarlo/braire.git@a98b4d9719782e51de2d5206baa3140b166cdb2c#egg=blaster
-bleach==3.1.4
+bleach==3.3.0
 -e git+https://github.com/Chutlhu/Brioche.git@87ab82fe48debc9ceb30550f3b0954090e182c78#egg=brioche
 cachetools==4.1.1
 certifi==2020.6.20
