@@ -1,43 +1,54 @@
 import numpy as np
-import scipy as sp
 import pandas as pd
+
+import matplotlib
+matplotlib.use('TkAgg')
 
 import matplotlib.pyplot as plt
 import pyroomacoustics as pra
 
-from dechorate.utils.file_utils import load_from_matlab
+from pathlib import Path
+
+data_dir = Path('.','data')
+figure_dir = Path('.','figures')
+
+room_size = [5.543, 5.675, 2.353]
 
 ## LOAD POSITIONS
 # load arrays' barycenters positions from file generated in excell
 # using data from the beacon and sketchUp (for theta)
-path_to_positions = './data/dECHORATE/positions.csv'
+path_to_positions = data_dir / Path('dECHORATE_positions_marvel.csv')
 audio_scene_positions = pd.read_csv(path_to_positions)
 
 mic_bar_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'array']
 mic_theta = np.array(mic_bar_pos['theta'])
 mic_aim = np.array(mic_bar_pos['aiming_at'])
-mic_bar_pos = np.vstack([mic_bar_pos['x'], mic_bar_pos['y'], mic_bar_pos['2.353']])
+mic_bar_pos = np.vstack([mic_bar_pos['x'], mic_bar_pos['y'], room_size[2] + mic_bar_pos['z']])
 
 I = 5 * mic_bar_pos.shape[-1]
 
 src_omni_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'omni']
-src_omni_pos = np.vstack([src_omni_pos['x'], src_omni_pos['y'], src_omni_pos['2.353']])
+src_omni_pos = np.vstack([src_omni_pos['x'], src_omni_pos['y'], room_size[2] + src_omni_pos['z']])
 
 src_noise_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'noise']
-src_noise_pos = np.vstack([src_noise_pos['x'], src_noise_pos['y'], src_noise_pos['2.353']])
+src_noise_pos = np.vstack([src_noise_pos['x'], src_noise_pos['y'], room_size[2] + src_noise_pos['z']])
 
 src_dir_pos = audio_scene_positions.loc[audio_scene_positions['type'] == 'dir']
-src_dir_pos = np.vstack([src_dir_pos['x'], src_dir_pos['y'], src_dir_pos['2.353']])
+src_dir_aim = np.array(src_dir_pos['aiming_at'])
+src_dir_pos = np.vstack([src_dir_pos['x'], src_dir_pos['y'], room_size[2] + src_dir_pos['z']])
+
 Jd = src_dir_pos.shape[-1]
 Jo = src_omni_pos.shape[-1]
 Jn = src_noise_pos.shape[-1]
 J = Jd + Jo
 
-room_size = [5.543, 5.675, 2.353]
 
 ## Create linear arrays
 nULA = np.zeros([3,5])
 nULA[0, :] = np.array([0-3.25-5-4, 0-3.25-5, 0-3.25, 3.25, 3.25+10])/100
+
+print(nULA)
+print(np.diff(nULA[0,:]))
 
 def rotate_and_translate(LA, new_center, new_angle):
     # azimuth rotation
@@ -79,6 +90,7 @@ for j in range(Jd):
     df.at[c, 'x'] = srcs[0, j]
     df.at[c, 'y'] = srcs[1, j]
     df.at[c, 'z'] = srcs[2, j]
+    df.at[c, 'aiming_at'] = src_dir_aim[j]
     c += 1
 
 # omndirectional source
@@ -95,7 +107,7 @@ for j in range(Jd, Jd+Jo):
 c = len(df)
 for j in range(Jn):
     df.at[c, 'id'] = int(j)+1
-    df.at[c, 'type'] = 'babble noise'
+    df.at[c, 'type'] = 'noise'
     df.at[c, 'channel'] = int(45+j)
     df.at[c, 'x'] = src_noise_pos[0, j]
     df.at[c, 'y'] = src_noise_pos[1, j]
@@ -126,15 +138,16 @@ for i in range(I//5):
     df.at[c, 'z'] = mic_bar_pos[2, i]
     c += 1
 
-csv_filename = './data/dECHORATE/annotations/dECHORATE_positioning_annotation.csv'
+csv_filename = data_dir / Path('dECHORATE_positioning_marvel_expanded.csv')
 df.to_csv(csv_filename, sep=',')
 
 ## PRINT FIGURES
 # Blueprint 2D xy plane
 font_size = 22
 marker_size = 120
+figsize = (12,9)
 
-plt.figure(figsize=(12,9))
+plt.figure(figsize=figsize)
 plt.gca().add_patch(
     plt.Rectangle((0, 0),
                    room_size[0], room_size[1], fill=False,
@@ -146,15 +159,11 @@ plt.scatter(mics[0, :], mics[1, :], marker='X', s=80, label='microphones')
 bars = np.zeros([3, 6])
 c = 0
 for i in range(I):
-    # if i % 5 == 0 or i % 5 == 4:
-    #     plt.text(mics[0, i], mics[1, i], '$%d$' % (i+33), fontdict={'fontsize': font_size})
-
+    
     if i % 5 == 0:
         bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
         bars[:, c] = bar
 
-        # plt.text(bar[0], bar[1]-0.2, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
-        #          (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': font_size})
         if i//5 + 1 == 2:
             plt.text(bar[0]+0.1, bar[1]-0.05, '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': font_size})
         else:
@@ -163,18 +172,7 @@ for i in range(I):
 
 plt.scatter(bars[0, :], bars[1, :], marker='1', s=marker_size, c='k', label='array barycenters')
 
-
 plt.scatter(srcs[0, :Jd], srcs[1, :Jd], marker='v', s=marker_size, label='directional')
-# for j in range(Jd):
-#     if j == 2:
-#         plt.text(srcs[0, j], srcs[1, j]-0.15, '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-#                  (j+1, srcs[0, j], srcs[1, j], srcs[2, j]), fontdict={'fontsize': font_size})
-#     elif j == 5:
-#         plt.text(srcs[0, j], srcs[1, j]+0.1, '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-#                  (j+1, srcs[0, j], srcs[1, j], srcs[2, j]), fontdict={'fontsize': font_size})
-#     else:
-#         plt.text(srcs[0, j], srcs[1, j], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-#                 (j+1, srcs[0, j], srcs[1, j], srcs[2, j]), fontdict={'fontsize': font_size})
 
 for j in range(Jd):
     if j == 2:
@@ -188,81 +186,19 @@ for j in range(Jd):
 plt.scatter(srcs[0, Jd:], srcs[1, Jd:], marker='o', s=marker_size, label='omnidirectional')
 
 for j in range(Jd, J):
-    # plt.text(srcs[0, j], srcs[1, j], '$omni_%d$ [%1.2f, %1.2f, %1.2f]' %
-    #         (j+1, srcs[0, j], srcs[1, j], srcs[2, j]), fontdict={'fontsize': font_size})
     plt.text(srcs[0, j], srcs[1, j], '$omni_%d$' % (j+1), fontdict={'fontsize': font_size})
+
+
+plt.scatter(src_noise_pos[0,:], src_noise_pos[1,:], marker='o', s=marker_size, label='noise')
+
+for j in range(Jn):
+    plt.text(src_noise_pos[0, j], src_noise_pos[1, j], '$noise_%d$' % (j+1), fontdict={'fontsize': font_size})
 
 plt.legend()
 plt.tight_layout()
-plt.savefig('./reports/figures/positioning2D_xy.pdf')
+plt.savefig(figure_dir / Path('positioning2D_xy.pdf'))
 plt.show()
-
-1/0
-
-# Blueprint 2D xz plane
-plt.figure(figsize=(16, 9))
-plt.gca().add_patch(
-    plt.Rectangle((0, 0),
-                  room_size[0], room_size[2], fill=False,
-                  edgecolor='g', linewidth=2)
-)
-
-for i in range(I):
-    plt.scatter(mics[0, i], mics[2, i], marker='X')
-    plt.text(mics[0, i], mics[2, i], '$%d$' %
-             (i+33), fontdict={'fontsize': font_size})
-    if i % 5 == 0:
-        bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
-        plt.text(bar[0]+0.1, bar[2]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (i//5 + 1, bar[0], bar[1], bar[2]), fontdict={'fontsize': font_size})
-
-
-for j in range(J):
-    bar = srcs[:, j]
-    if j < Jd:
-        plt.scatter(bar[0], bar[2], marker='v')
-        plt.text(bar[0], bar[2], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[0], bar[2], bar[2]), fontdict={'fontsize': font_size})
-    else:
-        plt.scatter(bar[0], bar[2], marker='o')
-        plt.text(bar[0], bar[2], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[0], bar[1], bar[2]), fontdict={'fontsize': font_size})
-
-plt.tight_layout()
-plt.savefig('./reports/figures/positioning2D_xz.pdf')
-plt.show()
-
-
-# Blueprint 2D yz plane
-plt.figure(figsize=(16, 9))
-plt.gca().add_patch(
-    plt.Rectangle((0, 0),
-                  room_size[1], room_size[2], fill=False,
-                  edgecolor='g', linewidth=1)
-)
-
-for i in range(I):
-    plt.scatter(mics[1, i], mics[2, i], marker='X')
-    plt.text(mics[1, i], mics[2, i], '$%d$' %
-             (i+33), fontdict={'fontsize': font_size})
-    if i % 5 == 0:
-        bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
-        plt.text(bar[1]+0.1, bar[2]+0.1, '$arr_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (i//5 + 1, bar[1], bar[1], bar[2]), fontdict={'fontsize': font_size})
-
-
-for j in range(J):
-    bar = srcs[:, j]
-    if j < Jd:
-        plt.scatter(bar[1], bar[2], marker='v')
-        plt.text(bar[1], bar[2], '$dir_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[1], bar[2], bar[2]), fontdict={'fontsize': font_size})
-    else:
-        plt.scatter(bar[1], bar[2], marker='o')
-        plt.text(bar[1], bar[2], '$omn_%d$ [%1.2f, %1.2f, %1.2f]' %
-                 (j+1, bar[1], bar[1], bar[2]), fontdict={'fontsize': font_size})
-plt.savefig('./reports/figures/positioning2D_yz.pdf')
-plt.show()
+plt.close()
 
 # plot with pyroomacoustics
 room = pra.ShoeBox(room_size, fs=48000)
@@ -272,9 +208,9 @@ for j in range(J):
     try:
         room.add_source(srcs[:, j])
     except:
-        print('src', j, srcs[:, j])
+        print('src', j, srcs[:, j], 'is out of the room')
 room.plot()
-plt.savefig('./reports/figures/positioning3D.pdf')
+plt.savefig(figure_dir / Path('positioning3D.pdf'))
 plt.show()
 
 

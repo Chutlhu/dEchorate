@@ -15,7 +15,7 @@ from scipy.optimize import least_squares
 from dechorate import constants
 
 from dechorate.dataset import DechorateDataset, SyntheticDataset
-from dechorate.calibration_and_mds import *
+from dechorate.trash_bin.calibration_and_mds import *
 
 from dechorate.utils.file_utils import save_to_matlab, load_from_pickle, save_to_pickle
 from dechorate.utils.dsp_utils import envelope, normalize
