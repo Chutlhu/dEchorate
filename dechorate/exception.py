@@ -1,2 +1,0 @@
-class NotUniqueSelectionError(Exception):
-    pass

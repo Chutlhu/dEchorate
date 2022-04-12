@@ -1,5 +1,5 @@
 filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,fornitures,temperature,silence dB,artifacts
-2020-01-22__22-48-02,silence,,,,0,1,0,0,0,0,FALSE,24,23,0
+2020-01-22__22-48-02,silence,99,99,silence,0,1,0,0,0,0,FALSE,24,23,0
 2020-01-22__22-48-55,diffuse,1,45,babble,0,1,0,0,0,0,FALSE,24,23,0
 2020-01-22__22-48-55,diffuse,2,46,babble,0,1,0,0,0,0,FALSE,24,23,0
 2020-01-22__22-48-55,diffuse,3,47,babble,0,1,0,0,0,0,FALSE,24,23,0
@@ -31,7 +31,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-22__23-25-55,omnidirectional,9,16,chirp,0,1,0,0,0,0,FALSE,24,23,0
 2020-01-22__23-25-29,omnidirectional,9,16,noise,0,1,0,0,0,0,FALSE,24,23,0
 2020-01-22__23-24-30,omnidirectional,9,16,speech,0,1,0,0,0,0,FALSE,24,23,0
-2020-01-22__23-36-31,silence,,,silence,0,1,1,0,0,0,FALSE,24,23,0
+2020-01-22__23-36-31,silence,99,99,silence,0,1,1,0,0,0,FALSE,24,23,0
 2020-01-22__23-36-04,diffuse,1,45,babble,0,1,1,0,0,0,FALSE,24,23,0
 2020-01-22__23-36-04,diffuse,2,46,babble,0,1,1,0,0,0,FALSE,24,23,0
 2020-01-22__23-36-04,diffuse,3,47,babble,0,1,1,0,0,0,FALSE,24,23,0
@@ -63,7 +63,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-22__23-42-27,omnidirectional,9,16,chirp,0,1,1,0,0,0,FALSE,24,23,0
 2020-01-22__23-44-06,omnidirectional,9,16,noise,0,1,1,0,0,0,FALSE,24,23,0
 2020-01-22__23-43-26,omnidirectional,9,16,speech,0,1,1,0,0,0,FALSE,24,23,0
-2020-01-23__00-06-44,silence,,,silence,0,1,1,1,0,0,FALSE,24,23,0
+2020-01-23__00-06-44,silence,99,99,silence,0,1,1,1,0,0,FALSE,24,23,0
 2020-01-23__00-08-49,diffuse,1,45,babble,0,1,1,1,0,0,FALSE,24,23,0
 2020-01-23__00-08-49,diffuse,2,46,babble,0,1,1,1,0,0,FALSE,24,23,0
 2020-01-23__00-08-49,diffuse,3,47,babble,0,1,1,1,0,0,FALSE,24,23,0
@@ -95,7 +95,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-23__00-25-45,omnidirectional,9,16,chirp,0,1,1,1,0,0,FALSE,24,23,0
 2020-01-23__00-26-37,omnidirectional,9,16,noise,0,1,1,1,0,0,FALSE,24,23,0
 2020-01-23__00-27-07,omnidirectional,9,16,speech,0,1,1,1,0,0,FALSE,24,23,0
-2020-01-23__00-42-20,silence,-,,-,0,1,1,1,1,0,FALSE,24,23,0
+2020-01-23__00-42-20,silence,99,99,silence,0,1,1,1,1,0,FALSE,24,23,0
 2020-01-23__00-49-15,diffuse,1,45,babble,0,1,1,1,1,0,FALSE,24,23,0
 2020-01-23__00-49-15,diffuse,2,46,babble,0,1,1,1,1,0,FALSE,24,23,0
 2020-01-23__00-49-15,diffuse,3,47,babble,0,1,1,1,1,0,FALSE,24,23,0
@@ -127,7 +127,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-23__00-42-52,omnidirectional,9,16,chirp,0,1,1,1,1,0,FALSE,24,23,0
 2020-01-23__00-41-53,omnidirectional,9,16,noise,0,1,1,1,1,0,FALSE,24,23,0
 2020-01-23__00-40-51,omnidirectional,9,16,speech,0,1,1,1,1,0,FALSE,24,23,0
-2020-01-23__01-10-04,silence,-,,-,0,1,1,1,1,1,FALSE,24,23,1
+2020-01-23__01-10-04,silence,99,99,silence,0,1,1,1,1,1,FALSE,24,23,1
 2020-01-23__01-10-04,diffuse,1,45,babble,0,1,1,1,1,1,FALSE,24,23,0
 2020-01-23__01-10-04,diffuse,2,46,babble,0,1,1,1,1,1,FALSE,24,23,0
 2020-01-23__01-10-04,diffuse,3,47,babble,0,1,1,1,1,1,FALSE,24,23,0
@@ -159,7 +159,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-23__01-32-58,omnidirectional,9,16,chirp,0,1,1,1,1,1,FALSE,24,23,0
 2020-01-23__01-33-48,omnidirectional,9,16,noise,0,1,1,1,1,1,FALSE,24,23,0
 2020-01-23__01-34-16,omnidirectional,9,16,speech,0,1,1,1,1,1,FALSE,24,23,0
-2020-01-23__20-22-44,silence,-,,-,0,0,0,0,0,0,FALSE,24,23,0
+2020-01-23__20-22-44,silence,99,99,silence,0,0,0,0,0,0,FALSE,24,23,0
 2020-01-23__20-23-29,diffuse,1,45,babble,0,0,0,0,0,0,FALSE,24,23,0
 2020-01-23__20-23-29,diffuse,2,46,babble,0,0,0,0,0,0,FALSE,24,23,0
 2020-01-23__20-23-29,diffuse,3,47,babble,0,0,0,0,0,0,FALSE,24,23,0
@@ -191,7 +191,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-23__20-30-00,omnidirectional,9,16,chirp,0,0,0,0,0,0,FALSE,24,23,0
 2020-01-23__20-32-00,omnidirectional,9,16,noise,0,0,0,0,0,0,FALSE,24,23,2
 2020-01-23__20-32-35,omnidirectional,9,16,speech,0,0,0,0,0,0,FALSE,24,23,0
-2020-01-25__19-55-53,silence,-,,-,0,0,0,1,0,0,FALSE,24,22,0
+2020-01-25__19-55-53,silence,99,99,silence,0,0,0,1,0,0,FALSE,24,22,0
 2020-01-25__19-56-34,diffuse,1,45,babble,0,0,0,1,0,0,FALSE,24,22,0
 2020-01-25__19-56-34,diffuse,2,46,babble,0,0,0,1,0,0,FALSE,24,22,0
 2020-01-25__19-56-34,diffuse,3,47,babble,0,0,0,1,0,0,FALSE,24,22,0
@@ -223,7 +223,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-25__20-22-00,omnidirectional,9,16,chirp,0,0,0,1,0,0,FALSE,24,22,0
 2020-01-25__20-23-00,omnidirectional,9,16,noise,0,0,0,1,0,0,FALSE,24,22,0
 2020-01-25__20-23-20,omnidirectional,9,16,speech,0,0,0,1,0,0,FALSE,24,22,0
-2020-01-25__22-38-48,silence,-,,-,0,0,0,0,1,0,FALSE,24,23,0
+2020-01-25__22-38-48,silence,99,99,silence,0,0,0,0,1,0,FALSE,24,23,0
 2020-01-25__22-39-27,diffuse,1,45,babble,0,0,0,0,1,0,FALSE,24,23,0
 2020-01-25__22-39-27,diffuse,2,46,babble,0,0,0,0,1,0,FALSE,24,23,0
 2020-01-25__22-39-27,diffuse,3,47,babble,0,0,0,0,1,0,FALSE,24,23,0
@@ -255,7 +255,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-25__22-46-03,omnidirectional,9,16,chirp,0,0,0,0,1,0,FALSE,24,23,0
 2020-01-25__23-01-15,omnidirectional,9,16,noise,0,0,0,0,1,0,FALSE,24,23,0
 2020-01-25__23-00-27,omnidirectional,9,16,speech,0,0,0,0,1,0,FALSE,24,23,0
-2020-01-26__18-54-25,silence,,,,0,0,1,0,0,0,FALSE,24,23,0
+2020-01-26__18-54-25,silence,99,99,silence,0,0,1,0,0,0,FALSE,24,23,0
 2020-01-26__18-54-52,diffuse,1,45,babble,0,0,1,0,0,0,FALSE,24,23,0
 2020-01-26__18-54-52,diffuse,2,46,babble,0,0,1,0,0,0,FALSE,24,23,0
 2020-01-26__18-54-52,diffuse,3,47,babble,0,0,1,0,0,0,FALSE,24,23,0
@@ -287,7 +287,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-26__19-17-30,omnidirectional,9,16,chirp,0,0,1,0,0,0,FALSE,24,23,0
 2020-01-26__19-18-22,omnidirectional,9,16,noise,0,0,1,0,0,0,FALSE,24,23,0
 2020-01-26__19-18-44,omnidirectional,9,16,speech,0,0,1,0,0,0,FALSE,24,23,0
-2020-01-26__19-34-43,silence,,,,0,0,0,0,0,1,FALSE,24,23,1
+2020-01-26__19-34-43,silence,99,99,silence,0,0,0,0,0,1,FALSE,24,23,1
 2020-01-26__19-35-04,diffuse,1,45,babble,0,0,0,0,0,1,FALSE,24,23,0
 2020-01-26__19-35-04,diffuse,2,46,babble,0,0,0,0,0,1,FALSE,24,23,0
 2020-01-26__19-35-04,diffuse,3,47,babble,0,0,0,0,0,1,FALSE,24,23,0
@@ -319,7 +319,7 @@ filename,sources,id,channel,signal,floor,ceiling,west,south,east,north,forniture
 2020-01-26__20-04-18,omnidirectional,9,16,chirp,0,0,0,0,0,1,FALSE,24,23,0
 2020-01-26__20-06-02,omnidirectional,9,16,noise,0,0,0,0,0,1,FALSE,24,23,0
 2020-01-26__20-06-21,omnidirectional,9,16,speech,0,0,0,0,0,1,FALSE,24,23,0
-2020-01-29__17-40-19,silence,-,,-,0,1,0,0,0,1,TRUE,24,23,0
+2020-01-29__17-40-19,silence,99,99,silence,0,1,0,0,0,1,TRUE,24,23,0
 2020-01-29__17-40-00,diffuse,1,45,babble,0,1,0,0,0,1,TRUE,24,23,0
 2020-01-29__17-40-00,diffuse,2,46,babble,0,1,0,0,0,1,TRUE,24,23,0
 2020-01-29__17-40-00,diffuse,3,47,babble,0,1,0,0,0,1,TRUE,24,23,0

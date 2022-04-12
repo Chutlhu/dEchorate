@@ -1,4 +1,3 @@
-import sklearn
 import librosa as lr
 import numpy as np
 import scipy as sp

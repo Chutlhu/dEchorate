@@ -15,7 +15,7 @@ constants = {
     'speed_of_sound' : 331.3 + 0.606 * 24,  # speed of sound
     'src_ids': np.arange(1,8),
     'mic_ids': np.arange(1, 32),
-    'signals' : ['rir','chirp', 'silence', 'babble', 'speech', 'noise'],
+    'signals' : ['rir', 'chirp', 'silence', 'babble', 'speech', 'noise'],
     'rir_processing': {
         'Fs': 48000,
         'stimulus': 'exp_sine_sweep',

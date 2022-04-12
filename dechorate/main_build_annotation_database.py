@@ -26,7 +26,7 @@ c = 0  # counter
 
 print('Compiling an unique database')
 # for each recording
-for r, row in tqdm(df_rec.iterrows()):
+for r, row in tqdm(df_rec.iterrows(), total=len(df_rec)):
 
     # for each channel in the recordings
     for i in range(31):
@@ -35,9 +35,14 @@ for r, row in tqdm(df_rec.iterrows()):
         df.at[c, 'src_id'] = row['id']
         df.at[c, 'src_ch'] = row['channel']
 
-        # if silence or diffuse (=noise) skip
-        if not (row['sources'] == 'silence' or row['sources'] == 'diffuse'):
 
+        # if silence or diffuse (=noise) skip
+        if row['sources'] == 'silence':
+            df.at[c, 'src_pos_x'] = np.nan
+            df.at[c, 'src_pos_y'] = np.nan
+            df.at[c, 'src_pos_z'] = np.nan
+
+        else:
             # find src attributes in pos_note
             curr_pos_source = df_pos.loc[
                   (df_pos['type'] == row['sources'])
@@ -63,6 +68,7 @@ for r, row in tqdm(df_rec.iterrows()):
             df.at[c, 'src_pos_y'] = float(curr_pos_source['y'].values)
             df.at[c, 'src_pos_z'] = float(curr_pos_source['z'].values)
 
+
         df.at[c, 'src_signal'] = row['signal']
         df.at[c, 'room_code'] = '%d%d%d%d%d%d' % (
             row['floor'], row['ceiling'], row['west'], row['south'], row['east'], row['north'])
@@ -81,6 +87,7 @@ for r, row in tqdm(df_rec.iterrows()):
         # find array attributes in pos_note
         if i == 30:
             df.at[c, 'mic_type'] = 'loopback'
+            df.at[c, 'mic_id'] = 31
 
         else:
             df.at[c, 'mic_type'] = 'capsule'
@@ -120,7 +127,6 @@ for r, row in tqdm(df_rec.iterrows()):
             df.at[c, 'mic_pos_x'] = float(curr_pos_mic['x'].values)
             df.at[c, 'mic_pos_y'] = float(curr_pos_mic['y'].values)
             df.at[c, 'mic_pos_z'] = float(curr_pos_mic['z'].values)
-            df.at[c, 'mic_signal'] = row['signal']
 
         c += 1
 
