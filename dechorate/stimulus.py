@@ -186,7 +186,7 @@ if __name__ == "__main__":
     Fs = 48000
     ps = ProbeSignal('exp_sine_sweep', Fs)
     n_seconds = 10
-    amplitude = 0.3
+    amplitude = 0.7
     n_repetitions = 3
     silence_at_start = 2
     silence_at_end = 2
