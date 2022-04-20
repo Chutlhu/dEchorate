@@ -18,7 +18,8 @@ constants = {
     'refl_order_pyroom': ['d', 'w', 'e', 's', 'n', 'f', 'c'],
     'refl_order_calibr': ['d', 'c', 'f', 'w', 's', 'e', 'n'],
     'room_temperature' : 24,     # temperature
-    'speed_of_sound' : 331.3 + 0.606 * 24,  # speed of sound
+    'room_humidity' : 80,
+    'speed_of_sound' : 346.98,  # speed of sound
     'src_ids': np.arange(1,10),
     'mic_ids': np.arange(1, 32),
     'signals' : ['chirp', 'silence', 'babble', 'speech', 'noise'],
