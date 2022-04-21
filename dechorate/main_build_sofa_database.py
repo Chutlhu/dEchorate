@@ -123,6 +123,7 @@ if __name__ == "__main__":
                 view = np.array([-slope, 1])
                 view = view / np.linalg.norm(view)
                 array_view = np.array([view[0], view[1], 0])
+                # array_view = [1,0,0]
 
                 # echo note
                 if src_idx > 3:
@@ -150,7 +151,7 @@ if __name__ == "__main__":
                     's' : 'True' if curr_df['room_rfl_south'].unique()[0] else 'False',
                     'e' : 'True' if curr_df['room_rfl_east'].unique()[0]  else 'False',
                     'n' : 'True' if curr_df['room_rfl_north'].unique()[0] else 'False',
-                    'frn' : 'True' if curr_df['room_fornitures'].unique()[0] else 'False',
+                    'frn':'True' if curr_df['room_fornitures'].unique()[0] else 'False',
                 }
 
                 
@@ -185,7 +186,7 @@ if __name__ == "__main__":
 
                 sofa.GLOBAL_References = """@article{dicarlo2021dechorate,
                 title={dEchorate: a calibrated room impulse response dataset for echo-aware signal processing},
-                author={Carlo, Diego Di and Tandeitnik, Pinchas and Foy, Cedri{\'c} and Bertin, Nancy and Deleforge, Antoine and Gannot, Sharon},
+                author={Di Carlo, Diego and Tandeitnik, Pinchas and Foy, Cedri{\'c} and Bertin, Nancy and Deleforge, Antoine and Gannot, Sharon},
                 journal={EURASIP Journal on Audio, Speech, and Music Processing},
                 volume={2021},
                 number={1},
@@ -195,8 +196,8 @@ if __name__ == "__main__":
                 }"""
 
                 ## --- RIRS --- ##
-                sofa.Data_IR = mimo_srir.T[None,:,:,None] # must be in M x R x N x E (measurements, receivers, samples, emitters)
-                assert sofa.Data_IR.shape == (1,5,2*Fs,1)
+                sofa.Data_IR = mimo_srir.T[None,:,:] # must be in M x R x N x E (measurements, receivers, samples, emitters)
+                assert sofa.Data_IR.shape == (1,5,2*Fs)
                 sofa.Data_SamplingRate = Fs
                 sofa.Data_SamplingRate_Units = 'hertz'
                 sofa.Data_Delay = [0] * 5
@@ -232,6 +233,25 @@ if __name__ == "__main__":
                 sofa.ReceiverView_Type = 'cartesian'
                 sofa.ReceiverView_Units = 'metre'
 
+                # sofa.GLOBAL_EmitterShortName = sofa.GLOBAL_SourceShortName
+                # # print(sofa.GLOBAL_EmitterShortName)
+                # sofa.GLOBAL_EmitterDescription = sofa.GLOBAL_SourceDescription
+                # # print(sofa.GLOBAL_EmitterDescription)
+
+                # sofa.EmitterPosition = sofa.SourcePosition
+                # # print(sofa.EmitterPosition)
+                # sofa.EmitterPosition_Type = sofa.SourcePosition_Type
+                # # print(sofa.EmitterPosition_Type)
+                # sofa.EmitterPosition_Units = sofa.SourcePosition_Units
+                # # print(sofa.EmitterPosition_Units)
+                # sofa.EmitterView = sofa.SourceView
+                # # print(sofa.EmitterView)
+                # sofa.EmitterUp = sofa.SourceUp
+                # # print(sofa.EmitterUp)
+                # sofa.EmitterView_Type = sofa.EmitterView_Type
+                # # print(sofa.EmitterView_Type)
+                # sofa.EmitterView_Units = sofa.EmitterView_Units
+                # # print(sofa.EmitterView_Units)
 
                 # --- SOURCES --- ## 
 
@@ -245,19 +265,6 @@ if __name__ == "__main__":
                 sofa.SourceUp = [0,0,1]
                 sofa.SourceView_Type = 'cartesian'
                 sofa.SourceView_Units = 'metre'
-
-                # for us, emitter = source 
-
-                # sofa.GLOBAL_EmitterShortName = sofa.GLOBAL_SourceShortName
-                # sofa.GLOBAL_EmitterDescription = sofa.GLOBAL_SourceDescription
-
-                # sofa.EmitterPosition = sofa.SourcePosition
-                # sofa.EmitterPosition_Type = sofa.SourcePosition_Type
-                # sofa.EmitterPosition_Units = sofa.SourcePosition_Units
-                # sofa.EmitterView = sofa.SourceView
-                # sofa.EmitterUp = sofa.SourceUp
-                # sofa.EmitterView_Type = sofa.EmitterView_Type
-                # sofa.EmitterView_Units = sofa.EmitterView_Units
 
                 ## --- ROOM --- ##
                 sofa.GLOBAL_RoomType = 'shoebox'
@@ -293,5 +300,5 @@ if __name__ == "__main__":
 
                 filename = sofa.GLOBAL_Title
                 path_to_out = Path(f'./outputs/dEchorate_sofa/{filename}.sofa')
-                # if not path_to_out.exists():
-                sf.write_sofa(str(path_to_out), sofa, compression=7)
+                if not path_to_out.exists():
+                    sf.write_sofa(str(path_to_out), sofa, compression=7)
