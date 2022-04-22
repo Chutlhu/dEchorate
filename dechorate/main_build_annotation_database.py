@@ -80,8 +80,10 @@ if __name__ == "__main__":
         # for each channel in the recordings
         for i in range(31):
 
+            src_id = row['id'] -1 
+
             df.at[c, 'filename'] = row['filename']
-            df.at[c, 'src_id'] = row['id']
+            df.at[c, 'src_id'] = src_id
             df.at[c, 'src_ch'] = row['channel']
 
 
@@ -96,7 +98,7 @@ if __name__ == "__main__":
                 curr_pos_source = df_pos.loc[
                     (df_pos['type'] == row['sources'])
                     & (df_pos['channel'] == row['channel'])
-                    & (df_pos['id'] == row['id'])]
+                    & (df_pos['id'] == src_id)]
                 
                 try:
                     assert len(curr_pos_source) == 1
@@ -118,7 +120,7 @@ if __name__ == "__main__":
                 df.at[c, 'src_pos_z'] = float(curr_pos_source['z'].values)
 
 
-            if row['id'] > 4 and row['sources'] == 'directional':
+            if row['id'] > 3 and row['sources'] == 'directional':
                 df.at[c, 'src_type'] = 'invdirectional'
             else:
                 df.at[c, 'src_type'] = row['sources']
@@ -149,13 +151,13 @@ if __name__ == "__main__":
 
                 curr_pos_array = df_pos.loc[
                     (df_pos['type'] == 'array')
-                    & (df_pos['id'] == i//5+1)]
+                    & (df_pos['id'] == i//5)]
 
                 # check that current selection is unique
                 try:
                     assert len(curr_pos_array) == 1
                 except:
-                    print('array', i//5+1, i)
+                    print('array', i//5, i)
                     print(curr_pos_array)
                     ValueError('Too many arrays')
 
@@ -167,7 +169,7 @@ if __name__ == "__main__":
                 # find mic attributes in pos_note
                 curr_pos_mic = df_pos.loc[
                     (df_pos['type'] == 'mic')
-                    & (df_pos['id'] == i+1)]
+                    & (df_pos['id'] == i)]
 
                 # check that current selection is unique
                 try:

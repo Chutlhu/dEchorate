@@ -120,13 +120,13 @@ if __name__ == "__main__":
                 &   (df_note['src_signal'] == 'chirp')
                 &   (df_note['room_code'] == int(curr_room_code))
                 &   (df_note['room_fornitures'] == curr_fornitures)
-                &   (df_note['mic_id'] == float(i+1))
+                &   (df_note['mic_id'] == float(i))
                 ]
 
                 try:
                     assert len(info) == 1
                 except:
-                    print(room_code, curr_room_code, src_id, i+1)
+                    print(room_code, curr_room_code, src_id, i)
                     print(info)
                     hdf.close()
 

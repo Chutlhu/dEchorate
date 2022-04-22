@@ -21,12 +21,12 @@ python dechorate/main_build_sound_datasets.py --signal speech  --datadir $path_t
 python dechorate/main_build_sound_datasets.py --signal chirp   --datadir $path_to_data_dir --dbpath $path_to_database
 echo "you may want to deleat the content of .cache folder" 
 
-# # 5. Estimate RIRs
-path_to_chirps="outputs/dEchorate_chirp.hdf5"
-python dechorate/main_estimate_rirs.py --dbpath $path_to_database --chirps $path_to_chirps
+# # # 5. Estimate RIRs
+# path_to_chirps="outputs/dEchorate_chirp.hdf5"
+# python dechorate/main_estimate_rirs.py --dbpath $path_to_database --chirps $path_to_chirps
 
 
-# # 6. Repack datasets
-for signal in silence babble noise speech chirp rirs; do
-    h5repack -v -f GZIP=7 outputs/dEchorate_${signal}.hdf5 outputs/dEchorate_${signal}_gzip7.hdf5
-done
+# # # 6. Repack datasets
+# for signal in silence babble noise speech chirp rirs; do
+#     h5repack -v -f GZIP=7 outputs/dEchorate_${signal}.hdf5 outputs/dEchorate_${signal}_gzip7.hdf5
+# done

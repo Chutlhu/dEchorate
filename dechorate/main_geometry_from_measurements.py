@@ -52,9 +52,6 @@ if __name__ == "__main__":
     nULA = np.zeros([3,5])
     nULA[0, :] = np.array([0-3.25-5-4, 0-3.25-5, 0-3.25, 3.25, 3.25+10])/100
 
-    print(nULA)
-    print(np.diff(nULA[0,:]))
-
     def rotate_and_translate(LA, new_center, new_angle):
         # azimuth rotation
         # can be extended as in http://planning.cs.uiuc.edu/node102.html
@@ -89,7 +86,7 @@ if __name__ == "__main__":
     # directional source
     c = 0
     for j in range(Jd):
-        df.at[c, 'id'] = int(j)+1
+        df.at[c, 'id'] = int(j)
         df.at[c, 'type'] = 'directional'
         df.at[c, 'channel'] = int(33+j)
         df.at[c, 'x'] = srcs[0, j]
@@ -101,7 +98,7 @@ if __name__ == "__main__":
     # omndirectional source
     c = len(df)
     for j in range(Jd, Jd+Jo):
-        df.at[c, 'id'] = int(j)+1
+        df.at[c, 'id'] = int(j)
         df.at[c, 'type'] = 'omnidirectional'
         df.at[c, 'channel'] = 16
         df.at[c, 'x'] = srcs[0, j]
@@ -111,7 +108,7 @@ if __name__ == "__main__":
 
     c = len(df)
     for j in range(Jn):
-        df.at[c, 'id'] = int(j)+1
+        df.at[c, 'id'] = int(j)
         df.at[c, 'type'] = 'noise'
         df.at[c, 'channel'] = int(45+j)
         df.at[c, 'x'] = src_noise_pos[0, j]
@@ -122,7 +119,7 @@ if __name__ == "__main__":
     c = len(df)
     for i in range(I):
         df.at[c, 'channel'] = int(33 + i)
-        df.at[c, 'id'] = int(i)+1
+        df.at[c, 'id'] = int(i)
         df.at[c, 'type'] = 'mic'
         df.at[c, 'array'] = int(i//5 + 1)
         df.at[c, 'x'] = mics[0, i]
@@ -133,9 +130,9 @@ if __name__ == "__main__":
     c = len(df)
     for i in range(I//5):
         df.at[c, 'channel'] = int(33 + i*5)
-        df.at[c, 'id'] = int(i)+1
+        df.at[c, 'id'] = int(i)
         df.at[c, 'type'] = 'array'
-        df.at[c, 'array'] = i+1
+        df.at[c, 'array'] = i
         df.at[c, 'theta'] = mic_theta[i]
         df.at[c, 'aiming_at'] = mic_aim[i]
         df.at[c, 'x'] = mic_bar_pos[0, i]
@@ -169,10 +166,10 @@ if __name__ == "__main__":
             bar = np.mean(mics[:, 5*i//5:5*(i//5+1)], axis=1)
             bars[:, c] = bar
 
-            if i//5 + 1 == 2:
-                plt.text(bar[0]+0.1, bar[1]-0.05, '$arr_%d$' %(i//5 + 1), fontdict={'fontsize': font_size})
+            if i//5 == 1:
+                plt.text(bar[0]+0.1, bar[1]-0.05, '$arr_%d$' %(i//5), fontdict={'fontsize': font_size})
             else:
-                plt.text(bar[0], bar[1]-0.2, '$arr_%d$' % (i//5 + 1), fontdict={'fontsize': font_size})
+                plt.text(bar[0], bar[1]-0.2, '$arr_%d$' % (i//5), fontdict={'fontsize': font_size})
             c += 1
 
     plt.scatter(bars[0, :], bars[1, :], marker='1', s=marker_size, c='k', label='array barycenters')
@@ -181,23 +178,23 @@ if __name__ == "__main__":
 
     for j in range(Jd):
         if j == 2:
-            plt.text(srcs[0, j], srcs[1, j]+0.1, '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
+            plt.text(srcs[0, j], srcs[1, j]+0.1, '$dir_%d$' % (j), fontdict={'fontsize': font_size})
         elif j == 5:
-            plt.text(srcs[0, j], srcs[1, j]-0.15, '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
+            plt.text(srcs[0, j], srcs[1, j]-0.15, '$dir_%d$' % (j), fontdict={'fontsize': font_size})
         else:
-            plt.text(srcs[0, j], srcs[1, j], '$dir_%d$' % (j+1), fontdict={'fontsize': font_size})
+            plt.text(srcs[0, j], srcs[1, j], '$dir_%d$' % (j), fontdict={'fontsize': font_size})
 
 
     plt.scatter(srcs[0, Jd:], srcs[1, Jd:], marker='o', s=marker_size, label='omnidirectional')
 
     for j in range(Jd, J):
-        plt.text(srcs[0, j], srcs[1, j], '$omni_%d$' % (j+1), fontdict={'fontsize': font_size})
+        plt.text(srcs[0, j], srcs[1, j], '$omni_%d$' % (j), fontdict={'fontsize': font_size})
 
 
     plt.scatter(src_noise_pos[0,:], src_noise_pos[1,:], marker='o', s=marker_size, label='noise')
 
     for j in range(Jn):
-        plt.text(src_noise_pos[0, j], src_noise_pos[1, j], '$noise_%d$' % (j+1), fontdict={'fontsize': font_size})
+        plt.text(src_noise_pos[0, j], src_noise_pos[1, j], '$noise_%d$' % (j), fontdict={'fontsize': font_size})
 
     plt.legend()
     plt.tight_layout()

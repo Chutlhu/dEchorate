@@ -123,7 +123,6 @@ if __name__ == "__main__":
                 view = np.array([-slope, 1])
                 view = view / np.linalg.norm(view)
                 array_view = np.array([view[0], view[1], 0])
-                # array_view = [1,0,0]
 
                 # echo note
                 if src_idx > 3:

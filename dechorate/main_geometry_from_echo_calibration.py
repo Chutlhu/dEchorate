@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     # directional source
     for j in range(srcs_dir.shape[1]):
-        df.at[c, 'id'] = int(j+1)
+        df.at[c, 'id'] = int(j)
         df.at[c, 'type'] = 'directional'
         df.at[c, 'channel'] = int(33+j)
         df.at[c, 'x'] = srcs_dir[0, j]
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     # omndirectional source
     for j in range(srcs_omn.shape[1]):
-        df.at[c, 'id'] = int(j+1) + 6
+        df.at[c, 'id'] = int(j) + 6
         df.at[c, 'type'] = 'omnidirectional'
         df.at[c, 'channel'] = 16
         df.at[c, 'x'] = srcs_omn[0, j]
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         c += 1
 
     for j in range(srcs_nse.shape[1]):
-        df.at[c, 'id'] = int(j+1)
+        df.at[c, 'id'] = int(j)
         df.at[c, 'type'] = 'diffuse'
         df.at[c, 'channel'] = int(45+j)
         df.at[c, 'x'] = srcs_nse[0, j]
@@ -113,16 +113,16 @@ if __name__ == "__main__":
 
     for i in range(mics.shape[1]):
         df.at[c, 'channel'] = int(33 + i)
-        df.at[c, 'id'] = int(i+1)
+        df.at[c, 'id'] = int(i)
         df.at[c, 'type'] = 'mic'
-        df.at[c, 'array'] = int(i//5 + 1)
+        df.at[c, 'array'] = int(i//5)
         df.at[c, 'x'] = mics[0, i]
         df.at[c, 'y'] = mics[1, i]
         df.at[c, 'z'] = mics[2, i]
         c += 1
 
     for i in range(arrs.shape[1]):
-        df.at[c, 'id'] = int(i+1)
+        df.at[c, 'id'] = int(i)
         df.at[c, 'type'] = 'array'
         df.at[c, 'x'] = arrs[0, i]
         df.at[c, 'y'] = arrs[1, i]
@@ -179,12 +179,12 @@ if __name__ == "__main__":
     plt.scatter(mics[0, :], mics[1, :], marker=m['mics'], s=s['mics'], c=c['mics'], label=l['mics'])
     plt.scatter(arrs[0, :], arrs[1, :], marker=m['arrs'], s=s['arrs'], c=c['arrs'], label=l['arrs'])
 
-    plt.text(arrs[0, 0]+0.1, arrs[1, 0]-0.15, '$arr_%d$' %1)
-    plt.text(arrs[0, 1]+0.1, arrs[1, 1]-0.15, '$arr_%d$' %2)
-    plt.text(arrs[0, 2]+0.1, arrs[1, 2]+0.10, '$arr_%d$' %3)
-    plt.text(arrs[0, 3]+0.1, arrs[1, 3]-0.15, '$arr_%d$' %4)
-    plt.text(arrs[0, 4]+0.1, arrs[1, 4]-0.1, '$arr_%d$'  %5)
-    plt.text(arrs[0, 5]+0.1, arrs[1, 5]+0.1, '$arr_%d$'  %6)
+    plt.text(arrs[0, 0]+0.1, arrs[1, 0]-0.15, '$arr_%d$' %0)
+    plt.text(arrs[0, 1]+0.1, arrs[1, 1]-0.15, '$arr_%d$' %1)
+    plt.text(arrs[0, 2]+0.1, arrs[1, 2]+0.10, '$arr_%d$' %2)
+    plt.text(arrs[0, 3]+0.1, arrs[1, 3]-0.15, '$arr_%d$' %3)
+    plt.text(arrs[0, 4]+0.1, arrs[1, 4]-0.1, '$arr_%d$'  %4)
+    plt.text(arrs[0, 5]+0.1, arrs[1, 5]+0.1, '$arr_%d$'  %5)
 
     # DIR
     plt.scatter(srcs_dir[0, 0], srcs_dir[1, 0], marker='v', s=s['srcs_dir'], c=c['srcs_dir'], label=l['srcs_dir'])
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     room.compute_rir()
 
     # 2nd order reflection => 25 images
-    K = 25
+    K = 7
     I = mics.shape[1]
     J = srcs_dir.shape[1]
 
@@ -253,8 +253,8 @@ if __name__ == "__main__":
         for j in range(srcs_dir.shape[1]):
             
             source = room.sources[j]
-            images_pos = source.get_images(max_order=2)
-            images_damp = source.get_damping(max_order=2)
+            images_pos = source.get_images(max_order=1)
+            images_damp = source.get_damping(max_order=1)
         
             images_dist = np.linalg.norm(images_pos - mics[:,i,None], axis=0)
         
