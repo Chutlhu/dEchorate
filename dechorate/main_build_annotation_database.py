@@ -78,9 +78,9 @@ if __name__ == "__main__":
     for r, row in tqdm(df_rec.iterrows(), total=len(df_rec)):
 
         # for each channel in the recordings
-        for i in range(31):
+        for i in range(30):
 
-            src_id = row['id'] -1 
+            src_id = row['id']
 
             df.at[c, 'filename'] = row['filename']
             df.at[c, 'src_id'] = src_id
@@ -119,8 +119,12 @@ if __name__ == "__main__":
                 df.at[c, 'src_pos_y'] = float(curr_pos_source['y'].values)
                 df.at[c, 'src_pos_z'] = float(curr_pos_source['z'].values)
 
+                df.at[c, 'src_view_x'] = float(curr_pos_source['view_x'].values)
+                df.at[c, 'src_view_y'] = float(curr_pos_source['view_y'].values)
+                df.at[c, 'src_view_z'] = float(curr_pos_source['view_z'].values)
 
-            if row['id'] > 3 and row['sources'] == 'directional':
+
+            if row['id'] >= 4 and row['sources'] == 'directional':
                 df.at[c, 'src_type'] = 'invdirectional'
             else:
                 df.at[c, 'src_type'] = row['sources']
@@ -162,9 +166,13 @@ if __name__ == "__main__":
                     ValueError('Too many arrays')
 
                 df.at[c, 'array_id'] = i//5 + 1
-                df.at[c, 'array_bar_x'] = float(curr_pos_array['x'].values)
-                df.at[c, 'array_bar_y'] = float(curr_pos_array['y'].values)
-                df.at[c, 'array_bar_z'] = float(curr_pos_array['z'].values)
+                df.at[c, 'array_bar_pos_x'] = float(curr_pos_array['x'].values)
+                df.at[c, 'array_bar_pos_y'] = float(curr_pos_array['y'].values)
+                df.at[c, 'array_bar_pos_z'] = float(curr_pos_array['z'].values)
+
+                df.at[c, 'array_bar_view_x'] = float(curr_pos_array['view_x'].values)
+                df.at[c, 'array_bar_view_y'] = float(curr_pos_array['view_y'].values)
+                df.at[c, 'array_bar_view_z'] = float(curr_pos_array['view_z'].values)
 
                 # find mic attributes in pos_note
                 curr_pos_mic = df_pos.loc[
@@ -185,6 +193,9 @@ if __name__ == "__main__":
                 df.at[c, 'mic_pos_x'] = float(curr_pos_mic['x'].values)
                 df.at[c, 'mic_pos_y'] = float(curr_pos_mic['y'].values)
                 df.at[c, 'mic_pos_z'] = float(curr_pos_mic['z'].values)
+                df.at[c, 'mic_view_x'] = float(curr_pos_mic['view_x'].values)
+                df.at[c, 'mic_view_y'] = float(curr_pos_mic['view_y'].values)
+                df.at[c, 'mic_view_z'] = float(curr_pos_mic['view_z'].values)
 
             c += 1
 

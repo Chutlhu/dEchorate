@@ -106,6 +106,11 @@ if __name__ == "__main__":
          [1.380, 1.486, 1.403]]
     ) # meters [3xJ]
     srcs = np.concatenate([srcs_dir, srcs_omn], axis=-1)
+    srcs_omn_view = np.array(
+        [[0.,0.,0.],
+         [0.,0.,0.],
+         [0.,0.,0.],]
+    ) # meters [3xJ]
 
     ## BABBLE NOISE SOURCES :: NOT calibrated ::
     srcs_nse = np.array(
@@ -113,6 +118,12 @@ if __name__ == "__main__":
          [4.769, 0.868, 0.812, 4.735],
          [1.437, 1.430, 1.408, 1.429]]
     ) # meters [3xJ]
+    srcs_nse_view = np.array(
+        [[ 1., 1., -1., -1.],
+         [-1., 1.,  1., -1.],
+         [ 0., 0.,  0.,  0.]]
+    ) # meters [3xJ]
+
 
     ###############################################################################
     ## BUILD THE DATABASE
@@ -141,6 +152,9 @@ if __name__ == "__main__":
         df.at[c, 'x'] = srcs_omn[0, j]
         df.at[c, 'y'] = srcs_omn[1, j]
         df.at[c, 'z'] = srcs_omn[2, j]
+        df.at[c, 'view_x'] = srcs_omn_view[0, j]
+        df.at[c, 'view_y'] = srcs_omn_view[1, j]
+        df.at[c, 'view_z'] = srcs_omn_view[2, j]
         c += 1
 
     for j in range(srcs_nse.shape[1]):
@@ -150,6 +164,9 @@ if __name__ == "__main__":
         df.at[c, 'x'] = srcs_nse[0, j]
         df.at[c, 'y'] = srcs_nse[1, j]
         df.at[c, 'z'] = srcs_nse[2, j]
+        df.at[c, 'view_x'] = srcs_nse_view[0, j]
+        df.at[c, 'view_y'] = srcs_nse_view[1, j]
+        df.at[c, 'view_z'] = srcs_nse_view[2, j]
         c += 1
 
     for i in range(mics.shape[1]):
@@ -160,6 +177,9 @@ if __name__ == "__main__":
         df.at[c, 'x'] = mics[0, i]
         df.at[c, 'y'] = mics[1, i]
         df.at[c, 'z'] = mics[2, i]
+        df.at[c, 'view_x'] = 0.
+        df.at[c, 'view_y'] = 0.
+        df.at[c, 'view_z'] = 0.
         c += 1
 
     for i in range(arrs.shape[1]):
@@ -174,6 +194,7 @@ if __name__ == "__main__":
         c += 1
 
     df.to_csv(path_to_output_pos_csv)
+    print('Position notes saved in', path_to_output_pos_csv)
 
     ###############################################################################
     ## PRINT FIGURES
@@ -235,7 +256,7 @@ if __name__ == "__main__":
         y = arrs[1,a]
         dx = arrs_view[0,a] / 3
         dy = arrs_view[1,a] / 3
-        plt.annotate("", xy=(x+dx,y+dy), xytext=(x, y), arrowprops=dict(arrowstyle="->"))
+        plt.annotate("", xy=(x+dx,y+dy), xytext=(x, y), arrowprops=dict(arrowstyle="->", alpha=0.5, color=c['mics']))
 
     # DIR
     plt.scatter(srcs_dir[0, 0], srcs_dir[1, 0], marker='v', s=s['srcs_dir'], c=c['srcs_dir'], label=l['srcs_dir'])
@@ -251,7 +272,7 @@ if __name__ == "__main__":
         y = srcs_dir[1,j]
         dx = srcs_dir_view[0,j] / 3
         dy = srcs_dir_view[1,j] / 3
-        plt.annotate("", xy=(x+dx,y+dy), xytext=(x, y), arrowprops=dict(arrowstyle="->"))
+        plt.annotate("", xy=(x+dx,y+dy), xytext=(x, y), arrowprops=dict(arrowstyle="->", alpha=0.5, color=c['srcs_dir']))
 
     # DIR
     plt.scatter(srcs_dir[0, 1], srcs_dir[1, 1], marker='^', s=s['srcs_dir'], c=c['srcs_dir'])
@@ -273,6 +294,12 @@ if __name__ == "__main__":
     plt.text(srcs_nse[0, 1]-0.2, srcs_nse[1, 1]-0.25, r'$noise_%d$' %1)
     plt.text(srcs_nse[0, 2]-0.2, srcs_nse[1, 2]-0.25, r'$noise_%d$' %2)
     plt.text(srcs_nse[0, 3]-0.2, srcs_nse[1, 3]-0.25, r'$noise_%d$' %3)
+    for j in range(srcs_nse_view.shape[1]):
+        x = srcs_nse[0,j]
+        y = srcs_nse[1,j]
+        dx = srcs_nse_view[0,j] / 3
+        dy = srcs_nse_view[1,j] / 3
+        plt.annotate("", xy=(x+dx,y+dy), xytext=(x, y), arrowprops=dict(arrowstyle="->", alpha=0.5, color=c['srcs_nse']))
 
 
     plt.legend()

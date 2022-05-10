@@ -35,20 +35,12 @@ if __name__ == "__main__":
     sources = list(dset[signals[0]][rooms[0]].keys())
     print('Sources:\t', sources)
     sources_description = ['Directional Avanton MIXCUBE']*6 + ['Omnidirectional B&G']*3
-    sources_views = np.array([
-        [ 0,-1, 0], # dir1
-        [ 0, 1, 0], # dir2
-        [-1, 0, 0], # dir3
-        [-1, 0, 0], # dir4
-        [ 0,-1, 0], # inv-dir5
-        [ 1, 0, 0], # inv-dir6
-        [ 0, 0, 0], # omni1
-        [ 0, 0, 0], # omni2
-        [ 0, 0, 0]  # omni3
-    ])
 
     path_to_db = Path(args.csv)
     df = pd.read_csv(path_to_db)
+
+    print(df)
+    1/0
 
     ### RIR MATRIX ###
 
