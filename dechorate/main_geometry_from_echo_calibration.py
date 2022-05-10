@@ -5,6 +5,7 @@ import pyroomacoustics as pra
 import matplotlib.pyplot as plt
 
 from utils.file_utils import save_to_pickle
+from scipy import stats
 
 from pathlib import Path
 
@@ -43,6 +44,7 @@ if __name__ == "__main__":
         0.95058622, 1.49048013, 1.49048013, 1.49048013, 1.49048013, 1.49048013]]
     ) # meters [3xI]
 
+        
 
     ## ARRAYS CENTERS :: calibrated
     arrs = np.array(
@@ -50,6 +52,37 @@ if __name__ == "__main__":
         [   3.86884385, 2.08780171, 1.66788504, 2.49721291, 3.94192909, 3.48314264],
         [   1.04391528, 0.98664873, 1.30742631, 1.38561103, 0.95058622, 1.49048013]]
     ) # meters [3xA]
+
+
+    arrs_view = np.array(
+        [[-0.39244819,  0.84963722,  0.4166421 , -0.76829078,  0.72204359, -0.55338187],
+        [  0.89876904, -0.34190427,  0.84837654,  0.54735264, -0.6695787 , -0.74562856],
+        [  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ]]
+    ) # unitary [3xA]
+
+    # arrs_target = np.array(
+    #     [[room_size[0], room_size[1], 0],
+    #     [ 0., 0., 0.],
+    #     [ room_size[0], 0., 0.],
+    #     [ room_size[0], room_size[0], 0.],
+    #     [ 0., 0., 0.],
+    #     [ 0., room_size[0], 0.]]
+    # ).T
+    # for a in range(0, 6):
+    #     idx_mic = np.arange(5*a, 5*(a+1))
+
+    #     pnt = arrs[:,a]
+    #     tgt = arrs_target[:, a]
+
+    #     view = tgt - pnt
+    #     view = np.array([-view[1], view[0], view[2]])
+
+    #     # slope, intercept, r_value, p_value, std_err = stats.linregress(arr[0,:], arr[1,:])
+    #     # view = np.array([-slope, 1])
+    #     view = view / np.linalg.norm(view)
+    #     array_view = np.array([view[0], view[1], 0])
+    #     arrs_view[:,a] = array_view
+    # print(arrs_view)
 
     ## DIRECTIONAL SOURCES :: calibrated
     srcs_dir = np.array(
@@ -60,6 +93,11 @@ if __name__ == "__main__":
     srcs_dir_aim = np.array(
         ['s','n','w','w','s','e']
     )
+    srcs_dir_view = np.array(
+        [[ 0,  0, -1, -1,  0,  1],
+        [ -1,  1,  0,  0, -1,  0],
+        [  0,  0,  0,  0,  0,  0]]
+    ) # unitary [3xJ]
 
     ## OMNIDIRECTIONAL SOURCES :: NOT calibrated ::
     srcs_omn = np.array(
@@ -90,6 +128,9 @@ if __name__ == "__main__":
         df.at[c, 'y'] = srcs_dir[1, j]
         df.at[c, 'z'] = srcs_dir[2, j]
         df.at[c, 'aiming_at'] = srcs_dir_aim[j]
+        df.at[c, 'view_x'] = srcs_dir_view[0, j]
+        df.at[c, 'view_y'] = srcs_dir_view[1, j]
+        df.at[c, 'view_z'] = srcs_dir_view[2, j]
         c += 1
 
     # omndirectional source
@@ -127,6 +168,9 @@ if __name__ == "__main__":
         df.at[c, 'x'] = arrs[0, i]
         df.at[c, 'y'] = arrs[1, i]
         df.at[c, 'z'] = arrs[2, i]
+        df.at[c, 'view_x'] = arrs_view[0,i]
+        df.at[c, 'view_y'] = arrs_view[1,i]
+        df.at[c, 'view_z'] = arrs_view[2,i]
         c += 1
 
     df.to_csv(path_to_output_pos_csv)
@@ -183,8 +227,15 @@ if __name__ == "__main__":
     plt.text(arrs[0, 1]+0.1, arrs[1, 1]-0.15, '$arr_%d$' %1)
     plt.text(arrs[0, 2]+0.1, arrs[1, 2]+0.10, '$arr_%d$' %2)
     plt.text(arrs[0, 3]+0.1, arrs[1, 3]-0.15, '$arr_%d$' %3)
-    plt.text(arrs[0, 4]+0.1, arrs[1, 4]-0.1, '$arr_%d$'  %4)
-    plt.text(arrs[0, 5]+0.1, arrs[1, 5]+0.1, '$arr_%d$'  %5)
+    plt.text(arrs[0, 4]+0.1, arrs[1, 4]-0.1,  '$arr_%d$' %4)
+    plt.text(arrs[0, 5]+0.1, arrs[1, 5]+0.1,  '$arr_%d$' %5)
+
+    for a in range(arrs.shape[1]):
+        x = arrs[0,a]
+        y = arrs[1,a]
+        dx = arrs_view[0,a] / 3
+        dy = arrs_view[1,a] / 3
+        plt.annotate("", xy=(x+dx,y+dy), xytext=(x, y), arrowprops=dict(arrowstyle="->"))
 
     # DIR
     plt.scatter(srcs_dir[0, 0], srcs_dir[1, 0], marker='v', s=s['srcs_dir'], c=c['srcs_dir'], label=l['srcs_dir'])
@@ -194,6 +245,13 @@ if __name__ == "__main__":
     plt.text(srcs_dir[0, 3]-0.2, srcs_dir[1, 3]-0.2, r'$dir_%d$' %3)
     plt.text(srcs_dir[0, 4]+0.1, srcs_dir[1, 4]-0.1, r'$dir_%d$' %4)
     plt.text(srcs_dir[0, 5]+0.1, srcs_dir[1, 5]-0.2, r'$dir_%d$' %5)
+
+    for j in range(srcs_dir_view.shape[1]):
+        x = srcs_dir[0,j]
+        y = srcs_dir[1,j]
+        dx = srcs_dir_view[0,j] / 3
+        dy = srcs_dir_view[1,j] / 3
+        plt.annotate("", xy=(x+dx,y+dy), xytext=(x, y), arrowprops=dict(arrowstyle="->"))
 
     # DIR
     plt.scatter(srcs_dir[0, 1], srcs_dir[1, 1], marker='^', s=s['srcs_dir'], c=c['srcs_dir'])
@@ -220,7 +278,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_dir / Path('positioning2D_xy.pdf'))
-    # plt.show()
+    plt.show()
     plt.close()
 
     ###############################################################################

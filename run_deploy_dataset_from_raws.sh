@@ -19,7 +19,7 @@ python dechorate/main_build_sound_datasets.py --signal babble  --datadir $path_t
 python dechorate/main_build_sound_datasets.py --signal noise   --datadir $path_to_data_dir --dbpath $path_to_database
 python dechorate/main_build_sound_datasets.py --signal speech  --datadir $path_to_data_dir --dbpath $path_to_database
 python dechorate/main_build_sound_datasets.py --signal chirp   --datadir $path_to_data_dir --dbpath $path_to_database
-echo "you may want to deleat the content of .cache folder" 
+echo "you may want to delete the content of .cache folder" 
 
 # # # 5. Estimate RIRs
 # path_to_chirps="outputs/dEchorate_chirp.hdf5"
