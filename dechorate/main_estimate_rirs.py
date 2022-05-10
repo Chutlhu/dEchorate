@@ -20,6 +20,7 @@ L = int(5*constants['Fs'])
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--outdir", help="Path to output files", type=str)
     parser.add_argument("--dbpath", help="Path to dEchorate database", type=str)
     parser.add_argument("--chirps", help="Path to dEchorate_chirp.hdf5", type=str)
     args = parser.parse_args()
@@ -27,9 +28,12 @@ if __name__ == "__main__":
     curr_dset_name = 'dEchorate_rirs'
 
     # setup paths
-    path_to_output = Path('.', 'outputs')
+    path_to_output = Path(args.outdir)
+    assert path_to_output.exists()
     path_to_annotation = Path(args.dbpath)
+    assert path_to_annotation.exists()
     path_to_chirps = Path(args.chirps)
+    assert path_to_chirps.exists()
     
     # get constants and values
     room_codes = constants['datasets']
@@ -129,6 +133,7 @@ if __name__ == "__main__":
                     print(room_code, curr_room_code, src_id, i)
                     print(info)
                     hdf.close()
+                    exit()
 
                 # # compute the rir
                 if group in hdf:

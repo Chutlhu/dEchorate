@@ -13,11 +13,13 @@ room_size = [5.543, 5.675, 2.353]
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("datadir", help="Path to dEchorate raw dataset", type=str)
+    parser.add_argument("--outdir", help="Path to output files", type=str)
+    parser.add_argument("--datadir", help="Path to dEchorate raw dataset", type=str)
     args = parser.parse_args()
 
     data_dir = args.datadir
-    output_dir = Path('.','outputs')
+
+    output_dir = Path(args.outdir)
 
     ## LOAD POSITIONS
     # load arrays' barycenters positions from file generated in excell

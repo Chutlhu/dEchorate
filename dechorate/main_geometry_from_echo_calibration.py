@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import pandas as pd
 import pyroomacoustics as pra
@@ -13,8 +14,12 @@ from pathlib import Path
 
 if __name__ == "__main__":
 
-    output_dir = Path('.','outputs')
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--outdir", help="Path to output files", type=str)
+    args = parser.parse_args()
 
+    output_dir = Path(args.outdir)
+    assert output_dir.exists()
     path_to_output_pos_csv = output_dir / Path('dEchorate_calibrated_elements_positions.csv')
     path_to_output_echo_pkl = output_dir / Path('dEchorate_echo_notes.pkl')
 
@@ -305,7 +310,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_dir / Path('positioning2D_xy.pdf'))
-    plt.show()
+    # plt.show()
     plt.close()
 
     ###############################################################################

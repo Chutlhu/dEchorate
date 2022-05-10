@@ -8,19 +8,20 @@ from pathlib import Path
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("datadir", help="Path to dEchorate raw dataset", type=str)
-    parser.add_argument("calibnote", help="Path to calibrated position database", type=str)
+    parser.add_argument("--outdir", help="Path to output files", type=str)
+    parser.add_argument("--datadir", help="Path to dEchorate raw dataset", type=str)
+    parser.add_argument("--calibnote", help="Path to calibrated position database", type=str)
     
     args = parser.parse_args()
+
+    output_dir = Path(args.outdir)
+    assert output_dir.exists()
 
     path_to_calib = Path(args.calibnote)
     assert path_to_calib.exists()
 
     dataset_dir = Path(args.datadir)
     assert dataset_dir.exists()
-
-    output_dir = Path('.','outputs')
-    assert output_dir.exists()
 
     # load csv with position annotation
     df_pos = pd.read_csv(path_to_calib)
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     for r, row in tqdm(df_rec.iterrows(), total=len(df_rec)):
 
         # for each channel in the recordings
-        for i in range(30):
+        for i in range(31):
 
             src_id = row['id']
 
@@ -148,7 +149,7 @@ if __name__ == "__main__":
             # find array attributes in pos_note
             if i == 30:
                 df.at[c, 'mic_type'] = 'loopback'
-                df.at[c, 'mic_id'] = 31
+                df.at[c, 'mic_id'] = i
 
             else:
                 df.at[c, 'mic_type'] = 'capsule'
@@ -165,7 +166,7 @@ if __name__ == "__main__":
                     print(curr_pos_array)
                     ValueError('Too many arrays')
 
-                df.at[c, 'array_id'] = i//5 + 1
+                df.at[c, 'array_id'] = i//5
                 df.at[c, 'array_bar_pos_x'] = float(curr_pos_array['x'].values)
                 df.at[c, 'array_bar_pos_y'] = float(curr_pos_array['y'].values)
                 df.at[c, 'array_bar_pos_z'] = float(curr_pos_array['z'].values)

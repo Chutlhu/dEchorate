@@ -93,6 +93,7 @@ def wave_loader(wavefile, session_filename, path_to_session_zip_dir, path_to_out
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--outdir", help="Path to output files", type=str)
     parser.add_argument("--signal", help="Type of signal you wish to extract", type=str)
     parser.add_argument("--datadir", help="Path to dEchorate data folder", type=str)
     parser.add_argument("--dbpath", help="Path to dEchorate annotation database", type=str)
@@ -102,16 +103,22 @@ if __name__ == "__main__":
     if not signal in constants['signals']:
         raise ValueError('Signals mus be either chirp, silence, babble, speech, noise')
 
+    output_dir = Path(args.outdir)
+    assert output_dir.exists()
+    
     datadir = args.datadir
+    path_to_recordings = Path(datadir)
+    assert path_to_recordings.exists()
+
+    path_to_annotation = Path(args.dbpath)
+    assert path_to_recordings.exists()
 
     # setup paths
     path_to_tmp = Path('.', '.cache')
     if not path_to_tmp.exists():
         path_to_tmp.mkdir(parents=True, exist_ok=True)
 
-    path_to_output = Path('.','outputs')
-    path_to_recordings = Path(datadir)
-    path_to_annotation = Path(args.dbpath)
+
     
     
     if not path_to_recordings.exists():
@@ -129,9 +136,9 @@ if __name__ == "__main__":
     signals = [signal]
 
     if signal == 'silence':
-        src_ids = [99]
+        src_ids = constants['silence_ids']
     if signal == 'babble':
-        src_ids = [1,2,3,4]
+        src_ids = constants['nse_ids']
 
     ## Open the database
     df_note = pd.read_csv(path_to_annotation)
@@ -141,11 +148,11 @@ if __name__ == "__main__":
 
     # DATASET structure: room x mics x srcs + bonus
     # room = [000000, 010000, ..., 111111, 020002]
-    # mics = [1, ..., 30, 31] : 0-29 capsule, 30th loopback
-    # srcs = [1, ..., 9] : 6 dir,  3 omni
+    # mics = [0, ..., 29, 30] : 0-29 capsule, 30th loopback
+    # srcs = [0, ..., 8] : 6 dir,  3 omni
     # bonus: book for polarity
 
-    path_to_output_dataset_hdf5 = path_to_output / Path(f'{curr_dset_name}.hdf5')
+    path_to_output_dataset_hdf5 = output_dir / Path(f'{curr_dset_name}.hdf5')
     if not path_to_output_dataset_hdf5.exists():
         f = h5py.File(path_to_output_dataset_hdf5, "w")
         f.close()
@@ -172,4 +179,4 @@ if __name__ == "__main__":
     
     hdf.close()
     
-    print('Dataset extracted in', path_to_output)
+    print('Dataset extracted in', output_dir)

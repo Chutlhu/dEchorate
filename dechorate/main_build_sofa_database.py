@@ -17,10 +17,14 @@ from dechorate.utils.file_utils import load_from_pickle
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("toa", help="Path to dEchorate csv echo annotation", type=str)
-    parser.add_argument("csv", help="Path to dEchorate csv database", type=str)
-    parser.add_argument("hdf", help="Path to dEchorate hdf5 dataset", type=str)
+    parser.add_argument("--outdir", help="Path to output files", type=str)
+    parser.add_argument("--toa", help="Path to dEchorate csv echo annotation", type=str)
+    parser.add_argument("--csv", help="Path to dEchorate csv database", type=str)
+    parser.add_argument("--hdf", help="Path to dEchorate rir hdf5 dataset", type=str)
     args = parser.parse_args()
+
+    path_to_outdir = Path(args.outdir)
+    assert path_to_outdir.exists()
 
     path_to_hdf = Path(args.hdf)
     dset = h5py.File(path_to_hdf, mode='r')
@@ -38,10 +42,6 @@ if __name__ == "__main__":
 
     path_to_db = Path(args.csv)
     df = pd.read_csv(path_to_db)
-
-    print(df)
-    1/0
-
     ### RIR MATRIX ###
 
     print('Building RIR matrix...', end='')
@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
         for src_idx in tqdm(range(J), desc='src'):
             
-            for arr_idx in range(I // 5):
+            for arr_idx in range(6):
 
                 sofa = sf.Sofa('SingleRoomSRIR')
 
@@ -86,8 +86,8 @@ if __name__ == "__main__":
 
                 curr_df = df.loc[
                         (df['room_code'] == int(rooms[room_idx]))
-                    &   (df['src_id'] == src_idx+1)
-                    &   (df['array_id'] == arr_idx+1)
+                    &   (df['src_id'] == src_idx)
+                    &   (df['array_id'] == arr_idx)
                     &   (df['src_signal'] == 'chirp')
                 ]
                 assert len(curr_df) == 5
@@ -99,22 +99,36 @@ if __name__ == "__main__":
                 assert len(src_x) == len(src_y) == len(src_z) == 1
                 src_pos = [[src_x, src_y, src_z]]
 
+                src_view_x = curr_df['src_view_x'].unique()
+                src_view_y = curr_df['src_view_x'].unique()
+                src_view_z = curr_df['src_view_x'].unique()
+                assert len(src_view_x) == len(src_view_y) == len(src_view_z) == 1
+                src_view = [[src_view_x, src_view_y, src_view_z]]
+
                 # array pos
-                arr_x = curr_df['array_bar_x'].unique()
-                arr_y = curr_df['array_bar_y'].unique()
-                arr_z = curr_df['array_bar_z'].unique()
+                arr_x = curr_df['array_bar_pos_x'].unique()
+                arr_y = curr_df['array_bar_pos_y'].unique()
+                arr_z = curr_df['array_bar_pos_z'].unique()
                 assert len(arr_x) == len(arr_y) == len(arr_z) == 1
                 arr_pos = [[arr_x, arr_y, arr_z]]
+
+                arr_view_x = curr_df['array_bar_view_x'].unique()
+                arr_view_y = curr_df['array_bar_view_y'].unique()
+                arr_view_z = curr_df['array_bar_view_z'].unique()
+                assert len(arr_view_x) == len(arr_view_y) == len(arr_view_z) == 1
+                arr_view = [[arr_view_x, arr_view_y, arr_view_z]]
 
                 # mics pos
                 mics_x = np.array(curr_df['mic_pos_x'])[None,:]
                 mics_y = np.array(curr_df['mic_pos_y'])[None,:]
                 mics_z = np.array(curr_df['mic_pos_z'])[None,:]
                 mics_pos = np.concatenate([mics_x, mics_y, mics_z], axis=0)
-                slope, intercept, r_value, p_value, std_err = stats.linregress(mics_x, mics_y)
-                view = np.array([-slope, 1])
-                view = view / np.linalg.norm(view)
-                array_view = np.array([view[0], view[1], 0])
+                assert mics_pos.shape == (3,5)
+                mics_view_x = np.array(curr_df['mic_view_x'])[None,:]
+                mics_view_y = np.array(curr_df['mic_view_y'])[None,:]
+                mics_view_z = np.array(curr_df['mic_view_z'])[None,:]
+                mics_view = np.concatenate([mics_view_x, mics_view_y, mics_view_z], axis=0)
+                assert mics_view.shape == (3,5)
 
                 # echo note
                 if src_idx > 3:
@@ -206,7 +220,7 @@ if __name__ == "__main__":
                 sofa.ListenerPosition = arr_pos
                 sofa.ListenerPosition_Type = 'cartesian'
                 sofa.ListenerPosition_Units = 'metre'
-                sofa.ListenerView = array_view
+                sofa.ListenerView = arr_view
                 sofa.ListenerUp = [0,0,1]
                 sofa.ListenerView_Type = 'cartesian'
                 sofa.ListenerView_Units = 'metre'
@@ -252,7 +266,7 @@ if __name__ == "__main__":
                 sofa.SourcePosition = src_pos
                 sofa.SourcePosition_Type = 'cartesian'
                 sofa.SourcePosition_Units = 'metre'
-                sofa.SourceView = sources_views[src_idx,:]
+                sofa.SourceView = src_view
                 sofa.SourceUp = [0,0,1]
                 sofa.SourceView_Type = 'cartesian'
                 sofa.SourceView_Units = 'metre'
@@ -290,6 +304,6 @@ if __name__ == "__main__":
                 sofa.verify()
 
                 filename = sofa.GLOBAL_Title
-                path_to_out = Path(f'./outputs/dEchorate_sofa/{filename}.sofa')
+                path_to_out = path_to_outdir / Path(f'{filename}.sofa')
                 if not path_to_out.exists():
                     sf.write_sofa(str(path_to_out), sofa, compression=7)
