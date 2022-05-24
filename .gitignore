@@ -102,3 +102,8 @@ recipes/acoustic_echo_retrieval/data/interim/*
 recipes/dataset_analysis/*.wav
 recipes/dataset_analysis/*.zip
 run_job*
+
+*.hdf5
+.cache
+*.png
+outputs/
