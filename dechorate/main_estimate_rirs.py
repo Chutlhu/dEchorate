@@ -6,7 +6,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from pathlib import Path
-from pyrsistent import b
 from tqdm import tqdm
 
 from dechorate import constants # these are stored in the __init__py file
