@@ -14,7 +14,7 @@ You can find a detailed explanation of the dEchorate dataset at:
 [dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing](https://hal.archives-ouvertes.fr/hal-03207860/)
 
 `dEchorate` has three main elements:
-- the data (available on Zenodo);
+- the [data (available on Zenodo)](https://zenodo.org/record/5562386);
 - the code for working with `dEchorate`;
 - the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/).
 
@@ -28,7 +28,7 @@ You can find a detailed explanation of the dEchorate dataset at:
 - 03 May 2020: v0.0.1 dEchorate project is alive
 
 ## Get the Data
-The data is available at [Zenodo](www.notavailableyet.com).
+The data is available at [Zenodo](https://zenodo.org/record/5562386).
 Please, follow that link to download (part of) the data.
 
 The dataset is available in multiple ways:
