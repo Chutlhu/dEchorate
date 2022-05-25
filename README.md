@@ -1,7 +1,5 @@
 # WELCOME to the dECHORATE dataset
 
-> :warning: **This work is under review**: Be very careful here!
-
 ## dECHORATE: A calibrated dataset for echo-aware audio signal processing
 
 > The `dEchorate` dataset is a new database of measured multichannel Room Impulse Responses (RIRs) including annotations of early echo timings and 3D positions of microphones, real sources and image sourcesunder different wall configurations in a cuboid room.  
