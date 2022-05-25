@@ -16,12 +16,6 @@ You can find a detailed explanation of the dEchorate dataset at:
 - the code for working with `dEchorate` (available at this github);
 - the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/) (available at this github).
 
-## Contents
-- [News](#news)
-- [Get the Data](#get)
-- [Examples](#examples)
-- [Citing Us](#citing)
-
 ## News:
 - 25 May 2022: v2.0.0 new dEchorate dataset
 - 03 May 2020: v0.0.1 dEchorate project is alive
@@ -35,8 +29,6 @@ The dataset is available in multiple ways:
 - Only RIRs: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
 - Only Speech: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
 - Raw data: an hdf5 file (~ 75 GB) containig all the raw recording data (chirps, speech/noise sources, babble noise, room tone) -->
-
-## Examples
 
 ## Citing dEchorate
 
