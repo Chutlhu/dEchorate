@@ -12,18 +12,19 @@ You can find a detailed explanation of the dEchorate dataset at:
 [dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing](https://hal.archives-ouvertes.fr/hal-03207860/)
 
 `dEchorate` has three main elements:
-- the [data (available on Zenodo)](https://zenodo.org/record/6576203);
-- the code for working with `dEchorate` (available at this github);
-- the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/) (available at this github).
+- the data on Zenodo
+    - [dataset in HDF5 format with python script](http://zenodo.org/record/6576203);
+    - [dataset in SOFA format](http://zenodo.org/record/6580691);
+- the code for working with `dEchorate` (available in this repo);
+- the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/) (available in this repo).
 
 ## News:
 - 25 May 2022: v2.0.0 new dEchorate dataset
 - 03 May 2020: v0.0.1 dEchorate project is alive
 
-## Get the Data
+<!-- ## Get the Data
 The data is available at [Zenodo](https://zenodo.org/record/6576203).
 Please, follow that link to download (part of) the data.
-<!-- 
 The dataset is available in multiple ways:
 - Annotations/labels/metadata: csv file that can be used pandas (Python)
 - Only RIRs: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
