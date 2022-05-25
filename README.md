@@ -14,9 +14,9 @@ You can find a detailed explanation of the dEchorate dataset at:
 [dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing](https://hal.archives-ouvertes.fr/hal-03207860/)
 
 `dEchorate` has three main elements:
-- the [data (available on Zenodo)](https://zenodo.org/record/5562386);
-- the code for working with `dEchorate`;
-- the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/).
+- the [data (available on Zenodo)](https://zenodo.org/record/6576203);
+- the code for working with `dEchorate` (available at this github);
+- the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/) (available at this github).
 
 ## Contents
 - [News](#news)
@@ -25,17 +25,18 @@ You can find a detailed explanation of the dEchorate dataset at:
 - [Citing Us](#citing)
 
 ## News:
+- 25 May 2022: v2.0.0 new dEchorate dataset
 - 03 May 2020: v0.0.1 dEchorate project is alive
 
 ## Get the Data
-The data is available at [Zenodo](https://zenodo.org/record/5562386).
+The data is available at [Zenodo](https://zenodo.org/record/6576203).
 Please, follow that link to download (part of) the data.
-
+<!-- 
 The dataset is available in multiple ways:
 - Annotations/labels/metadata: csv file that can be used pandas (Python)
 - Only RIRs: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
 - Only Speech: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
-- Raw data: an hdf5 file (~ 75 GB) containig all the raw recording data (chirps, speech/noise sources, babble noise, room tone)
+- Raw data: an hdf5 file (~ 75 GB) containig all the raw recording data (chirps, speech/noise sources, babble noise, room tone) -->
 
 ## Examples
 
@@ -44,10 +45,14 @@ The dataset is available in multiple ways:
 If you are using `dEchorate` and you want to cite us, please use
 
 ```BibTex
-@preprint{di2021dechorate,
-    title={dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing},
-    author={Di Carlo, Diego and Tandeitnik, Pinchas and Foy, C{\'e}dric and Deleforge, Antoine and Bertin, Nancy and Gannot, Sharon},
-    journal={arXiv preprint arXiv:2104.13168},
-    year={2021}
-  }
+@article{dicarlo2021dechorate,
+  title={dEchorate: a calibrated room impulse response dataset for echo-aware signal processing},
+  author={{Di Carlo}, Diego and Tandeitnik, Pinchas and Foy, Cedri{\'c} and Bertin, Nancy and Deleforge, Antoine and Gannot, Sharon},
+  journal={EURASIP Journal on Audio, Speech, and Music Processing},
+  volume={2021},
+  number={1},
+  pages={1--15},
+  year={2021},
+  publisher={Springer}
+}
 ```
