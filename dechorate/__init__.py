@@ -3,11 +3,11 @@ import numpy as np
 constants = {
     'recording_offset'  : {
         'standard'      :  4444 # samples
-    ,   '/rir/000001/2' : 12636
-    ,   '/rir/000001/6' :  8540
-    ,   '/rir/000010/5' :  8540    
-    ,   '/rir/001000/7' :  8540
-    ,   '/rir/011100/7' : 12636
+    ,   '/rir/000001/1' : 12636
+    ,   '/rir/000001/5' :  8540
+    ,   '/rir/000010/4' :  8540    
+    ,   '/rir/001000/6' :  8540
+    ,   '/rir/011100/6' : 12636
     },
     'Fs' : 48000, # samples / seconds
     'rir_length': 19556, # samples
