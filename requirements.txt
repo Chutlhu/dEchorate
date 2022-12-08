@@ -10,7 +10,7 @@ backcall==0.1.0
 bleach==3.1.4
 -e git+https://github.com/Chutlhu/Brioche.git@87ab82fe48debc9ceb30550f3b0954090e182c78#egg=brioche
 cachetools==4.1.1
-certifi==2020.6.20
+certifi==2022.12.7
 cffi==1.13.2
 chardet==3.0.4
 cycler==0.10.0
