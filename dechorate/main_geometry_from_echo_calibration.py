@@ -1,3 +1,4 @@
+import h5py
 import argparse
 import numpy as np
 import pandas as pd
@@ -5,7 +6,6 @@ import pyroomacoustics as pra
 
 import matplotlib.pyplot as plt
 
-from utils.file_utils import save_to_pickle
 from scipy import stats
 
 from pathlib import Path
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     output_dir = Path(args.outdir)
     assert output_dir.exists()
     path_to_output_pos_csv = output_dir / Path('dEchorate_calibrated_elements_positions.csv')
-    path_to_output_echo_pkl = output_dir / Path('dEchorate_echo_notes.pkl')
+    path_to_output_echo_hdf5 = output_dir / Path('dEchorate_echo_notes.hdf5')
 
     ###############################################################################
     room_temperature = 24
@@ -363,5 +363,11 @@ if __name__ == "__main__":
         'amp' : echoes_amp
     }
 
-    save_to_pickle(path_to_output_echo_pkl, echo_note)
-    print('Echo notes saved in', path_to_output_echo_pkl)
+    hf = h5py.File(Path(path_to_output_echo_hdf5), 'w')
+    hf.create_dataset("mics", data=mics)        # 3 x n_mics
+    hf.create_dataset("srcs", data=srcs_dir)    # 3 x n_srcs
+    hf.create_dataset("echo_toa", data=mics)    # n_echo x n_mics x n_src
+    hf.create_dataset("echo_amp", data=mics)    # n_echo x n_mics x n_src
+    hf.close()
+    
+    print('Echo notes saved in', path_to_output_echo_hdf5)

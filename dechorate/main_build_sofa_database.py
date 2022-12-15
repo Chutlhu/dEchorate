@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from pathlib import Path
 from dechorate import constants
-from dechorate.utils.file_utils import load_from_pickle
 
     
 if __name__ == "__main__":
@@ -48,7 +47,7 @@ if __name__ == "__main__":
     J = len(sources)
     I = 30
     Fs = constants['Fs']
-    L = int(2*Fs)
+    L = int(0.5*Fs)
 
     rirs = np.zeros([L, I, J, D])
 
@@ -59,7 +58,7 @@ if __name__ == "__main__":
             group = f'/{signal}/{room}/{src}'
             data = np.asarray(dset[group])
             
-            rirs[:,:,j,r] = data[:2*Fs,:-1]
+            rirs[:,:,j,r] = data[:L,:-1]
     
     print(' Done.')
     print('RIR matrix shape', rirs.shape)
@@ -161,7 +160,7 @@ if __name__ == "__main__":
                 
                 sofa.GLOBAL_DatabaseName = 'dEchorate'
 
-                title_suffix = f'room:{rooms[room_idx]}_src:{src_idx+1}_arr:{arr_idx+1}_mics:{mic_idxs.min()+1}-{mic_idxs.max()+1}'
+                title_suffix = f'room{rooms[room_idx]}_src{src_idx+1}_arr{arr_idx+1}_mics{mic_idxs.min()+1}-{mic_idxs.max()+1}'
                 sofa.GLOBAL_Title = f'dEchorate_{title_suffix}'
 
                 sofa.GLOBAL_DateCreated = '2022-04-20'
@@ -201,7 +200,7 @@ if __name__ == "__main__":
 
                 ## --- RIRS --- ##
                 sofa.Data_IR = mimo_srir.T[None,:,:] # must be in M x R x N x E (measurements, receivers, samples, emitters)
-                assert sofa.Data_IR.shape == (1,5,2*Fs)
+                assert sofa.Data_IR.shape == (1,5,L)
                 sofa.Data_SamplingRate = Fs
                 sofa.Data_SamplingRate_Units = 'hertz'
                 sofa.Data_Delay = [0] * 5

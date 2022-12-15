@@ -5,9 +5,11 @@ import argparse
 import matplotlib.pyplot as plt
 import pyroomacoustics as pra
 
+from dechorate import constants
+
 from pathlib import Path
 
-room_size = [5.543, 5.675, 2.353]
+room_size = constants["room_size"]
 
     
 if __name__ == "__main__":
@@ -62,7 +64,7 @@ if __name__ == "__main__":
         R = np.array([[[np.cos(th), -np.sin(th), 0],
                     [np.sin(th), np.cos(th),  0],
                     [0,          0,          1]]])
-        nULA_rot = R@LA
+        nULA_rot = R @ LA
         # translate
         nULA_tra = nULA_rot + new_center[:, None]
         return nULA_tra
