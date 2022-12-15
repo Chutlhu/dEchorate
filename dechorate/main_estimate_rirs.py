@@ -13,7 +13,7 @@ from dechorate.stimulus import ProbeSignal
 from dechorate.utils.dsp_utils import *
 
 rec_offset = constants['recording_offset']
-L = int(5*constants['Fs'])
+L = int(0.5*constants['Fs'])
 
 
 if __name__ == "__main__":
@@ -22,6 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--outdir", help="Path to output files", type=str)
     parser.add_argument("--dbpath", help="Path to dEchorate database", type=str)
     parser.add_argument("--chirps", help="Path to dEchorate_chirp.hdf5", type=str)
+    parser.add_argument("--comp", help="Compression option for hdf5", type=int, default=4)
     args = parser.parse_args()
 
     curr_dset_name = 'dEchorate_rirs'
@@ -71,7 +72,6 @@ if __name__ == "__main__":
     ,   'src_id' : []
     ,   'mic_id' : []
     ,   'path_hdf5' : []
-    ,   'delay' : []                 
     }
 
     for room_code in tqdm(room_codes, desc="room_code"):
@@ -147,7 +147,6 @@ if __name__ == "__main__":
                 dt['src_id'].append(src_id)
                 dt['mic_id'].append(i)
                 dt['path_hdf5'].append(group)
-                dt['delay'].append(delay)
 
             # compensate delays (hardcoded in __init__.py)
             if group in rec_offset.keys():
@@ -160,7 +159,7 @@ if __name__ == "__main__":
             if group in hdf:
                 continue
             else:
-                hdf.create_dataset(group, data=rirs)
+                hdf.create_dataset(group, data=rirs, compression="gzip", compression_opts=args.comp)
 
             df = pd.DataFrame(dt)
             df.to_csv(path_to_output / Path('dEchorate_rir_database.csv'))

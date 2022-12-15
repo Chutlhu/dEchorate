@@ -97,6 +97,7 @@ if __name__ == "__main__":
     parser.add_argument("--signal", help="Type of signal you wish to extract", type=str)
     parser.add_argument("--datadir", help="Path to dEchorate data folder", type=str)
     parser.add_argument("--dbpath", help="Path to dEchorate annotation database", type=str)
+    parser.add_argument("--comp", help="Compression option for hdf5", type=int, default=4)
     args = parser.parse_args()
 
     signal = args.signal
@@ -117,9 +118,6 @@ if __name__ == "__main__":
     path_to_tmp = Path('.', '.cache')
     if not path_to_tmp.exists():
         path_to_tmp.mkdir(parents=True, exist_ok=True)
-
-
-    
     
     if not path_to_recordings.exists():
         raise ValueError(f'WrongPathError {path_to_recordings.resolve()} does not exist' )
@@ -174,7 +172,7 @@ if __name__ == "__main__":
         wav = wave_loader(wavename, session_filename, path_to_session_zip, path_to_tmp)
         
         # here we use the default compression, so it will be faster to make operation
-        hdf.create_dataset(group, data=wav)
+        hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=args.comp)
         # hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=4)
     
     hdf.close()
