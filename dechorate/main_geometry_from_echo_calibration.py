@@ -65,30 +65,6 @@ if __name__ == "__main__":
         [  0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ]]
     ) # unitary [3xA]
 
-    # arrs_target = np.array(
-    #     [[room_size[0], room_size[1], 0],
-    #     [ 0., 0., 0.],
-    #     [ room_size[0], 0., 0.],
-    #     [ room_size[0], room_size[0], 0.],
-    #     [ 0., 0., 0.],
-    #     [ 0., room_size[0], 0.]]
-    # ).T
-    # for a in range(0, 6):
-    #     idx_mic = np.arange(5*a, 5*(a+1))
-
-    #     pnt = arrs[:,a]
-    #     tgt = arrs_target[:, a]
-
-    #     view = tgt - pnt
-    #     view = np.array([-view[1], view[0], view[2]])
-
-    #     # slope, intercept, r_value, p_value, std_err = stats.linregress(arr[0,:], arr[1,:])
-    #     # view = np.array([-slope, 1])
-    #     view = view / np.linalg.norm(view)
-    #     array_view = np.array([view[0], view[1], 0])
-    #     arrs_view[:,a] = array_view
-    # print(arrs_view)
-
     ## DIRECTIONAL SOURCES :: calibrated
     srcs_dir = np.array(
         [[  1.89407487, 1.63305090, 4.30997826, 4.61104211, 1.63305090, 4.46997826],
@@ -124,8 +100,8 @@ if __name__ == "__main__":
          [1.437, 1.430, 1.408, 1.429]]
     ) # meters [3xJ]
     srcs_nse_view = np.array(
-        [[ 1., 1., -1., -1.],
-         [-1., 1.,  1., -1.],
+        [[-1., -1.,  1.,  1.],
+         [ 1., -1., -1.,  1.],
          [ 0., 0.,  0.,  0.]]
     ) # meters [3xJ]
 
@@ -338,6 +314,8 @@ if __name__ == "__main__":
 
     echoes_toa = np.zeros((K, I, J))
     echoes_amp = np.zeros((K, I, J))
+    echoes_wall = np.empty((K,I,J), dtype='S1')
+    walls_in_pyroom = np.array(['f','s','w','d','e','n','c'])
 
     for i in range(mics.shape[1]):
         for j in range(srcs_dir.shape[1]):
@@ -347,6 +325,17 @@ if __name__ == "__main__":
             images_damp = source.get_damping(max_order=1)
         
             images_dist = np.linalg.norm(images_pos - mics[:,i,None], axis=0)
+            
+            images_directions = images_pos - source.position[:,None]
+            images_directions[np.abs(images_directions)<0.5] = 0 
+            images_directions = images_directions / np.linalg.norm(images_directions, axis=0, keepdims=True)
+           
+            assert np.allclose(images_directions[:,0], np.array([0.,0.,-1.])) # 
+            assert np.allclose(images_directions[:,1], np.array([0.,-1.,0.]))
+            assert np.allclose(images_directions[:,2], np.array([-1.,0.,0.]))
+            assert np.allclose(images_directions[:,4], np.array([1.,0.,0.]))
+            assert np.allclose(images_directions[:,5], np.array([0.,1.,0.]))
+            assert np.allclose(images_directions[:,6], np.array([0.,0.,1.]))            
         
             toas = (images_dist / speed_of_sound).squeeze()
             amps = (images_damp / (4*np.pi*images_dist)).squeeze()
@@ -355,19 +344,25 @@ if __name__ == "__main__":
 
             echoes_toa[:,i,j] = toas[idx]
             echoes_amp[:,i,j] = amps[idx]
-
-    echo_note = {
-        'mics' : mics,
-        'srcs' : srcs_dir,
-        'toa' : echoes_toa,
-        'amp' : echoes_amp
-    }
+            echoes_wall[:,i,j] = walls_in_pyroom[idx]
+    
 
     hf = h5py.File(Path(path_to_output_echo_hdf5), 'w')
-    hf.create_dataset("mics", data=mics)        # 3 x n_mics
-    hf.create_dataset("srcs", data=srcs_dir)    # 3 x n_srcs
-    hf.create_dataset("echo_toa", data=mics)    # n_echo x n_mics x n_src
-    hf.create_dataset("echo_amp", data=mics)    # n_echo x n_mics x n_src
+    
+    hf.create_dataset("arrays_position", data=arrs)
+    hf.create_dataset("arrays_direction", data=arrs_view)
+    hf.create_dataset("room_size", data=room_size)
+    hf.create_dataset("sources_directional_position", data=srcs_dir)
+    hf.create_dataset("sources_directional_direction", data=srcs_dir_view)
+    hf.create_dataset("sources_omnidirection_position", data=srcs_omn)
+    hf.create_dataset("sources_noise_position", data=srcs_nse)
+    hf.create_dataset("sources_noise_direction", data=srcs_nse_view)
+    hf.create_dataset("microphones", data=mics)        # 3 x n_mics
+    # hf.create_dataset("srcs", data=srcs_dir)    # 3 x n_srcs
+    hf.create_dataset("echo_toa", data=echoes_toa)    # n_echo x n_mics x n_src_dir
+    hf.create_dataset("echo_amp", data=echoes_amp)    # n_echo x n_mics x n_src_dir
+    hf.create_dataset("echo_wall", data=echoes_wall, dtype='S1')    # n_echo x n_mics x n_src_dir
+
     hf.close()
     
     print('Echo notes saved in', path_to_output_echo_hdf5)
