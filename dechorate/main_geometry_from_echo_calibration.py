@@ -21,7 +21,7 @@ if __name__ == "__main__":
     output_dir = Path(args.outdir)
     assert output_dir.exists()
     path_to_output_pos_csv = output_dir / Path('dEchorate_calibrated_elements_positions.csv')
-    path_to_output_echo_hdf5 = output_dir / Path('dEchorate_echo_notes.hdf5')
+    path_to_output_echo_hdf5 = output_dir / Path('dEchorate_echo_notes.h5')
 
     ###############################################################################
     room_temperature = 24

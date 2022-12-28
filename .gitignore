@@ -106,5 +106,5 @@ run_job*
 *.hdf5
 .cache
 *.png
-outputs/
+outpu*/
 deliverable/

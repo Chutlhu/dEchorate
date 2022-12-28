@@ -87,7 +87,7 @@ def wave_loader(wavefile, session_filename, path_to_session_zip_dir, path_to_out
     path_to_current_wavefile = get_zipped_file(filename, path_to_session_zip_dir, path_to_output)
     wav, fs = sf.read(path_to_current_wavefile)
     assert fs == constants['Fs']
-    return wav
+    return wav, fs
 
     
 if __name__ == "__main__":
@@ -95,12 +95,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--outdir", help="Path to output files", type=str)
     parser.add_argument("--signal", help="Type of signal you wish to extract", type=str)
+    parser.add_argument("--fs", help="Output sampling frequency", type=int)
     parser.add_argument("--datadir", help="Path to dEchorate data folder", type=str)
     parser.add_argument("--dbpath", help="Path to dEchorate annotation database", type=str)
     parser.add_argument("--comp", help="Compression option for hdf5", type=int, default=4)
     args = parser.parse_args()
 
     signal = args.signal
+    new_fs = args.fs
     if not signal in constants['signals']:
         raise ValueError('Signals mus be either chirp, silence, babble, speech, noise')
 
@@ -150,7 +152,7 @@ if __name__ == "__main__":
     # srcs = [0, ..., 8] : 6 dir,  3 omni
     # bonus: book for polarity
 
-    path_to_output_dataset_hdf5 = output_dir / Path(f'{curr_dset_name}.hdf5')
+    path_to_output_dataset_hdf5 = output_dir / Path(f'{curr_dset_name}_{int(new_fs/1000)}k.h5')
     if not path_to_output_dataset_hdf5.exists():
         f = h5py.File(path_to_output_dataset_hdf5, "w")
         f.close()
@@ -169,9 +171,14 @@ if __name__ == "__main__":
 
         session_filename = f'room-{room_code}'
         path_to_session_zip = path_to_recordings / Path(session_filename+'.zip')
-        wav = wave_loader(wavename, session_filename, path_to_session_zip, path_to_tmp)
+        wav, fs = wave_loader(wavename, session_filename, path_to_session_zip, path_to_tmp)
+        
+        if not new_fs == fs:
+            wav = resample(wav, fs, new_fs)
         
         # here we use the default compression, so it will be faster to make operation
+        hdf.attrs['signal'] = signal
+        hdf.attrs['sampling_rate'] = new_fs
         hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=args.comp)
         # hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=4)
     

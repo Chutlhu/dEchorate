@@ -13,7 +13,7 @@ from dechorate.stimulus import ProbeSignal
 from dechorate.utils.dsp_utils import *
 
 rec_offset = constants['recording_offset']
-L = int(0.5*constants['Fs'])
+L = int(1.*constants['Fs'])
 
 
 if __name__ == "__main__":
@@ -21,8 +21,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--outdir", help="Path to output files", type=str)
     parser.add_argument("--dbpath", help="Path to dEchorate database", type=str)
-    parser.add_argument("--chirps", help="Path to dEchorate_chirp.hdf5", type=str)
-    parser.add_argument("--comp", help="Compression option for hdf5", type=int, default=4)
+    parser.add_argument("--chirps", help="Path to dEchorate_chirp.h5", type=str)
+    parser.add_argument("--comp", help="Compression option for h5", type=int, default=4)
     args = parser.parse_args()
 
     curr_dset_name = 'dEchorate_rirs'
@@ -56,12 +56,12 @@ if __name__ == "__main__":
     # srcs = [0, ..., 8] : 6 dir,  3 omni
     # bonus: book for polarity
 
-    path_to_output_dataset_hdf5 = path_to_output / Path(f'{curr_dset_name}.hdf5')
-    if not path_to_output_dataset_hdf5.exists():
-        f = h5py.File(path_to_output_dataset_hdf5, 'w')
+    path_to_output_dataset_h5 = path_to_output / Path(f'{curr_dset_name}.h5')
+    if not path_to_output_dataset_h5.exists():
+        f = h5py.File(path_to_output_dataset_h5, 'w')
         f.close()
     # re-open it in append mode
-    hdf = h5py.File(path_to_output_dataset_hdf5, 'a')
+    hdf = h5py.File(path_to_output_dataset_h5, 'a')
 
     ## POPULATE THE HDF5 DATASET
 
