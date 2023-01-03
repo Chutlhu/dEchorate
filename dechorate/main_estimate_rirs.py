@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--comp", help="Compression option for h5", type=int, default=4)
     args = parser.parse_args()
 
-    curr_dset_name = 'dEchorate_rirs'
+    curr_dset_name = 'dEchorate_rir'
 
     # setup paths
     path_to_output = Path(args.outdir)
@@ -62,6 +62,8 @@ if __name__ == "__main__":
         f.close()
     # re-open it in append mode
     hdf = h5py.File(path_to_output_dataset_h5, 'a')
+    hdf.attrs['signal'] = 'rirs'
+    hdf.attrs['sampling_rate'] = Fs
 
     ## POPULATE THE HDF5 DATASET
 

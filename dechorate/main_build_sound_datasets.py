@@ -122,6 +122,7 @@ if __name__ == "__main__":
         path_to_tmp.mkdir(parents=True, exist_ok=True)
     
     if not path_to_recordings.exists():
+        print(path_to_recordings)
         raise ValueError(f'WrongPathError {path_to_recordings.resolve()} does not exist' )
 
     # current procesing
@@ -152,7 +153,7 @@ if __name__ == "__main__":
     # srcs = [0, ..., 8] : 6 dir,  3 omni
     # bonus: book for polarity
 
-    path_to_output_dataset_hdf5 = output_dir / Path(f'{curr_dset_name}_{int(new_fs/1000)}k.h5')
+    path_to_output_dataset_hdf5 = output_dir / Path(f'{curr_dset_name}.h5')
     if not path_to_output_dataset_hdf5.exists():
         f = h5py.File(path_to_output_dataset_hdf5, "w")
         f.close()
@@ -164,7 +165,7 @@ if __name__ == "__main__":
         
         print(f'{wavename}:\tRoom: {room_code}\tSignal: {signal}\tSrc: {src_id}')
         
-        group = f'/{signal}/{room_code}/{src_id:d}'
+        group = f'/{signal}/{room_code}/{src_id:d}/data'
 
         if group in hdf:
             continue
@@ -173,13 +174,36 @@ if __name__ == "__main__":
         path_to_session_zip = path_to_recordings / Path(session_filename+'.zip')
         wav, fs = wave_loader(wavename, session_filename, path_to_session_zip, path_to_tmp)
         
+        n_mics = wav.shape[-1]
         if not new_fs == fs:
-            wav = resample(wav, fs, new_fs)
+            wav = resample(wav.T, fs, new_fs)
+        assert wav.shape[-1] == n_mics
         
-        # here we use the default compression, so it will be faster to make operation
+        # if speech, reshape in 6.5 sec x 3 utterances
+        n_utts = 1
+        if signal == 'speech':
+            l = 6.5
+            wav = np.stack([wav[int(start*new_fs):int((start+l)*new_fs),:] for start in [1.5, 9.5, 17.5]], axis=-1)
+            n_utts = 3
+            assert wav.shape[0] == l*new_fs
+            assert wav.shape[1] == n_mics  
+            assert wav.shape[2] == n_utts
+        elif signal == 'noise':
+            wav = wav[2*new_fs:13*new_fs,:]
+            n_utts = 1
+        else:
+            pass
+
         hdf.attrs['signal'] = signal
         hdf.attrs['sampling_rate'] = new_fs
+        hdf.attrs['n_samples'] = wav.shape[0]
+        hdf.attrs['n_mics'] = n_mics
+        hdf.attrs['n_utts'] = n_utts
+        hdf.attrs['n_srcs'] = len(src_ids)
+        hdf.attrs['data_dim_names'] = ["n_samples", "n_mics", "(n_utts)"]
+        
         hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=args.comp)
+        hdf.create_dataset(f'/{signal}/{room_code}/{src_id:d}/sanity_check', data=wav, compression="gzip", compression_opts=args.comp)
         # hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=4)
     
     hdf.close()

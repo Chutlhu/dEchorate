@@ -108,3 +108,4 @@ run_job*
 *.png
 outpu*/
 deliverable/
+./*.png
