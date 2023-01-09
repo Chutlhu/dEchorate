@@ -103,6 +103,7 @@ if __name__ == "__main__":
 
     signal = args.signal
     new_fs = args.fs
+    
     if not signal in constants['signals']:
         raise ValueError('Signals mus be either chirp, silence, babble, speech, noise')
 
@@ -161,6 +162,7 @@ if __name__ == "__main__":
     hdf = h5py.File(path_to_output_dataset_hdf5, 'a')
 
     ## POPULATE THE HDF5 DATASET
+    first_loop = True
     for (wavename, signal, src_id, room_code, artifact) in get_wavefile_from_database(df_note, signals, src_ids, room_codes):
         
         print(f'{wavename}:\tRoom: {room_code}\tSignal: {signal}\tSrc: {src_id}')
@@ -179,6 +181,8 @@ if __name__ == "__main__":
             wav = resample(wav.T, fs, new_fs)
         assert wav.shape[-1] == n_mics
         
+        sanity_check = np.ones(n_mics)
+        
         # if speech, reshape in 6.5 sec x 3 utterances
         n_utts = 1
         if signal == 'speech':
@@ -188,22 +192,30 @@ if __name__ == "__main__":
             assert wav.shape[0] == l*new_fs
             assert wav.shape[1] == n_mics  
             assert wav.shape[2] == n_utts
-        elif signal == 'noise':
-            wav = wav[2*new_fs:13*new_fs,:]
-            n_utts = 1
-        else:
+        elif signal in ['noise', 'babble']:
+            l = 6.5
+            wav = np.stack([wav[int(start*new_fs):int((start+l)*new_fs),:] for start in [2.5, 5.]], axis=-1)
+            n_utts = 2
+        elif signal == 'silence':
+            l = 6.5
+            wav = np.stack([wav[int(start*new_fs):int((start+l)*new_fs),:] for start in [2.]], axis=-1)
+            n_utts = 2
+        elif signal == 'chirp':
             pass
+        else:
+            raise ValueError('Uooops.. something is missinng here.')
 
-        hdf.attrs['signal'] = signal
-        hdf.attrs['sampling_rate'] = new_fs
-        hdf.attrs['n_samples'] = wav.shape[0]
-        hdf.attrs['n_mics'] = n_mics
-        hdf.attrs['n_utts'] = n_utts
-        hdf.attrs['n_srcs'] = len(src_ids)
-        hdf.attrs['data_dim_names'] = ["n_samples", "n_mics", "(n_utts)"]
+        if first_loop:
+            hdf.attrs['signal'] = signal
+            hdf.attrs['sampling_rate'] = new_fs
+            hdf.attrs['n_samples'] = wav.shape[0]
+            hdf.attrs['n_mics'] = n_mics
+            hdf.attrs['n_utts'] = n_utts
+            hdf.attrs['n_srcs'] = len(src_ids)
+            hdf.attrs['data_dim_names'] = ["n_samples", "n_mics", "(n_utts)"]
+            first_loop = False
         
-        hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=args.comp)
-        hdf.create_dataset(f'/{signal}/{room_code}/{src_id:d}/sanity_check', data=wav, compression="gzip", compression_opts=args.comp)
+        hdf.create_dataset(f'/{signal}/{room_code}/{src_id:d}', data=wav, compression="gzip", compression_opts=args.comp)
         # hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=4)
     
     hdf.close()

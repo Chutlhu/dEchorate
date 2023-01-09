@@ -64,7 +64,7 @@ if __name__ == "__main__":
     hdf = h5py.File(path_to_output_dataset_h5, 'a')
     hdf.attrs['signal'] = 'rirs'
     hdf.attrs['sampling_rate'] = Fs
-
+    
     ## POPULATE THE HDF5 DATASET
 
     # navigate the chirps dataset
@@ -75,11 +75,13 @@ if __name__ == "__main__":
     ,   'mic_id' : []
     ,   'path_hdf5' : []
     }
+    
+    first_loop = True
 
     for room_code in tqdm(room_codes, desc="room_code"):
 
         for src_id in tqdm(src_ids, desc="src_id"):
-
+                
             group = f'/chirp/{room_code}/{src_id:d}'
             data = np.array(dset_chirp[group])
         
@@ -157,6 +159,14 @@ if __name__ == "__main__":
                 d = rec_offset['standard']
 
             rirs = rirs[d:d+L,:]
+            
+            if first_loop:
+                hdf.attrs['n_samples'] = rirs.shape[0]
+                hdf.attrs['n_mics'] = n_mics
+                hdf.attrs['n_utts'] = 1
+                hdf.attrs['n_srcs'] = len(src_ids)
+                hdf.attrs['data_dim_names'] = ["n_samples", "n_mics", "(n_utts)"]
+                first_loop = False
             
             if group in hdf:
                 continue
