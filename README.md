@@ -11,25 +11,19 @@
 You can find a detailed explanation of the dEchorate dataset at:
 [dEchorate: a Calibrated Room Impulse Response Database for Echo-aware Signal Processing](https://hal.archives-ouvertes.fr/hal-03207860/)
 
+## Description and Download
+
 `dEchorate` has three main elements:
 - the data on Zenodo
     - [dataset in HDF5 format with python script](http://zenodo.org/record/6576203);
     - [dataset in SOFA format](http://zenodo.org/record/6580691);
-- the code for working with `dEchorate` (available in this repo);
-- the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/) (available in this repo).
+- the code for working with `dEchorate` is available in this repo;
+- the code for reproducing the [paper](https://hal.archives-ouvertes.fr/hal-03207860/) is available in this repo.
 
 ## News:
-- 25 May 2022: v2.0.0 new dEchorate dataset
-- 03 May 2020: v0.0.1 dEchorate project is alive
-
-<!-- ## Get the Data
-The data is available at [Zenodo](https://zenodo.org/record/6576203).
-Please, follow that link to download (part of) the data.
-The dataset is available in multiple ways:
-- Annotations/labels/metadata: csv file that can be used pandas (Python)
-- Only RIRs: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
-- Only Speech: numpy matrix `n_samples x n_mics x n_srcs x n_rooms` (~ 6 GB)
-- Raw data: an hdf5 file (~ 75 GB) containig all the raw recording data (chirps, speech/noise sources, babble noise, room tone) -->
+- 2023 Jan 26: v3.0.0 polished and refactored dateset
+- 2022 May 25: v2.0.0 new dEchorate dataset
+- 2020 May 03: v0.0.1 dEchorate project is alive
 
 ## Citing dEchorate
 
