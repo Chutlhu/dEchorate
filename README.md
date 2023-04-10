@@ -13,8 +13,7 @@ You can find a detailed explanation of the dEchorate dataset at:
 
 ## Description and Download
 
-### DATA TEMPORALLY MOVED HERE:
-https://drive.google.com/drive/folders/1yGTh_BjnVNwDgBsn5mkuW3i4rJIgZwlS
+#### DATA TEMPORALLY MOVED [HERE](https://drive.google.com/drive/folders/1yGTh_BjnVNwDgBsn5mkuW3i4rJIgZwlS)
 
 
 `dEchorate` has three main elements:
