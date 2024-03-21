@@ -147,7 +147,10 @@ if __name__ == "__main__":
                 \n}"""
 
                 ## --- RIRS --- ##
-                sofa.Data_IR = mimo_srir.T[None,:,:] # must be in M x R x N x E (measurements, receivers, samples, emitters)
+                sofa.Data_IR = mimo_srir.T[None,:,:] 
+                # must be in M x R x N x E (measurements, receivers, samples, emitters)
+                
+                
                 assert sofa.Data_IR.shape == (1,5,L)
                 sofa.Data_SamplingRate = Fs
                 sofa.Data_SamplingRate_Units = 'hertz'
