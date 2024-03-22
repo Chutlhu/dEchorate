@@ -1,4 +1,3 @@
-from genericpath import exists
 import h5py
 import argparse
 import numpy as np
@@ -11,7 +10,6 @@ from pathlib import Path
 from tqdm import tqdm
 
 from dechorate import constants # these are stored in the __init__py file
-from dechorate.stimulus import ProbeSignal
 from dechorate.utils.dsp_utils import *
 
 
@@ -53,7 +51,6 @@ def get_wavefile_from_database(df, signals, src_ids, room_codes):
                     & (df['src_id'] == src_id)
                     & (df['src_signal'] == signal)
                 ]
-                
                 assert len(wavefiles_db) == 31
                 assert len(pd.unique(wavefiles_db['filename'])) == 1
 
@@ -150,8 +147,8 @@ if __name__ == "__main__":
 
     # DATASET structure: room x mics x srcs + bonus
     # room = [000000, 010000, ..., 111111, 020002]
-    # mics = [0, ..., 29, 30] : 0-29 capsule, 30th loopback
-    # srcs = [0, ..., 8] : 6 dir,  3 omni
+    # mics = [1, ..., 30, 31] : 1-30 capsule, 31th is the loopback
+    # srcs = [1, ..., 9] : 6 dir,  3 omni
     # bonus: book for polarity
 
     path_to_output_dataset_hdf5 = output_dir / Path(f'{curr_dset_name}.h5')
@@ -204,20 +201,16 @@ if __name__ == "__main__":
             pass
         else:
             raise ValueError('Uooops.. something is missinng here.')
-
-        if first_loop:
-            hdf.attrs['signal'] = signal
-            hdf.attrs['sampling_rate'] = new_fs
-            hdf.attrs['n_samples'] = wav.shape[0]
-            hdf.attrs['n_mics'] = n_mics
-            hdf.attrs['n_utts'] = n_utts
-            hdf.attrs['n_srcs'] = len(src_ids)
-            hdf.attrs['data_dim_names'] = ["n_samples", "n_mics", "(n_utts)"]
-            first_loop = False
-        
-        hdf.create_dataset(f'/{signal}/{room_code}/{src_id:d}', data=wav, compression="gzip", compression_opts=args.comp)
-        # hdf.create_dataset(group, data=wav, compression="gzip", compression_opts=4)
     
+        hdf.create_dataset(f'/{signal}/{room_code}/{src_id:d}', data=wav, compression="gzip", compression_opts=args.comp)
+    
+    hdf.attrs['signal'] = signal
+    hdf.attrs['sampling_rate'] = new_fs
+    hdf.attrs['n_samples'] = wav.shape[0]
+    hdf.attrs['n_mics'] = n_mics
+    hdf.attrs['n_utts'] = n_utts
+    hdf.attrs['n_srcs'] = len(src_ids)
+    hdf.attrs['data_dim_names'] = ["n_samples", "n_mics", "(n_utts)"]
     hdf.close()
     
     print('Dataset extracted in', output_dir)

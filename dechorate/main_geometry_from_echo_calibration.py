@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
     # directional source
     for j in range(srcs_dir.shape[1]):
-        df.at[c, 'id'] = int(j)
+        df.at[c, 'id'] = int(j)+1 # [1, 2, ..., 6]
         df.at[c, 'type'] = 'directional'
         df.at[c, 'channel'] = int(33+j)
         df.at[c, 'x'] = srcs_dir[0, j]
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     # omndirectional source
     for j in range(srcs_omn.shape[1]):
-        df.at[c, 'id'] = int(j) + 6
+        df.at[c, 'id'] = int(j)+7 # [7, 8, 9]
         df.at[c, 'type'] = 'omnidirectional'
         df.at[c, 'channel'] = 16
         df.at[c, 'x'] = srcs_omn[0, j]
@@ -139,7 +139,7 @@ if __name__ == "__main__":
         c += 1
 
     for j in range(srcs_nse.shape[1]):
-        df.at[c, 'id'] = int(j)
+        df.at[c, 'id'] = int(j)+1 # [1, 2, 3, 4]
         df.at[c, 'type'] = 'diffuse'
         df.at[c, 'channel'] = int(45+j)
         df.at[c, 'x'] = srcs_nse[0, j]
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         c += 1
 
     for i in range(mics.shape[1]):
-        df.at[c, 'channel'] = int(33 + i)
+        df.at[c, 'channel'] = int(i)+1
         df.at[c, 'id'] = int(i)
         df.at[c, 'type'] = 'mic'
         df.at[c, 'array'] = int(i//5)

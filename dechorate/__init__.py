@@ -3,11 +3,11 @@ import numpy as np
 constants = {
     'recording_offset'  : {
         'standard'      :  4444 # samples
-    ,   '/rir/000001/1' : 12636
-    ,   '/rir/000001/5' :  8540
-    ,   '/rir/000010/4' :  8540    
-    ,   '/rir/001000/6' :  8540
-    ,   '/rir/011100/6' : 12636
+    ,   '/rir/000001/2' : 12636
+    ,   '/rir/000001/6' :  8540
+    ,   '/rir/000010/5' :  8540    
+    ,   '/rir/001000/7' :  8540
+    ,   '/rir/011100/7' : 12636
     },
     'Fs' : 48000, # samples / seconds
     'rir_length': 19556, # samples
@@ -21,9 +21,9 @@ constants = {
     'room_humidity' : 80,
     'speed_of_sound' : 346.98,  # speed of sound
     'silence_ids': [99],
-    'nse_ids': np.arange(4),
-    'src_ids': np.arange(9),
-    'mic_ids': np.arange(31),
+    'nse_ids': np.arange(4)+1,
+    'src_ids': np.arange(9)+1,
+    'mic_ids': np.arange(31)+1,
     'signals' : ['chirp', 'silence', 'babble', 'speech', 'noise'],
     'rir_processing': {
         'Fs': 48000,

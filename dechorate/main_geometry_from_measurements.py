@@ -90,7 +90,7 @@ if __name__ == "__main__":
     # directional source
     c = 0
     for j in range(Jd):
-        df.at[c, 'id'] = int(j)
+        df.at[c, 'id'] = int(j)+1
         df.at[c, 'type'] = 'directional'
         df.at[c, 'channel'] = int(33+j)
         df.at[c, 'x'] = srcs[0, j]
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     # omndirectional source
     c = len(df)
     for j in range(Jd, Jd+Jo):
-        df.at[c, 'id'] = int(j)
+        df.at[c, 'id'] = int(j)+1
         df.at[c, 'type'] = 'omnidirectional'
         df.at[c, 'channel'] = 16
         df.at[c, 'x'] = srcs[0, j]
@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     c = len(df)
     for j in range(Jn):
-        df.at[c, 'id'] = int(j)
+        df.at[c, 'id'] = int(j)+1
         df.at[c, 'type'] = 'noise'
         df.at[c, 'channel'] = int(45+j)
         df.at[c, 'x'] = src_noise_pos[0, j]
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     c = len(df)
     for i in range(I):
         df.at[c, 'channel'] = int(33 + i)
-        df.at[c, 'id'] = int(i)
+        df.at[c, 'id'] = int(i)+1
         df.at[c, 'type'] = 'mic'
         df.at[c, 'array'] = int(i//5 + 1)
         df.at[c, 'x'] = mics[0, i]
@@ -134,7 +134,7 @@ if __name__ == "__main__":
     c = len(df)
     for i in range(I//5):
         df.at[c, 'channel'] = int(33 + i*5)
-        df.at[c, 'id'] = int(i)
+        df.at[c, 'id'] = int(i)+1
         df.at[c, 'type'] = 'array'
         df.at[c, 'array'] = i
         df.at[c, 'theta'] = mic_theta[i]

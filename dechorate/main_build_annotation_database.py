@@ -116,13 +116,13 @@ if __name__ == "__main__":
 
                     raise ValueError('Too many sources')
 
-                df.at[c, 'src_pos_x'] = float(curr_pos_source['x'].values)
-                df.at[c, 'src_pos_y'] = float(curr_pos_source['y'].values)
-                df.at[c, 'src_pos_z'] = float(curr_pos_source['z'].values)
+                df.at[c, 'src_pos_x'] = float(curr_pos_source['x'].values[0])
+                df.at[c, 'src_pos_y'] = float(curr_pos_source['y'].values[0])
+                df.at[c, 'src_pos_z'] = float(curr_pos_source['z'].values[0])
 
-                df.at[c, 'src_view_x'] = float(curr_pos_source['view_x'].values)
-                df.at[c, 'src_view_y'] = float(curr_pos_source['view_y'].values)
-                df.at[c, 'src_view_z'] = float(curr_pos_source['view_z'].values)
+                df.at[c, 'src_view_x'] = float(curr_pos_source['view_x'].values[0])
+                df.at[c, 'src_view_y'] = float(curr_pos_source['view_y'].values[0])
+                df.at[c, 'src_view_z'] = float(curr_pos_source['view_z'].values[0])
 
 
             if row['id'] >= 4 and row['sources'] == 'directional':
@@ -167,13 +167,13 @@ if __name__ == "__main__":
                     ValueError('Too many arrays')
 
                 df.at[c, 'array_id'] = i//5
-                df.at[c, 'array_bar_pos_x'] = float(curr_pos_array['x'].values)
-                df.at[c, 'array_bar_pos_y'] = float(curr_pos_array['y'].values)
-                df.at[c, 'array_bar_pos_z'] = float(curr_pos_array['z'].values)
+                df.at[c, 'array_bar_pos_x'] = float(curr_pos_array['x'].values[0])
+                df.at[c, 'array_bar_pos_y'] = float(curr_pos_array['y'].values[0])
+                df.at[c, 'array_bar_pos_z'] = float(curr_pos_array['z'].values[0])
 
-                df.at[c, 'array_bar_view_x'] = float(curr_pos_array['view_x'].values)
-                df.at[c, 'array_bar_view_y'] = float(curr_pos_array['view_y'].values)
-                df.at[c, 'array_bar_view_z'] = float(curr_pos_array['view_z'].values)
+                df.at[c, 'array_bar_view_x'] = float(curr_pos_array['view_x'].values[0])
+                df.at[c, 'array_bar_view_y'] = float(curr_pos_array['view_y'].values[0])
+                df.at[c, 'array_bar_view_z'] = float(curr_pos_array['view_z'].values[0])
 
                 # find mic attributes in pos_note
                 curr_pos_mic = df_pos.loc[
@@ -189,14 +189,14 @@ if __name__ == "__main__":
                     raise ValueError('Too many microphones')
 
                 curr_mic = int(curr_pos_mic['id'].values[0])
-                df.at[c, 'mic_id'] = curr_pos_mic['id'].values
-                df.at[c, 'mic_ch'] = curr_pos_mic['channel'].values
-                df.at[c, 'mic_pos_x'] = float(curr_pos_mic['x'].values)
-                df.at[c, 'mic_pos_y'] = float(curr_pos_mic['y'].values)
-                df.at[c, 'mic_pos_z'] = float(curr_pos_mic['z'].values)
-                df.at[c, 'mic_view_x'] = float(curr_pos_mic['view_x'].values)
-                df.at[c, 'mic_view_y'] = float(curr_pos_mic['view_y'].values)
-                df.at[c, 'mic_view_z'] = float(curr_pos_mic['view_z'].values)
+                df.at[c, 'mic_id'] = int(curr_pos_mic['id'].values[0])
+                df.at[c, 'mic_ch'] = int(curr_pos_mic['channel'].values[0])
+                df.at[c, 'mic_pos_x'] = float(curr_pos_mic['x'].values[0])
+                df.at[c, 'mic_pos_y'] = float(curr_pos_mic['y'].values[0])
+                df.at[c, 'mic_pos_z'] = float(curr_pos_mic['z'].values[0])
+                df.at[c, 'mic_view_x'] = float(curr_pos_mic['view_x'].values[0])
+                df.at[c, 'mic_view_y'] = float(curr_pos_mic['view_y'].values[0])
+                df.at[c, 'mic_view_z'] = float(curr_pos_mic['view_z'].values[0])
 
             c += 1
 

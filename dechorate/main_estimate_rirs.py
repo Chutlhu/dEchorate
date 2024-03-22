@@ -80,6 +80,8 @@ if __name__ == "__main__":
 
     for room_code in tqdm(room_codes, desc="room_code"):
 
+        all_rirs = []
+
         for src_id in tqdm(src_ids, desc="src_id"):
                 
             group = f'/chirp/{room_code}/{src_id:d}'
@@ -100,6 +102,8 @@ if __name__ == "__main__":
             ps = ProbeSignal(stimulus, Fs)
             times, s = ps.generate(n_seconds, amplitude, n_repetitions, silence_at_start, silence_at_end, sweeprange)
             
+            max_len = int(5*Fs)
+
             # compute the global delay from the rir with the playback signal
             try:
                 rir_loop = ps.compute_rir(loopback[:,None], windowing=False)
@@ -109,7 +113,7 @@ if __name__ == "__main__":
                 delay = 999999
 
             n_mics = data.shape[1]
-            rirs = np.zeros([5*Fs, n_mics])
+            rirs = np.zeros([max_len, n_mics])
 
             group = f'/rir/{room_code}/{src_id:d}'
 
@@ -140,10 +144,11 @@ if __name__ == "__main__":
 
                 # # compute the rir
                 if group in hdf:
+                    print('already in')
                     continue
                 else:
                     rir = ps.compute_rir(data[:, i, None], windowing=False)
-                    rirs[:,i] = rir[0:int(5*Fs)].squeeze()
+                    rirs[:,i] = rir[0:int(max_len)].squeeze()
 
 
                 dt['signal'].append('rir')
@@ -159,6 +164,7 @@ if __name__ == "__main__":
                 d = rec_offset['standard']
 
             rirs = rirs[d:d+L,:]
+            all_rirs.append(rirs)
             
             if first_loop:
                 hdf.attrs['n_samples'] = rirs.shape[0]
@@ -166,15 +172,16 @@ if __name__ == "__main__":
                 hdf.attrs['n_utts'] = 1
                 hdf.attrs['n_srcs'] = len(src_ids)
                 hdf.attrs['data_dim_names'] = ["n_samples", "n_mics", "(n_utts)"]
+
                 first_loop = False
-            
+
             if group in hdf:
+                print('already in')
                 continue
             else:
                 hdf.create_dataset(group, data=rirs, compression="gzip", compression_opts=args.comp)
 
             df = pd.DataFrame(dt)
             df.to_csv(path_to_output / Path('dEchorate_rir_database.csv'))
-            
 
     hdf.close()

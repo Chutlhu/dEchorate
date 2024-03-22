@@ -75,20 +75,6 @@ class ProbeSignal():
             np.sin(w1*(n_samples-1)/lw * (np.exp(taxis*lw)-1))
         self.ampl_ranges = [-amplitude, amplitude]
 
-        # # Find the last zero crossing to avoid the need for fadeout
-        # # Comment the whole block to remove this
-        # k = np.flipud(sinsweep)
-        # error = 1
-        # counter = 0
-        # while error > 0.001:
-        #     error = np.abs(k[counter])
-        #     counter = counter+1
-
-        # k = k[counter::]
-        # sinsweep_hat = np.flipud(k)
-        # sinsweep = np.zeros(shape=(n_samples,))
-        # sinsweep[0:sinsweep_hat.shape[0]] = sinsweep_hat
-
         # the convolutional inverse
         envelope = (w2/w1)**(-taxis)  # Holters2009, Eq.(9)
         invfilter = np.flipud(sinsweep)*envelope
