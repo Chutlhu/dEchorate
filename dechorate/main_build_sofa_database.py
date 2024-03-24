@@ -61,13 +61,8 @@ if __name__ == "__main__":
     path_to_db = Path(args.csv)
     df = pd.read_csv(path_to_db)
 
-    # for attr in dset.attrs:
-    #     print(f'{attr} :', dset.attrs[attr])
-    # dset.close()
-    # 1/0
 
-    ### RIR MATRIX ###
-    
+    ### RIR MATRIX ###    
     print('Building RIR matrix...', end='')
     D = len(rooms)
     J = len(sources)
@@ -105,10 +100,10 @@ if __name__ == "__main__":
                 
                 sofa.GLOBAL_DatabaseName = 'dEchorate'
 
-                title_suffix = f'room{rooms[room_idx]}_src{src_idx}_arr{arr_idx}_mics{mic_idxs.min()}-{mic_idxs.max()}'
+                title_suffix = f'room{rooms[room_idx]}_src{src_idx+1}_arr{arr_idx+1}_mics{mic_idxs.min()+1}-{mic_idxs.max()+1}'
                 sofa.GLOBAL_Title = f'dEchorate_{title_suffix}'
 
-                sofa.GLOBAL_DateCreated = '2023-01-26'
+                sofa.GLOBAL_DateCreated = '2024-03-24'
                 sofa.GLOBAL_DateModified = sofa.GLOBAL_DateCreated
 
                 sofa.GLOBAL_AuthorContact = 'diego.dicarlo89@gmail.com'
@@ -123,7 +118,6 @@ if __name__ == "__main__":
                 \n- code: 'https://github.com/Chutlhu/DechorateDB'; 
                 \n- paper: 'https://doi.org/10.1186/s13636-021-00229-0'"""
 
-                sofa.GLOBAL_RoomDescription = 'Recorded at the Bar\'Ilan acoustic lab. Refer to the publication for all the details.'
 
                 sofa.GLOBAL_History = """
                   - 2019-01-20: Recorded raw data
@@ -131,6 +125,7 @@ if __name__ == "__main__":
                 \n- 2021-03-22: Publication on Zenodo v0
                 \n- 2022-04-21: Creation SOFA
                 \n- 2023-01-26: New Sofa
+                \n- 2024-03-24: Updating Sofa
                 """
 
 
@@ -188,7 +183,7 @@ if __name__ == "__main__":
                 # --- SOURCES --- ## 
 
                 # Source = compact sound source (it may contain more emitters, i.e. speakers)
-                sofa.GLOBAL_SourceShortName = f'loudspeaker_id:{src_idx}'
+                sofa.GLOBAL_SourceShortName = f'loudspeaker_id:{src_idx+1}'
                 sofa.GLOBAL_SourceDescription = sources_description[src_idx]
                 sofa.SourcePosition = src_pos[:,src_idx]
                 sofa.SourcePosition_Type = 'cartesian'
@@ -200,42 +195,56 @@ if __name__ == "__main__":
 
                 ## --- ROOM --- ##
                 sofa.GLOBAL_RoomType = 'shoebox'
+                room_description = f'room_code:{room}->is reflective?' \
+                    + f'floor:{int(int(room[0]) > 0)}_' \
+                    + f'ceiling:{int(int(room[1]) > 0)}_' \
+                    + f'west:{int(int(room[2]) > 0)}_' \
+                    + f'south:{int(int(room[3]) > 0)}_' \
+                    + f'east:{int(int(room[4]) > 0)}_' \
+                    + f'north:{int(int(room[5]) > 0)}_' \
+                    + f'hasFornituer?:{int(int(room[1]) > 1)}'
+                
+                sofa.GLOBAL_RoomDescription = room_description
                 sofa.RoomCornerA = [0,0,0]
                 sofa.RoomCornerB = room_size
                 sofa.RoomCorners_Type = 'cartesian'
                 sofa.RoomCorners_Units = 'metre'
 
-                ## -- ECHOES -- ##
-                room = rooms[room_idx]
-                sofa.add_variable("ReflectiveSurfacesCode", room, "string", "S")
-                sofa.add_attribute("ReflectiveSurfacesCode_Order", "Floor,West,South,East,North")
+                # import ipdb; ipdb.set_trace()
+                # sofa.RoomTemperature = constants['room_temperature']
+                # sofa.Temperature_Units = "degree Celsius"
 
-                sofa.add_variable("RoomFloorIsRefective",    int(int(room[0]) > 0), "double", "I")
-                sofa.add_variable("RoomCleilingIsRefective", int(int(room[1]) > 0), "double", "I")
-                sofa.add_variable("RoomWestIsRefective",     int(int(room[2]) > 0), "double", "I")
-                sofa.add_variable("RoomSouthIsRefective",    int(int(room[3]) > 0), "double", "I")
-                sofa.add_variable("RoomEastIsRefective",     int(int(room[4]) > 0), "double", "I")
-                sofa.add_variable("RoomNorthIsRefective",    int(int(room[5]) > 0), "double", "I")
-                sofa.add_variable("RoomHasFornitures",       int(int(room[1]) > 1), "double", "I")
 
-                sofa.add_variable("Temperature", constants['room_temperature'], "double", "I")
-                sofa.add_attribute("Temperature_Units", "degree Celsius")
-                sofa.add_variable("RelativeHumidity", constants['room_humidity'], "double", "I")
-                sofa.add_attribute("RelativeHumidity_Units", "percentage")
-                sofa.add_variable("SpeedOfSound", constants['speed_of_sound'], "double", "I")
-                sofa.add_attribute("SpeedOfSound_Units", "metre/seconds")
+                # sofa.add_variable("Temperature", constants['room_temperature'], "double", "I")
+                # sofa.add_variable("RelativeHumidity", constants['room_humidity'], "double", "I")
+                # sofa.add_attribute("RelativeHumidity_Units", "percentage")
+                # sofa.add_variable("SpeedOfSound", constants['speed_of_sound'], "double", "I")
+                # sofa.add_attribute("SpeedOfSound_Units", "metre/seconds")
+
+                # ## -- ECHOES -- ##
+                # room = rooms[room_idx]
+                # sofa.add_variable("ReflectiveSurfacesCode", room, "string", "S")
+                # sofa.add_attribute("ReflectiveSurfacesCode_Order", "Floor,West,South,East,North")
+
+                # sofa.add_variable("RoomFloorIsRefective",    int(int(room[0]) > 0), "double", "I")
+                # sofa.add_variable("RoomCleilingIsRefective", int(int(room[1]) > 0), "double", "I")
+                # sofa.add_variable("RoomWestIsRefective",     int(int(room[2]) > 0), "double", "I")
+                # sofa.add_variable("RoomSouthIsRefective",    int(int(room[3]) > 0), "double", "I")
+                # sofa.add_variable("RoomEastIsRefective",     int(int(room[4]) > 0), "double", "I")
+                # sofa.add_variable("RoomNorthIsRefective",    int(int(room[5]) > 0), "double", "I")
+                # sofa.add_variable("RoomHasFornitures",       int(int(room[1]) > 1), "double", "I")
                 
-                ## --- ECHOES --- ##
-                if src_idx < 6:
-                    toas = echo_toa[:,mic_idxs,src_idx]
-                    wall_code = echo_wall[:,mic_idxs,src_idx][:,0].tobytes().decode('UTF-8')
-                else:
-                    toas = echo_toa[:,mic_idxs,0]*0
-                    wall = 'NaN'
-                sofa.add_variable("EchoTimings", toas, "double", "KR")
-                sofa.add_attribute("EchoTimings_Units", "seconds")
-                sofa.add_variable("EchoWall", wall_code, "string", "S")
-                sofa.add_attribute("EchoWall_Units", "wall_code")
+                # ## --- ECHOES --- ##
+                # if src_idx < 6:
+                #     toas = echo_toa[:,mic_idxs,src_idx]
+                #     wall_code = echo_wall[:,mic_idxs,src_idx][:,0].tobytes().decode('UTF-8')
+                # else:
+                #     toas = echo_toa[:,mic_idxs,0]*0
+                #     wall = 'NaN'
+                # sofa.add_variable("EchoTimings", toas, "double", "KR")
+                # sofa.add_attribute("EchoTimings_Units", "seconds")
+                # sofa.add_variable("EchoWall", wall_code, "string", "S")
+                # sofa.add_attribute("EchoWall_Units", "wall_code")
 
                 sofa.verify()
 
@@ -243,3 +252,6 @@ if __name__ == "__main__":
                 path_to_out = path_to_outdir / Path(f'{filename}.sofa')
                 if not path_to_out.exists():
                     sf.write_sofa(str(path_to_out), sofa, compression=7)
+
+                # testing
+                print(sf.read_sofa(str(path_to_out), verify=True, verbose=True))
